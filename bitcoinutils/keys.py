@@ -2,9 +2,10 @@
 Classes related to private/public keys and addresses
 '''
 import hashlib
-import binascii
-import base58check
-from ecdsa import SigningKey, SECP256k1
+from binascii import unhexlify, hexlify
+from base58check import b58encode, b58decode
+from ecdsa import SigningKey, VerifyingKey, SECP256k1
+from sympy.ntheory import sqrt_mod
 
 from bitcoinutils.constants import NETWORK_BASE58_WIF_PREFIXES
 from bitcoinutils.setup import get_network
@@ -26,14 +27,14 @@ class PrivateKey:
                                                            curve=SECP256k1)
 
     def to_bytes(self):
-       return self.key.to_string()
+        return self.key.to_string()
 
     # expects wif in hex string
     def from_wif(self, wif):
-        wif_bytes = wif.encode('utf-8')
+        wif_utf = wif.encode('utf-8')
 
         # decode base58check get key bytes plus checksum
-        data_bytes = base58check.b58decode( wif_bytes )
+        data_bytes = b58decode( wif_utf )
         key_bytes = data_bytes[:-4]
         checksum = data_bytes[-4:]
 
@@ -69,7 +70,7 @@ class PrivateKey:
         checksum = data_hash[0:4]
 
         # suffix the key bytes with the checksum and encode to base58check
-        wif = base58check.b58encode( key_bytes + checksum )
+        wif = b58encode( key_bytes + checksum )
 
         return wif
 
@@ -81,20 +82,62 @@ class PrivateKey:
 PublicKey
 '''
 class PublicKey:
-    def __init__(self, hex):
+    def __init__(self, hex_ascii):
         # expects key as hex string - SEC format
-        hex_bytes = hex.encode('utf-8')
+        first_byte_in_hex = hex_ascii[:2] # 2 since a byte is represented by 2 hex characters
+        hex_bytes = unhexlify(hex_ascii)
 
         # check if compressed or not
         if len(hex_bytes) > 33:
-            # uncompressed - remove first byte (\x04 for uncompressed in SEC
-            # format) and instantiate ecdsa key
+            # uncompressed - SEC format: 0x04 + x + y coordinates (x,y are 32 byte numbers)
+            # remove first byte and instantiate ecdsa key
             self.key = VerifyingKey.from_string(hex_bytes[1:], curve=SECP256k1)
         else:
-            # compressed - need to check if x or y is given and calculate the other
-            # and then instantiate the ecdsa key
-            #...
-        pass
+            # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
+            # is even else y is old. Calculate y and then instantiate the ecdsa key
+            x_coord = int( hex_ascii[2:], 16 )
+
+            # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
+            # This is done modulo p which (secp256k1) is:
+            p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+
+            # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
+            y_values = sqrt_mod( (x_coord**3 + 7) % p, p, True )
+            print(y_values)
+
+            # check SEC format's first byte to determine which of the 2 values to use
+            if first_byte_in_hex == '02':
+                # y is the even value
+                if y_values[0] % 2 == 0:
+                    y_coord = y_values[0]
+                else:
+                    y_coord = y_values[1]
+            elif first_byte_in_hex == '03':
+                # y is the odd value
+                if y_values[0] % 2 == 0:
+                    y_coord = y_values[1]
+                else:
+                    y_coord = y_values[0]
+            else:
+                raise TypeError("Invalid SEC compressed format")
+
+            uncompressed_hex = "%0.64X%0.64X" % (x_coord, y_coord)
+            uncompressed_hex_bytes = unhexlify(uncompressed_hex)
+            self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
 
 
+    def to_bytes(self):
+        return self.key.to_string()
 
+    def to_hex(self, compressed=True):
+        return
+
+
+def main():
+    p1 = PublicKey('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
+    print(p1.to_hex())
+    p2 = PublicKey('020F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9')
+    print(p2.to_hex())
+
+if __name__ == "__main__":
+    main()
