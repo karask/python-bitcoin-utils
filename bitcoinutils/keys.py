@@ -1,14 +1,30 @@
-'''
-Classes related to private/public keys and addresses
-'''
-import hashlib
+# Copyright (C) 2018 The python-bitcoin-utils developers
+#
+# This file is part of python-bitcoin-utils
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoin-utils, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
+
+# Classes related to Bitcoin private/public keys and addresses
+#
+# The rational of the classes and their method is that inputs are typically hex
+# strings as displayed by blockexplorers and other such software. Internally data
+# will be represented and operated upon in bytes. Finally, methods that return
+# data intended for display will be converted to hex string again.
+
+from hashlib import sha256
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
 from ecdsa import SigningKey, VerifyingKey, SECP256k1
 from sympy.ntheory import sqrt_mod
 
+# if any of these is update WE NEED to uninstall/install lib again
 from bitcoinutils.constants import NETWORK_BASE58_WIF_PREFIXES
-from bitcoinutils.setup import get_network
+from bitcoinutils.setup import setup, get_network
 
 '''
 PrivateKey
@@ -18,11 +34,13 @@ class PrivateKey:
     def __init__(self, wif=None, secret_exponent=None):
 
         if not secret_exponent and not wif:
+            self.is_compressed = True
             self.key = SigningKey.generate()
         else:
             if wif:
                 self.from_wif(wif)
             elif secret_exponent:
+                self.is_compressed = True
                 self.key = SigningKey.from_secret_exponent(secret_exponent,
                                                            curve=SECP256k1)
 
@@ -39,12 +57,14 @@ class PrivateKey:
         checksum = data_bytes[-4:]
 
         # verify key with checksum
-        # ...
+        data_hash = sha256(sha256(key_bytes).digest()).digest()
+        if not checksum == data_hash[0:4]:
+            raise ValueError('Checksum is wrong. Possible mistype?')
 
         # get network prefix and check with current setup
         network_prefix = key_bytes[:1]
         if NETWORK_BASE58_WIF_PREFIXES[get_network()] != network_prefix:
-            raise TypeError('Using the wrong network!')
+            raise ValueError('Using the wrong network!')
 
         # remove network prefix
         key_bytes = key_bytes[1:]
@@ -52,30 +72,39 @@ class PrivateKey:
         # check length of bytes and if > 32 then compressed
         # use this to instantite an ecdsa key
         if len(key_bytes) > 32:
+            self.is_compressed = True
             self.key = SigningKey.from_string(key_bytes[:-1], curve=SECP256k1)
         else:
+            self.is_compressed = False
             self.key = SigningKey.from_string(key_bytes, curve=SECP256k1)
 
 
-    def to_wif(self, compressed=True):
+    def to_wif(self, compressed=None):
         # add network prefix to the key
         key_bytes = NETWORK_BASE58_WIF_PREFIXES[get_network()] + self.to_bytes()
 
-        # add suffix if compressed
-        if compressed:
+        # add suffix if compressed -- if parameter was passed explicitly it
+        # supercedes creation compression state
+        if compressed == True:
             key_bytes += b'\x01'
+        elif compressed == False:
+            pass
+        else:
+            if self.is_compressed:
+                key_bytes += b'\x01'
 
         # double hash and get the first 4 bytes for checksum
-        data_hash = hashlib.sha256(hashlib.sha256(key_bytes).digest()).digest()
+        data_hash = sha256(sha256(key_bytes).digest()).digest()
         checksum = data_hash[0:4]
 
         # suffix the key bytes with the checksum and encode to base58check
         wif = b58encode( key_bytes + checksum )
 
-        return wif
+        return wif.decode('utf-8')
 
-    #def get_public_key(self):
-    #    self.key.get_verifying_key()
+    def get_public_key(self):
+        verifying_key = hexlify(self.key.get_verifying_key().to_string())
+        return PublicKey( '04' + verifying_key.decode('utf-8') )
 
 
 '''
@@ -103,7 +132,6 @@ class PublicKey:
 
             # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
             y_values = sqrt_mod( (x_coord**3 + 7) % p, p, True )
-            print(y_values)
 
             # check SEC format's first byte to determine which of the 2 values to use
             if first_byte_in_hex == '02':
@@ -130,14 +158,34 @@ class PublicKey:
         return self.key.to_string()
 
     def to_hex(self, compressed=True):
-        return
+        key_hex = hexlify(self.key.to_string())
+
+        if compressed:
+            # check if y is even or odd
+            if int(key_hex[-2:], 16) % 2 == 0:
+                key_str = b'02' + key_hex[:64]
+            else:
+                key_str = b'03' + key_hex[:64]
+        else:
+            key_str = b'04' + key_hex
+
+        return key_str.decode('utf-8')
 
 
 def main():
-    p1 = PublicKey('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
-    print(p1.to_hex())
-    p2 = PublicKey('020F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9')
-    print(p2.to_hex())
+    setup('mainnet')
+    priv = PrivateKey('KzVpbhbE6vF8HhybZLypQw8qgGsj53KrT7njHQNcrCiboFrVT9jY')
+    print(priv.to_wif())
+    print(priv.to_wif(compressed=False))
+    pub = priv.get_public_key()
+    print(pub.to_hex())
+    #print("-----------")
+    #p1 = PublicKey('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
+    #print(p1.to_bytes())
+    #print(p1.to_hex())
+    #p2 = PublicKey('020F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9')
+    #print(p2.to_bytes())
+    #print(p2.to_hex())
 
 if __name__ == "__main__":
     main()
