@@ -38,7 +38,7 @@ class PrivateKey:
             self.key = SigningKey.generate()
         else:
             if wif:
-                self.from_wif(wif)
+                self._from_wif(wif)
             elif secret_exponent:
                 self.is_compressed = True
                 self.key = SigningKey.from_secret_exponent(secret_exponent,
@@ -47,8 +47,12 @@ class PrivateKey:
     def to_bytes(self):
         return self.key.to_string()
 
+    @classmethod
+    def from_wif(cls, wif):
+        return cls(wif=wif)
+
     # expects wif in hex string
-    def from_wif(self, wif):
+    def _from_wif(self, wif):
         wif_utf = wif.encode('utf-8')
 
         # decode base58check get key bytes plus checksum
@@ -153,6 +157,9 @@ class PublicKey:
             uncompressed_hex_bytes = unhexlify(uncompressed_hex)
             self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
 
+    @classmethod
+    def from_hex(cls, hex_ascii):
+        return cls(hex_ascii)
 
     def to_bytes(self):
         return self.key.to_string()
@@ -174,15 +181,15 @@ class PublicKey:
 
 def main():
     setup('mainnet')
-    priv = PrivateKey('KzVpbhbE6vF8HhybZLypQw8qgGsj53KrT7njHQNcrCiboFrVT9jY')
+    priv = PrivateKey.from_wif('KzVpbhbE6vF8HhybZLypQw8qgGsj53KrT7njHQNcrCiboFrVT9jY')
     print(priv.to_wif())
     print(priv.to_wif(compressed=False))
     pub = priv.get_public_key()
     print(pub.to_hex())
-    #print("-----------")
-    #p1 = PublicKey('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
-    #print(p1.to_bytes())
-    #print(p1.to_hex())
+    print("-----------")
+    p1 = PublicKey.from_hex('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
+    print(p1.to_bytes())
+    print(p1.to_hex())
     #p2 = PublicKey('020F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9')
     #print(p2.to_bytes())
     #print(p2.to_hex())
