@@ -9,13 +9,6 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-# Classes related to Bitcoin private/public keys and addresses
-#
-# The rational of the classes and their method is that inputs are typically hex
-# strings as displayed by blockexplorers and other such software. Internally data
-# will be represented and operated upon in bytes. Finally, methods that return
-# data intended for display will be converted to hex string again.
-
 from hashlib import sha256
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
@@ -26,33 +19,62 @@ from sympy.ntheory import sqrt_mod
 from bitcoinutils.constants import NETWORK_BASE58_WIF_PREFIXES
 from bitcoinutils.setup import setup, get_network
 
-'''
-PrivateKey
-'''
 class PrivateKey:
+    """Represents an ECDSA private key.
+
+    Attributes
+    ----------
+    key : bytes
+        the raw key of 32 bytes
+
+    Methods
+    -------
+    from_wif(wif)
+        creates an object from a WIF of WIFC format (string)
+    to_wif(compressed=True)
+        returns as WIFC (compressed) or WIF format (string)
+    to_bytes()
+        returns the key's raw bytes
+    get_public_key()
+        returns the corresponding PublicKey object
+    """
 
     def __init__(self, wif=None, secret_exponent=None):
+        """
+        Parameters
+        ----------
+        wif : str
+            the key in WIF of WIFC format
+        secret_exponent : int
+            used to create a specific key deterministically
+        """
 
         if not secret_exponent and not wif:
-            self.is_compressed = True
             self.key = SigningKey.generate()
         else:
             if wif:
                 self._from_wif(wif)
             elif secret_exponent:
-                self.is_compressed = True
                 self.key = SigningKey.from_secret_exponent(secret_exponent,
                                                            curve=SECP256k1)
 
     def to_bytes(self):
+        """Returns key's bytes"""
+
         return self.key.to_string()
+
 
     @classmethod
     def from_wif(cls, wif):
+        """Creates key from WIFC or WIF format key"""
+
         return cls(wif=wif)
+
 
     # expects wif in hex string
     def _from_wif(self, wif):
+        """Creates key from WIFC or WIF format key"""
+
         wif_utf = wif.encode('utf-8')
 
         # decode base58check get key bytes plus checksum
@@ -76,26 +98,19 @@ class PrivateKey:
         # check length of bytes and if > 32 then compressed
         # use this to instantite an ecdsa key
         if len(key_bytes) > 32:
-            self.is_compressed = True
             self.key = SigningKey.from_string(key_bytes[:-1], curve=SECP256k1)
         else:
-            self.is_compressed = False
             self.key = SigningKey.from_string(key_bytes, curve=SECP256k1)
 
 
-    def to_wif(self, compressed=None):
+    def to_wif(self, compressed=True):
+        """Returns key in WIFC or WIF string"""
+
         # add network prefix to the key
         key_bytes = NETWORK_BASE58_WIF_PREFIXES[get_network()] + self.to_bytes()
 
-        # add suffix if compressed -- if parameter was passed explicitly it
-        # supercedes creation compression state
         if compressed == True:
             key_bytes += b'\x01'
-        elif compressed == False:
-            pass
-        else:
-            if self.is_compressed:
-                key_bytes += b'\x01'
 
         # double hash and get the first 4 bytes for checksum
         data_hash = sha256(sha256(key_bytes).digest()).digest()
@@ -107,18 +122,44 @@ class PrivateKey:
         return wif.decode('utf-8')
 
     def get_public_key(self):
+        """Returns the corresponding PublicKey"""
+
         verifying_key = hexlify(self.key.get_verifying_key().to_string())
         return PublicKey( '04' + verifying_key.decode('utf-8') )
 
 
-'''
-PublicKey
-'''
 class PublicKey:
-    def __init__(self, hex_ascii):
+    """Represents an ECDSA public key.
+
+    Attributes
+    ----------
+    key : bytes
+        the raw public key of 64 bytes (x, y coordinates of the ECDSA curve
+
+    Methods
+    -------
+    from_hex(hex_str)
+        creates an object from a hex string
+    to_hex(compressed=True)
+        returns the key as hex string (compressed format by default)
+    to_bytes()
+        returns the key's raw bytes
+    get_address(compressed=True))
+        returns the corresponding Address object
+    """
+
+
+    def __init__(self, hex_str):
+        """
+        Parameters
+        ----------
+        hex_str : str
+            the public key in hex string
+        """
+
         # expects key as hex string - SEC format
-        first_byte_in_hex = hex_ascii[:2] # 2 since a byte is represented by 2 hex characters
-        hex_bytes = unhexlify(hex_ascii)
+        first_byte_in_hex = hex_str[:2] # 2 since a byte is represented by 2 hex characters
+        hex_bytes = unhexlify(hex_str)
 
         # check if compressed or not
         if len(hex_bytes) > 33:
@@ -128,7 +169,7 @@ class PublicKey:
         else:
             # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
             # is even else y is old. Calculate y and then instantiate the ecdsa key
-            x_coord = int( hex_ascii[2:], 16 )
+            x_coord = int( hex_str[2:], 16 )
 
             # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
             # This is done modulo p which (secp256k1) is:
@@ -158,13 +199,19 @@ class PublicKey:
             self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
 
     @classmethod
-    def from_hex(cls, hex_ascii):
-        return cls(hex_ascii)
+    def from_hex(cls, hex_str):
+        """Creates a public key from a hex string"""
+
+        return cls(hex_str)
 
     def to_bytes(self):
+        """Returns key's bytes"""
+
         return self.key.to_string()
 
     def to_hex(self, compressed=True):
+        """Creates a public key from a hex string"""
+
         key_hex = hexlify(self.key.to_string())
 
         if compressed:
