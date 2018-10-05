@@ -40,13 +40,14 @@ class PrivateKey:
     """
 
     def __init__(self, wif=None, secret_exponent=None):
-        """
+        """With no parameters a random key is created
+
         Parameters
         ----------
-        wif : str
-            the key in WIF of WIFC format
-        secret_exponent : int
-            used to create a specific key deterministically
+        wif : str, optional
+            the key in WIF of WIFC format (default None)
+        secret_exponent : int, optional
+            used to create a specific key deterministically (default None)
         """
 
         if not secret_exponent and not wif:
@@ -73,7 +74,14 @@ class PrivateKey:
 
     # expects wif in hex string
     def _from_wif(self, wif):
-        """Creates key from WIFC or WIF format key"""
+        """Creates key from WIFC or WIF format key
+
+        Raises
+        ------
+        ValueError
+            if the checksum is wrong or if the WIF/WIFC is not from the
+            configured network.
+        """
 
         wif_utf = wif.encode('utf-8')
 
@@ -156,6 +164,12 @@ class PublicKey:
         ----------
         hex_str : str
             the public key in hex string
+
+        Raises
+        ------
+            TypeError
+                If first byte of public key (corresponding to SEC format) is
+                invalid.
         """
 
         # expects key as hex string - SEC format
@@ -226,9 +240,45 @@ class PublicKey:
 
         return key_str.decode('utf-8')
 
-    def get_address(self):
+    def get_address(self, compressed=True):
         """Returns the corresponding Address (default compressed)"""
+
         return "new Addres(TODO)"
+
+
+class Address:
+    """Represents a Bitcoin address
+
+    Attributes
+    ----------
+    address : str
+        the address string
+
+    Methods
+    -------
+    from_address(address)
+        instantiates an object from address string encoding
+    from_hash160(hash160_str)
+        instantiates an object from a hash160 hex string
+    to_address(compressed=True)
+        returns the address's string encoding
+    to_hash160(compressed=True))
+        returns the address's hash160 hex string representation
+    """
+
+    def __init__(self, address, hash160=None):
+        """
+        Parameters
+        ----------
+        address : str
+            the address as a string
+        hash160 : str
+            the hash160 hex string representation
+        """
+        pass
+
+
+
 
 
 def main():
