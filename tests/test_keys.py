@@ -1,0 +1,53 @@
+import unittest
+
+from context import bitcoinutils
+from bitcoinutils.constants import NETWORK_BASE58_WIF_PREFIXES
+from bitcoinutils.setup import setup, get_network
+from bitcoinutils.keys import PrivateKey, PublicKey
+
+class TestPrivateKeys(unittest.TestCase):
+    def setUp(self):
+        setup('mainnet')
+        self.key_wifc = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
+        self.key_wif = "5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf"
+        self.key_bytes = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'
+        self.public_key_bytes = b'y\xbef~\xf9\xdc\xbb\xacU\xa0b\x95\xce\x87\x0b\x07\x02\x9b\xfc\xdb-\xce(\xd9Y\xf2\x81[\x16\xf8\x17\x98H:\xdaw&\xa3\xc4e]\xa4\xfb\xfc\x0e\x11\x08\xa8\xfd\x17\xb4H\xa6\x85T\x19\x9cG\xd0\x8f\xfb\x10\xd4\xb8'
+
+    def test_wif_creation(self):
+        p = PrivateKey(self.key_wifc)
+        self.assertEqual(p.to_bytes(), self.key_bytes)
+        self.assertEqual(p.to_wif(compressed = False), self.key_wif)
+
+    def test_exponent_creation(self):
+        p = PrivateKey(secret_exponent=1)
+        self.assertEqual(p.to_bytes(), self.key_bytes)
+        self.assertEqual(p.to_wif(compressed = False), self.key_wif)
+        self.assertEqual(p.to_wif(), self.key_wifc)
+
+    def test_public_key(self):
+        p = PrivateKey(secret_exponent = 1)
+        self.assertEqual(p.get_public_key().to_bytes(), self.public_key_bytes)
+
+
+class TestPublicKeys(unittest.TestCase):
+    def setUp(self):
+        setup('mainnet')
+        self.public_key_hexc = '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
+        self.public_key_hex = '0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'
+        self.public_key_bytes = b'y\xbef~\xf9\xdc\xbb\xacU\xa0b\x95\xce\x87\x0b\x07\x02\x9b\xfc\xdb-\xce(\xd9Y\xf2\x81[\x16\xf8\x17\x98H:\xdaw&\xa3\xc4e]\xa4\xfb\xfc\x0e\x11\x08\xa8\xfd\x17\xb4H\xa6\x85T\x19\x9cG\xd0\x8f\xfb\x10\xd4\xb8'
+
+    def test_pubkey_creation(self):
+        pub1 = PublicKey(self.public_key_hex)
+        self.assertEqual(pub1.to_bytes(), self.public_key_bytes)
+        pub2 = PublicKey(self.public_key_hexc)
+        self.assertEqual(pub2.to_bytes(), self.public_key_bytes)
+
+    def test_pubkey_uncompressed(self):
+        pub = PublicKey(self.public_key_hexc)
+        self.assertEqual(pub.to_hex(compressed = False), self.public_key_hex)
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+

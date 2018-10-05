@@ -15,7 +15,7 @@ from base58check import b58encode, b58decode
 from ecdsa import SigningKey, VerifyingKey, SECP256k1
 from sympy.ntheory import sqrt_mod
 
-# if any of these is update WE NEED to uninstall/install lib again
+# TODELETE if any of these is updated WE NEED to uninstall/install lib again
 from bitcoinutils.constants import NETWORK_BASE58_WIF_PREFIXES
 from bitcoinutils.setup import setup, get_network
 
@@ -121,6 +121,7 @@ class PrivateKey:
 
         return wif.decode('utf-8')
 
+
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
 
@@ -225,18 +226,27 @@ class PublicKey:
 
         return key_str.decode('utf-8')
 
+    def get_address(self):
+        """Returns the corresponding Address (default compressed)"""
+        return "new Addres(TODO)"
+
 
 def main():
     setup('mainnet')
-    priv = PrivateKey.from_wif('KzVpbhbE6vF8HhybZLypQw8qgGsj53KrT7njHQNcrCiboFrVT9jY')
+    priv = PrivateKey(secret_exponent = 1)
+    #priv = PrivateKey.from_wif('KzVpbhbE6vF8HhybZLypQw8qgGsj53KrT7njHQNcrCiboFrVT9jY')
+    print(priv.to_bytes())
     print(priv.to_wif())
     print(priv.to_wif(compressed=False))
     pub = priv.get_public_key()
     print(pub.to_hex())
     print("-----------")
-    p1 = PublicKey.from_hex('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
-    print(p1.to_bytes())
-    print(p1.to_hex())
+    print(pub.to_bytes())
+    print(pub.to_hex())
+    print(pub.to_hex(compressed = False))
+    #p1 = PublicKey.from_hex('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
+    #print(p1.to_bytes())
+    #print(p1.to_hex())
     #p2 = PublicKey('020F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9')
     #print(p2.to_bytes())
     #print(p2.to_hex())
