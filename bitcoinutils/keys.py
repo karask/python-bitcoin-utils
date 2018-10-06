@@ -76,6 +76,8 @@ class PrivateKey:
     def _from_wif(self, wif):
         """Creates key from WIFC or WIF format key
 
+        Check to_wif for the detailed process. From WIF is the reverse.
+
         Raises
         ------
         ValueError
@@ -112,7 +114,14 @@ class PrivateKey:
 
 
     def to_wif(self, compressed=True):
-        """Returns key in WIFC or WIF string"""
+        """Returns key in WIFC or WIF string
+
+        key_bytes = (32 bytes number) [ + 0x01 if compressed ]
+        network_prefix = (1 byte version number)
+        data_hash = SHA-256( SHA-256( key_bytes ) )
+        checksum = (first 4 bytes of data_hash)
+        wif = Base58CheckEncode( key_bytes + checksum )
+        """
 
         # add network prefix to the key
         key_bytes = NETWORK_BASE58_WIF_PREFIXES[get_network()] + self.to_bytes()
