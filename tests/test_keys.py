@@ -1,9 +1,8 @@
 import unittest
 
 from context import bitcoinutils
-from bitcoinutils.constants import NETWORK_BASE58_WIF_PREFIXES
 from bitcoinutils.setup import setup, get_network
-from bitcoinutils.keys import PrivateKey, PublicKey
+from bitcoinutils.keys import PrivateKey, PublicKey, P2pkhAddress
 
 class TestPrivateKeys(unittest.TestCase):
     def setUp(self):
@@ -35,6 +34,7 @@ class TestPublicKeys(unittest.TestCase):
         self.public_key_hexc = '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
         self.public_key_hex = '0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8'
         self.public_key_bytes = b'y\xbef~\xf9\xdc\xbb\xacU\xa0b\x95\xce\x87\x0b\x07\x02\x9b\xfc\xdb-\xce(\xd9Y\xf2\x81[\x16\xf8\x17\x98H:\xdaw&\xa3\xc4e]\xa4\xfb\xfc\x0e\x11\x08\xa8\xfd\x17\xb4H\xa6\x85T\x19\x9cG\xd0\x8f\xfb\x10\xd4\xb8'
+        self.address = '1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm'
 
     def test_pubkey_creation(self):
         pub1 = PublicKey(self.public_key_hex)
@@ -46,6 +46,30 @@ class TestPublicKeys(unittest.TestCase):
         pub = PublicKey(self.public_key_hexc)
         self.assertEqual(pub.to_hex(compressed = False), self.public_key_hex)
 
+    def test_get_uncompressed_address(self):
+        pub = PublicKey(self.public_key_hex)
+        self.assertEqual(pub.get_address(compressed=False).to_address(), self.address)
+
+
+class TestP2pkhAddresses(unittest.TestCase):
+    def setUp(self):
+        setup('mainnet')
+        self.hash160 = '91b24bf9f5288532960ac687abb035127b1d28a5'
+        self.hash160c = '751e76e8199196d454941c45d1b3a323f1433bd6'
+        self.address = '1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm'
+        self.addressc = '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH'
+
+    def test_creation_hash(self):
+        a1 = P2pkhAddress.from_hash160(self.hash160)
+        self.assertEqual(a1.to_address(), self.address)
+        a2 = P2pkhAddress.from_hash160(self.hash160c)
+        self.assertEqual(a2.to_address(), self.addressc)
+
+    def test_creation_address(self):
+        a1 = P2pkhAddress.from_address(self.address)
+        self.assertEqual(a1.to_hash160(), self.hash160)
+        a2 = P2pkhAddress.from_address(self.addressc)
+        self.assertEqual(a2.to_hash160(), self.hash160c)
 
 if __name__ == '__main__':
     unittest.main()
