@@ -269,7 +269,9 @@ class P2pkhAddress:
     Attributes
     ----------
     hash160 : str
-        the hash160 representation of the address
+        the hash160 string representation of the address; hash160 represents
+        two consequtive hashes of the public key, first a SHA-256 and then an
+        RIPEMD-160
 
     Methods
     -------
@@ -285,6 +287,8 @@ class P2pkhAddress:
     Raises
     ------
     TypeError
+        No parameters passed
+    ValueError
         If an invalid address or hash160 is provided.
     """
 
@@ -296,6 +300,13 @@ class P2pkhAddress:
             the address as a string
         hash160 : str
             the hash160 hex string representation
+
+        Raises
+        ------
+        TypeError
+            No parameters passed
+        ValueError
+            If an invalid address or hash160 is provided.
         """
 
         if hash160:
@@ -313,19 +324,24 @@ class P2pkhAddress:
 
     @classmethod
     def from_address(cls, address):
-        """blah"""
+        """Creates and address object from an address string"""
 
         return cls(address=address)
 
 
     @classmethod
     def from_hash160(cls, hash160):
-        """blah"""
+        """Creates and address object from a hash160 string"""
 
         return cls(hash160=hash160)
 
 
     def _address_to_hash160(self, address):
+        """Converts an address to it's hash160 equivalent
+
+	Base58CheckDecode the address and remove network_prefix and checksum.
+	"""
+
         addr_encoded = address.encode('utf-8')
         data_checksum = b58decode( addr_encoded )
         network_prefix = data_checksum[:1]
@@ -335,6 +351,8 @@ class P2pkhAddress:
 
 
     def _is_hash160_valid(self, hash160):
+        """Checks is a hash160 hex string is valid"""
+
         # check the size -- should be 20 bytes, 40 characters in hexadecimal string
         if len(hash160) != 40:
             return False
@@ -348,6 +366,7 @@ class P2pkhAddress:
 
 
     def _is_address_valid(self, address):
+        """Checks is an address string is valid"""
 
         digits_58_pattern = r'[^123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]'
 
@@ -373,9 +392,19 @@ class P2pkhAddress:
         return True
 
     def to_hash160(self):
+        """Returns as hash160 hex string"""
+
         return self.hash160
 
     def to_address(self):
+        """Returns as address string
+
+        network_prefix = (1 byte version number)
+        data = network_prefix + hash160_bytes
+        data_hash = SHA-256( SHA-256( hash160_bytes ) )
+        checksum = (first 4 bytes of data_hash)
+        address_bytes = Base58CheckEncode( data + checksum )
+        """
         hash160_encoded = self.hash160.encode('utf-8')
         hash160_bytes = unhexlify(hash160_encoded)
 
@@ -383,34 +412,15 @@ class P2pkhAddress:
         data_hash = hashlib.sha256(hashlib.sha256(data).digest()).digest()
         checksum = data_hash[0:4]
         address_bytes = b58encode( data + checksum )
+
         return address_bytes.decode('utf-8')
 
 
 def main():
-    setup('mainnet')
+    pass
+    #setup('mainnet')
     #priv = PrivateKey(secret_exponent = 1)
-    priv = PrivateKey.from_wif('KzVpbhbE6vF8HhybZLypQw8qgGsj53KrT7njHQNcrCiboFrVT9jY')
-    print(priv.to_bytes())
-    print(priv.to_wif())
-    print(priv.to_wif(compressed=False))
-    pub = priv.get_public_key()
-    print(pub.to_hex())
-    print("-----------")
-    print(pub.to_bytes())
-    print(pub.to_hex())
-    print(pub.to_hex(compressed = False))
-    a = pub.get_address(compressed=False)
-    print("+++++++++")
-    #a = P2pkhAddress('1andreas3batLhQa2FawWjeyjCqyBzypd')
-    print(a.to_hash160())
-    a2 = P2pkhAddress(hash160='0663d2403f560f8d053a25fbea618eb470716176')
-    print(a.to_address())
-    #p1 = PublicKey.from_hex('040F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9F064F1FDE4BC07D4F48C5114680AD1ADAF5F6EAA2166F7E4B4887703A681B548')
-    #print(p1.to_bytes())
-    #print(p1.to_hex())
-    #p2 = PublicKey('020F031CA83F3FB372BD6C2430119E0B947CF059D19CDEA98F4CEFFEF620C584F9')
-    #print(p2.to_bytes())
-    #print(p2.to_hex())
+    #priv = PrivateKey.from_wif('KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn')
 
 if __name__ == "__main__":
     main()
