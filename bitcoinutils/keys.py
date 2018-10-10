@@ -11,9 +11,11 @@
 
 import re
 import hashlib
+from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
 from ecdsa import SigningKey, VerifyingKey, SECP256k1
+from ecdsa.util import sigencode_string
 from sympy.ntheory import sqrt_mod
 
 # TODELETE if any of these is updated WE NEED to uninstall/install lib again
@@ -140,6 +142,55 @@ class PrivateKey:
         return wif.decode('utf-8')
 
 
+    def sign(self, message):
+        """Signs the message with the private key
+
+        Bitcoin uses a compact format for message signatures (for tx sigs it
+        uses normal DER format). The format has the normal r and s parameters
+        that ECDSA signatures have but also includes a prefix which encodes
+        extra information. Using the prefix the public key can be
+        reconstructed when verifying the signature.
+
+        Prefix values:
+            27 - 0x1B = first key with even y
+            28 - 0x1C = first key with odd y
+            29 - 0x1D = second key with even y
+            30 - 0x1E = second key with odd y
+        If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
+
+        Returns a Bitcoin compact signature in Base64
+        """
+
+        # All bitcoin signatures include the magic prefix. It is just a string
+        # added to the message to distringuish Bitcoin-specific messages.
+        magic_prefix = b'\x18Bitcoin Signed Message:\n'
+
+        message_size = len(message).to_bytes(1, byteorder='big')
+        message_encoded = message.encode('utf-8')
+
+        message_magic = magic_prefix + message_size + message_encoded
+
+        # create message digest -- note double hashing
+        message_digest = hashlib.sha256( hashlib.sha256(message_magic).digest() ).digest()
+        signature = self.key.sign_digest(message_digest, sigencode = sigencode_string)
+
+        nV = 27 + 0 + 4
+        sig1 = b64encode( b'\x1F' + signature ).decode('utf-8')
+        sig2 = b64encode( b'\x20' + signature ).decode('utf-8')
+        sig3 = b64encode( b'\x21' + signature ).decode('utf-8')
+        sig4 = b64encode( b'\x22' + signature ).decode('utf-8')
+        print(sig1)
+        print(sig2)
+        print(sig3)
+        print(sig4)
+        #print(message_hash)
+        #print(signature)
+        #print(b64encode(signature))
+        #print(b64encode(signature).decode('utf-8'))
+
+        return b64encode(sig1).decode('utf-8')
+
+
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
 
@@ -223,6 +274,7 @@ class PublicKey:
             uncompressed_hex_bytes = unhexlify(uncompressed_hex)
             self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
 
+
     @classmethod
     def from_hex(cls, hex_str):
         """Creates a public key from a hex string"""
@@ -250,6 +302,37 @@ class PublicKey:
             key_str = b'04' + key_hex
 
         return key_str.decode('utf-8')
+
+
+    def verify(self, signature, message):
+        """Verifies a that the message was signed with this public key's
+        corresponding private key.
+
+        Bitcoin uses a compact format for message signatures (for tx sigs it
+        uses normal DER format). The format has the normal r and s parameters
+        that ECDSA signatures have but also includes a prefix which encodes
+        extra information. Using the prefix the public key can be
+        reconstructed when verifying the signature.
+
+	The public key class uses the public key (we do NOT reconstruct the public key).
+
+        Prefix values:
+            27 - 0x1B = first key with even y
+            28 - 0x1C = first key with odd y
+            29 - 0x1D = second key with even y
+            30 - 0x1E = second key with odd y
+        If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
+
+        Returns a Bitcoin compact signature in Base64
+
+
+        The signature should be in Base64
+        """
+
+        message_digest = hashlib.sha256(message.encode('utf-8')).digest()
+        signature = b64decode(signature)
+        return self.key.verify(signature, message_digest)
+
 
     def get_address(self, compressed=True):
         """Returns the corresponding Address (default compressed)"""
@@ -421,6 +504,19 @@ def main():
     #setup('mainnet')
     #priv = PrivateKey(secret_exponent = 1)
     #priv = PrivateKey.from_wif('KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn')
+    setup('mainnet')
+    priv = PrivateKey(secret_exponent = 1)
+    pub = priv.get_public_key()
+    print(priv.to_wif(compressed=True))
+    print(priv.get_public_key().get_address().to_address())
+
+    message = "The test!"
+
+    signature = priv.sign(message)
+    print(signature)
+    print(message)
+    assert pub.verify(signature, message)
+
 
 if __name__ == "__main__":
     main()
