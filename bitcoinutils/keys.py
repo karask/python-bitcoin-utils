@@ -142,7 +142,7 @@ class PrivateKey:
         return wif.decode('utf-8')
 
 
-    def sign(self, message, compressed=True):
+    def sign_message(self, message, compressed=True):
         """Signs the message with the private key
 
         Bitcoin uses a compact format for message signatures (for tx sigs it
@@ -162,7 +162,9 @@ class PrivateKey:
         """
 
         # All bitcoin signatures include the magic prefix. It is just a string
-        # added to the message to distringuish Bitcoin-specific messages.
+        # added to the message to distinguish Bitcoin-specific messages.
+        # TODO: message prefix is added to both PublicKey and PrivateKey
+        # (verify/sign)
         magic_prefix = b'\x18Bitcoin Signed Message:\n'
 
         message_size = len(message).to_bytes(1, byteorder='big')
@@ -172,12 +174,14 @@ class PrivateKey:
 
         # create message digest -- note double hashing
         message_digest = hashlib.sha256( hashlib.sha256(message_magic).digest() ).digest()
-        signature = self.key.sign_digest(message_digest, sigencode = sigencode_string)
+        signature = self.key.sign_digest(message_digest)
 
         #prefix = 27
         #if compressed:
         #    prefix += 4
 
+
+        #for i in range(prefix, prefix + 4)
         #pseudocode for now...
         #for(i in prefix..prefix+4)
         #    convert i to byte
@@ -200,7 +204,7 @@ class PrivateKey:
         #print(b64encode(signature))
         #print(b64encode(signature).decode('utf-8'))
 
-        return b64encode(sig1).decode('utf-8')
+        return sig4
 
 
     def get_public_key(self):
@@ -344,16 +348,35 @@ class PublicKey:
         raise ValueError('NO-OP!')
 
 
+    # TODO add to documentation
+    #@classmethod
+    #def verify_message(self, address, signature, message)
+        #address compressed or not
+        #derive key from signature using prefix byte
+
 
     def verify(self, signature, message):
         """Verifies a that the message was signed with this public key's
         corresponding private key."""
 
+        # All bitcoin signatures include the magic prefix. It is just a string
+        # added to the message to distinguish Bitcoin-specific messages.
+        # TODO: message prefix is added to both PublicKey and PrivateKey
+        # (verify/sign)
+        magic_prefix = b'\x18Bitcoin Signed Message:\n'
+
+        message_size = len(message).to_bytes(1, byteorder='big')
+        message_encoded = message.encode('utf-8')
+
+        message_magic = magic_prefix + message_size + message_encoded
+
+        # create message digest -- note double hashing
+        message_digest = hashlib.sha256( hashlib.sha256(message_magic).digest()).digest()
+
         signature_bytes = b64decode( signature.encode('utf-8') )
-        message_digest = hashlib.sha256(message.encode('utf-8')).digest()
 
         # verify -- ignore first byte of compact signature
-        return self.key.verify(signature_bytes[1:], message_digest)
+        return self.key.verify_digest(signature_bytes[1:], message_digest)
 
 
     def get_address(self, compressed=True):
@@ -534,9 +557,9 @@ def main():
 
     message = "The test!"
 
-    signature = priv.sign(message)
-    print(signature)
+    signature = priv.sign_message(message)
     print(message)
+    print(signature)
     assert pub.verify(signature, message)
 
 
