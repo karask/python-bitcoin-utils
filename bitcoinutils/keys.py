@@ -14,13 +14,24 @@ import hashlib
 from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
-from ecdsa import SigningKey, VerifyingKey, SECP256k1
-from ecdsa.util import sigencode_string
+from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
+from ecdsa.util import sigencode_string, sigdecode_string
 from sympy.ntheory import sqrt_mod
 
 # TODELETE if any of these is updated WE NEED to uninstall/install lib again
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES
 from bitcoinutils.setup import setup, get_network
+
+
+# method used by both PrivateKey and PublicKey - TODO clean - add in another module?
+def add_magic_prefix(message):
+    magic_prefix = b'\x18Bitcoin Signed Message:\n'
+    message_size = len(message).to_bytes(1, byteorder='big')
+    message_encoded = message.encode('utf-8')
+    message_magic = magic_prefix + message_size + message_encoded
+    return message_magic
+
+
 
 class PrivateKey:
     """Represents an ECDSA private key.
@@ -38,6 +49,8 @@ class PrivateKey:
         returns as WIFC (compressed) or WIF format (string)
     to_bytes()
         returns the key's raw bytes
+    sign_message(message, compressed=True)
+        signs and returns the message with the private key
     get_public_key()
         returns the corresponding PublicKey object
     """
@@ -163,48 +176,31 @@ class PrivateKey:
 
         # All bitcoin signatures include the magic prefix. It is just a string
         # added to the message to distinguish Bitcoin-specific messages.
-        # TODO: message prefix is added to both PublicKey and PrivateKey
-        # (verify/sign)
-        magic_prefix = b'\x18Bitcoin Signed Message:\n'
-
-        message_size = len(message).to_bytes(1, byteorder='big')
-        message_encoded = message.encode('utf-8')
-
-        message_magic = magic_prefix + message_size + message_encoded
+        message_magic = add_magic_prefix(message)
 
         # create message digest -- note double hashing
         message_digest = hashlib.sha256( hashlib.sha256(message_magic).digest() ).digest()
-        signature = self.key.sign_digest(message_digest)
+        signature = self.key.sign_digest(message_digest,
+                                         sigencode=sigencode_string)
 
-        #prefix = 27
-        #if compressed:
-        #    prefix += 4
+        prefix = 27
+        if compressed:
+            prefix += 4
 
-
-        #for i in range(prefix, prefix + 4)
-        #pseudocode for now...
-        #for(i in prefix..prefix+4)
-        #    convert i to byte
-        #    add byte to signature
+        sig1 = "a" #delete
+        for i in range(prefix, prefix + 4):
+            recid = chr(i).encode('utf-8')
+            sig = b64encode( recid + signature ).decode('utf-8')
+            if i == 34:        # delete
+                sig1 = sig    # delete
+            print(i, ' ', sig)
         #    if(self.verify.. return)
         #    else continue
         #raise ??
 
-        nV = 27 + 0 + 4
-        sig1 = b64encode( b'\x1F' + signature ).decode('utf-8')
-        sig2 = b64encode( b'\x20' + signature ).decode('utf-8')
-        sig3 = b64encode( b'\x21' + signature ).decode('utf-8')
-        sig4 = b64encode( b'\x22' + signature ).decode('utf-8')
         print(sig1)
-        print(sig2)
-        print(sig3)
-        print(sig4)
-        #print(message_hash)
-        #print(signature)
-        #print(b64encode(signature))
-        #print(b64encode(signature).decode('utf-8'))
 
-        return sig4
+        return sig1
 
 
     def get_public_key(self):
@@ -225,16 +221,44 @@ class PublicKey:
     Methods
     -------
     from_hex(hex_str)
-        creates an object from a hex string
+        creates an object from a hex string in SEC format
     from_message_signature(signature)
         NO-OP!
+    verify_message(address, signature, message)
+        NO-OP!
     to_hex(compressed=True)
-        returns the key as hex string (compressed format by default)
+        returns the key as hex string (in SEC format - compressed by default)
     to_bytes()
         returns the key's raw bytes
     get_address(compressed=True))
         returns the corresponding Address object
     """
+
+    # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
+    # This is done modulo p which (secp256k1) is:
+    # p is the finite field prime number and is equal to:
+    # 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+    # Note that we could alse get that from ecdsa lib from the curve, e.g.:
+    # SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
+    _p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+    # Curve's a and b are (y**2 = x**3 + a*x + b)
+    _a = 0x0000000000000000000000000000000000000000000000000000000000000000
+    _b = 0x0000000000000000000000000000000000000000000000000000000000000007
+    # Curve's generator point is:
+    _Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+    _Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+    # prime number of points in the group (the order)
+    _n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+
+    # The ECDSA curve (secp256k1) is:
+    # Note that we could get that from ecdsa lib, e.g.:
+    # SECP256k1.__dict__['curve']
+    _curve = ellipticcurve.CurveFp( _p, _a, _b )
+
+    # The generator base point is:
+    # Note that we could get that from ecdsa lib, e.g.:
+    # SECP256k1.__dict__['generator']
+    _G = ellipticcurve.Point( _curve, _Gx, _Gy, _n )
 
 
     def __init__(self, hex_str):
@@ -246,9 +270,9 @@ class PublicKey:
 
         Raises
         ------
-            TypeError
-                If first byte of public key (corresponding to SEC format) is
-                invalid.
+        TypeError
+            If first byte of public key (corresponding to SEC format) is
+            invalid.
         """
 
         # expects key as hex string - SEC format
@@ -262,15 +286,11 @@ class PublicKey:
             self.key = VerifyingKey.from_string(hex_bytes[1:], curve=SECP256k1)
         else:
             # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
-            # is even else y is old. Calculate y and then instantiate the ecdsa key
+            # is even else y is odd. Calculate y and then instantiate the ecdsa key
             x_coord = int( hex_str[2:], 16 )
 
-            # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
-            # This is done modulo p which (secp256k1) is:
-            p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-
             # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
-            y_values = sqrt_mod( (x_coord**3 + 7) % p, p, True )
+            y_values = sqrt_mod( (x_coord**3 + 7) % self._p, self._p, True )
 
             # check SEC format's first byte to determine which of the 2 values to use
             if first_byte_in_hex == '02':
@@ -295,17 +315,20 @@ class PublicKey:
 
     @classmethod
     def from_hex(cls, hex_str):
-        """Creates a public key from a hex string"""
+        """Creates a public key from a hex string (SEC format)"""
 
         return cls(hex_str)
+
 
     def to_bytes(self):
         """Returns key's bytes"""
 
         return self.key.to_string()
 
+
     def to_hex(self, compressed=True):
-        """Creates a public key from a hex string"""
+        """Returns public key as a hex string (SEC format - compressed by
+        default)"""
 
         key_hex = hexlify(self.key.to_string())
 
@@ -322,6 +345,7 @@ class PublicKey:
         return key_str.decode('utf-8')
 
 
+    # TODO DELETE ??
     @classmethod
     def from_message_signature(self, signature):
         """Creates a public key from a message signature
@@ -349,10 +373,92 @@ class PublicKey:
 
 
     # TODO add to documentation
-    #@classmethod
-    #def verify_message(self, address, signature, message)
-        #address compressed or not
-        #derive key from signature using prefix byte
+    @classmethod
+    def verify_message(self, address, signature, message):
+        """Creates a public key from a message signature and verifies message
+
+        Bitcoin uses a compact format for message signatures (for tx sigs it
+        uses normal DER format). The format has the normal r and s parameters
+        that ECDSA signatures have but also includes a prefix which encodes
+        extra information. Using the prefix the public key can be
+        reconstructed from the signature.
+
+        Prefix values:
+            27 - 0x1B = first key with even y
+            28 - 0x1C = first key with odd y
+            29 - 0x1D = second key with even y
+            30 - 0x1E = second key with odd y
+        If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
+
+        Raises
+        ------
+        ValueError
+            If signature is invalid
+        """
+
+        sig = b64decode( signature.encode('utf-8') ) 
+        if len(sig) != 65:
+            raise ValueError('Invalid signature size')
+
+        # get signature prefix, compressed and recid (which key is odd/even)
+        prefix = sig[0]
+        if prefix < 27 or prefix > 35:
+            return False
+        if prefix >= 31:
+            compressed = True
+            recid = prefix - 31
+        else:
+            compressed = False
+            recid = prefix - 27
+
+        # create message digest -- note double hashing
+        message_magic = add_magic_prefix(message)
+        message_digest = hashlib.sha256( hashlib.sha256(message_magic).digest() ).digest()
+
+        # AAA
+        #
+        # use recid, r and s to get the point in the curve
+        #
+
+        # get signature's r and s
+        r,s = sigdecode_string(sig[1:], SECP256k1.__dict__['order'])
+
+        # ger R's x coordinate
+        x = r + (recid // 2) * SECP256k1.__dict__['order']
+        print("X: %X %d" % ( x, len(str(x))) )
+
+        # get R's y coordinate (y**2 = x**3 + 7)
+        y_values = sqrt_mod( (x**3 + 7) % self._p, self._p, True )
+        if (y_values[0] - recid) % 2 == 0:
+            y = y_values[0]
+        else:
+            y = y_values[1]
+        print("Y: %0.32X %d" % ( y, len(str(y))) )
+
+        # get R (recovered ephemeral key) from x,y
+        R = ellipticcurve.Point(self._curve, x, y, self._p)
+
+        # get e (hash of message encoded as big integer)
+        e = int(hexlify(message_digest), 16)
+
+        # compute public key Q = r^-1 (sR - eG)
+        # because Point substraction is not defined we will instead use:
+        # Q = r^-1 (sR + (-eG) )
+        minus_e = -e % self._n
+        inv_r = numbertheory.inverse_mod(r, self._n)
+        Q = inv_r * ( s*R + minus_e*self._G )
+
+        print("order: %X" % SECP256k1.__dict__['order'])
+
+        # BBB
+        # instantiate the public key and verify message
+        public_key = VerifyingKey.from_public_point( Q, curve = SECP256k1 )
+        key_hex = hexlify(public_key.to_string())
+        pubkey = PublicKey.from_hex(b'04' + key_hex)
+        print("pubkey2", pubkey.to_hex())
+        #assert pubkey.verify(signature, message)
+
+        # confirm that the address provided corresponds to that public key
 
 
     def verify(self, signature, message):
@@ -361,14 +467,7 @@ class PublicKey:
 
         # All bitcoin signatures include the magic prefix. It is just a string
         # added to the message to distinguish Bitcoin-specific messages.
-        # TODO: message prefix is added to both PublicKey and PrivateKey
-        # (verify/sign)
-        magic_prefix = b'\x18Bitcoin Signed Message:\n'
-
-        message_size = len(message).to_bytes(1, byteorder='big')
-        message_encoded = message.encode('utf-8')
-
-        message_magic = magic_prefix + message_size + message_encoded
+        message_magic = add_magic_prefix(message)
 
         # create message digest -- note double hashing
         message_digest = hashlib.sha256( hashlib.sha256(message_magic).digest()).digest()
@@ -376,7 +475,9 @@ class PublicKey:
         signature_bytes = b64decode( signature.encode('utf-8') )
 
         # verify -- ignore first byte of compact signature
-        return self.key.verify_digest(signature_bytes[1:], message_digest)
+        return self.key.verify_digest(signature_bytes[1:],
+                                      message_digest,
+                                      sigdecode=sigdecode_string)
 
 
     def get_address(self, compressed=True):
@@ -560,7 +661,11 @@ def main():
     signature = priv.sign_message(message)
     print(message)
     print(signature)
+    print("pubkey1", pub.to_hex())
     assert pub.verify(signature, message)
+    PublicKey.verify_message('1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH',
+                             'IojIWwmhrqpkksRsM1yEMBHDV0OYO5oBJ/3UBCeIdbBVoKECwU/ZYutqWp3+5YM+tKt9VCj9MnK5gc+yF8rvapY=',
+                             'The test!')
 
 
 if __name__ == "__main__":
