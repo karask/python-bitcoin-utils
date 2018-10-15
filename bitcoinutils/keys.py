@@ -187,21 +187,15 @@ class PrivateKey:
         if compressed:
             prefix += 4
 
-        sig1 = "a" #delete
+        address = self.get_public_key().get_address(compressed=compressed).to_address()
         for i in range(prefix, prefix + 4):
             recid = chr(i).encode('utf-8')
             sig = b64encode( recid + signature ).decode('utf-8')
-            if i == 34:        # delete
-                sig1 = sig    # delete
-            print(i, ' ', sig)
-        #    if(self.verify.. return)
-        #    else continue
-        #raise ??
-
-        print(sig1)
-
-        return sig1
-
+            try:
+                if PublicKey.verify_message(address, sig, message):
+                    return sig
+            except:
+                continue
 
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
@@ -225,7 +219,8 @@ class PublicKey:
     from_message_signature(signature)
         NO-OP!
     verify_message(address, signature, message)
-        NO-OP!
+        Class method that constructs the public key, confirms the address and
+        verifies the signature
     to_hex(compressed=True)
         returns the key as hex string (in SEC format - compressed by default)
     to_bytes()
@@ -248,7 +243,7 @@ class PublicKey:
     _Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
     _Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
     # prime number of points in the group (the order)
-    _n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+    _order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
     # The ECDSA curve (secp256k1) is:
     # Note that we could get that from ecdsa lib, e.g.:
@@ -258,7 +253,7 @@ class PublicKey:
     # The generator base point is:
     # Note that we could get that from ecdsa lib, e.g.:
     # SECP256k1.__dict__['generator']
-    _G = ellipticcurve.Point( _curve, _Gx, _Gy, _n )
+    _G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
 
 
     def __init__(self, hex_str):
@@ -345,34 +340,14 @@ class PublicKey:
         return key_str.decode('utf-8')
 
 
-    # TODO DELETE ??
     @classmethod
     def from_message_signature(self, signature):
-        """Creates a public key from a message signature
-
-        Bitcoin uses a compact format for message signatures (for tx sigs it
-        uses normal DER format). The format has the normal r and s parameters
-        that ECDSA signatures have but also includes a prefix which encodes
-        extra information. Using the prefix the public key can be
-        reconstructed from the signature.
-
-        Prefix values:
-            27 - 0x1B = first key with even y
-            28 - 0x1C = first key with odd y
-            29 - 0x1D = second key with even y
-            30 - 0x1E = second key with odd y
-        If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
-        """
-
         # TODO implement (add signature=None in __init__, etc.)
-
         # TODO plus does this apply to DER signatures as well?
-
         #return cls(signature=signature)
-        raise ValueError('NO-OP!')
+        raise BaseException('NO-OP!')
 
 
-    # TODO add to documentation
     @classmethod
     def verify_message(self, address, signature, message):
         """Creates a public key from a message signature and verifies message
@@ -396,7 +371,7 @@ class PublicKey:
             If signature is invalid
         """
 
-        sig = b64decode( signature.encode('utf-8') ) 
+        sig = b64decode( signature.encode('utf-8') )
         if len(sig) != 65:
             raise ValueError('Invalid signature size')
 
@@ -415,17 +390,15 @@ class PublicKey:
         message_magic = add_magic_prefix(message)
         message_digest = hashlib.sha256( hashlib.sha256(message_magic).digest() ).digest()
 
-        # AAA
         #
         # use recid, r and s to get the point in the curve
         #
 
         # get signature's r and s
-        r,s = sigdecode_string(sig[1:], SECP256k1.__dict__['order'])
+        r,s = sigdecode_string(sig[1:], self._order)
 
         # ger R's x coordinate
-        x = r + (recid // 2) * SECP256k1.__dict__['order']
-        print("X: %X %d" % ( x, len(str(x))) )
+        x = r + (recid // 2) * self._order
 
         # get R's y coordinate (y**2 = x**3 + 7)
         y_values = sqrt_mod( (x**3 + 7) % self._p, self._p, True )
@@ -433,10 +406,9 @@ class PublicKey:
             y = y_values[0]
         else:
             y = y_values[1]
-        print("Y: %0.32X %d" % ( y, len(str(y))) )
 
         # get R (recovered ephemeral key) from x,y
-        R = ellipticcurve.Point(self._curve, x, y, self._p)
+        R = ellipticcurve.Point(self._curve, x, y, self._order)
 
         # get e (hash of message encoded as big integer)
         e = int(hexlify(message_digest), 16)
@@ -444,21 +416,22 @@ class PublicKey:
         # compute public key Q = r^-1 (sR - eG)
         # because Point substraction is not defined we will instead use:
         # Q = r^-1 (sR + (-eG) )
-        minus_e = -e % self._n
-        inv_r = numbertheory.inverse_mod(r, self._n)
+        minus_e = -e % self._order
+        inv_r = numbertheory.inverse_mod(r, self._order)
         Q = inv_r * ( s*R + minus_e*self._G )
 
-        print("order: %X" % SECP256k1.__dict__['order'])
-
-        # BBB
         # instantiate the public key and verify message
         public_key = VerifyingKey.from_public_point( Q, curve = SECP256k1 )
-        key_hex = hexlify(public_key.to_string())
-        pubkey = PublicKey.from_hex(b'04' + key_hex)
-        print("pubkey2", pubkey.to_hex())
-        #assert pubkey.verify(signature, message)
+        key_hex = hexlify(public_key.to_string()).decode('utf-8')
+        pubkey = PublicKey.from_hex('04' + key_hex)
+        if not pubkey.verify(signature, message):
+            return False
 
         # confirm that the address provided corresponds to that public key
+        if pubkey.get_address(compressed=compressed).to_address() != address:
+            return False
+
+        return True
 
 
     def verify(self, signature, message):
@@ -650,23 +623,16 @@ def main():
     #setup('mainnet')
     #priv = PrivateKey(secret_exponent = 1)
     #priv = PrivateKey.from_wif('KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn')
-    setup('mainnet')
-    priv = PrivateKey(secret_exponent = 1)
-    pub = priv.get_public_key()
-    print(priv.to_wif(compressed=True))
-    print(priv.get_public_key().get_address().to_address())
-
-    message = "The test!"
-
-    signature = priv.sign_message(message)
-    print(message)
-    print(signature)
-    print("pubkey1", pub.to_hex())
-    assert pub.verify(signature, message)
-    PublicKey.verify_message('1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH',
-                             'IojIWwmhrqpkksRsM1yEMBHDV0OYO5oBJ/3UBCeIdbBVoKECwU/ZYutqWp3+5YM+tKt9VCj9MnK5gc+yF8rvapY=',
-                             'The test!')
-
+    #message = "The test!"
+    #pub = priv.get_public_key()
+    #print(priv.to_wif())
+    #print(pub.to_hex())
+    #address = pub.get_address().to_address()
+    #print(address)
+    #signature = priv.sign_message(message)
+    #print(signature)
+    #print(message)
+    #assert PublicKey.verify_message(address, signature, message)
 
 if __name__ == "__main__":
     main()

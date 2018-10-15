@@ -71,6 +71,27 @@ class TestP2pkhAddresses(unittest.TestCase):
         a2 = P2pkhAddress.from_address(self.addressc)
         self.assertEqual(a2.to_hash160(), self.hash160c)
 
+
+class TestSignAndVerify(unittest.TestCase):
+    def setUp(self):
+        setup('mainnet')
+        self.message = "The test!"
+        self.key_wifc = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
+        self.priv = PrivateKey.from_wif(self.key_wifc)
+        self.pub = self.priv.get_public_key()
+        self.address = self.pub.get_address().to_address()
+        self.external_address = '1LbxJuEHPsoFRVo3qM1YJRg7DfRD1RvUDe'
+        self.external_signature = 'H+yEsMrKoLqcdegOxYbZ4MFpQkRJligl1whXQDY2+g7EptxmOj9vC3n5ykdHkof0qEbmyV62syaKh+9C95V5R34='
+
+    def test_sign_and_verify(self):
+        signature = self.priv.sign_message(self.message)
+        self.assertTrue(PublicKey.verify_message(self.address, signature, self.message))
+
+    def test_verify_external(self):
+        self.assertTrue(PublicKey.verify_message(self.external_address,
+                                                 self.external_signature,
+                                                 self.message))
+
 if __name__ == '__main__':
     unittest.main()
 
