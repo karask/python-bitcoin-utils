@@ -6,7 +6,7 @@ Currently, only a module that provides access to private/public keys and address
 
 Installation
 ------------
-$ pip install python-bitcoin-utils
+$ pip install bitcoin-utils
 
 Example usage
 -------------
