@@ -67,7 +67,7 @@ class PrivateKey:
         """
 
         if not secret_exponent and not wif:
-            self.key = SigningKey.generate()
+            self.key = SigningKey.generate(curve=SECP256k1)
         else:
             if wif:
                 self._from_wif(wif)
@@ -621,6 +621,8 @@ class P2pkhAddress:
 def main():
     pass
     #setup('mainnet')
+    #priv = PrivateKey()
+    #print(priv.to_wif())
     #priv = PrivateKey(secret_exponent = 1)
     #priv = PrivateKey.from_wif('KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn')
     #message = "The test!"
