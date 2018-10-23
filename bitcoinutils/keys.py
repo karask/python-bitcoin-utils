@@ -581,22 +581,30 @@ class P2pkhAddress:
         if len(address) < 26 or len(address) > 35:
             return False
 
-        # check address' checksum
+        # get data, network_prefix and checksum
         data_checksum = b58decode( address.encode('utf-8') )
         data = data_checksum[:-4]
+        network_prefix = data_checksum[:1]
         checksum = data_checksum[-4:]
 
+        # check address' checksum
         data_hash = hashlib.sha256(hashlib.sha256(data).digest()).digest()
 
         if data_hash[0:4] != checksum:
             return False
 
+        # check correct network
+        if NETWORK_P2PKH_PREFIXES[get_network()] != network_prefix:
+            return False
+
         return True
+
 
     def to_hash160(self):
         """Returns as hash160 hex string"""
 
         return self.hash160
+
 
     def to_address(self):
         """Returns as address string
