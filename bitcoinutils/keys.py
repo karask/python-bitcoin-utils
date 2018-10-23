@@ -462,18 +462,18 @@ class PublicKey:
         hashripemd160.update(hashsha256)
         hash160 = hashripemd160.digest()
         addr_string_hex = hexlify(hash160).decode('utf-8')
-        return P2pkhAddress(hash160=addr_string_hex)
+        return Address(hash160=addr_string_hex)
 
 
-class P2pkhAddress:
-    """Represents a Bitcoin address derived from a public key
+class Address:
+    """Represents a Bitcoin address
 
     Attributes
     ----------
     hash160 : str
         the hash160 string representation of the address; hash160 represents
-        two consequtive hashes of the public key, first a SHA-256 and then an
-        RIPEMD-160
+        two consequtive hashes of the public key or the redeam script, first 
+        a SHA-256 and then an RIPEMD-160
 
     Methods
     -------

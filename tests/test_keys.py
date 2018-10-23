@@ -2,7 +2,7 @@ import unittest
 
 from context import bitcoinutils
 from bitcoinutils.setup import setup, get_network
-from bitcoinutils.keys import PrivateKey, PublicKey, P2pkhAddress
+from bitcoinutils.keys import PrivateKey, PublicKey, Address
 
 class TestPrivateKeys(unittest.TestCase):
     def setUp(self):
@@ -51,7 +51,7 @@ class TestPublicKeys(unittest.TestCase):
         self.assertEqual(pub.get_address(compressed=False).to_address(), self.address)
 
 
-class TestP2pkhAddresses(unittest.TestCase):
+class TestAddresses(unittest.TestCase):
     def setUp(self):
         setup('mainnet')
         self.hash160 = '91b24bf9f5288532960ac687abb035127b1d28a5'
@@ -60,15 +60,15 @@ class TestP2pkhAddresses(unittest.TestCase):
         self.addressc = '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH'
 
     def test_creation_hash(self):
-        a1 = P2pkhAddress.from_hash160(self.hash160)
+        a1 = Address.from_hash160(self.hash160)
         self.assertEqual(a1.to_address(), self.address)
-        a2 = P2pkhAddress.from_hash160(self.hash160c)
+        a2 = Address.from_hash160(self.hash160c)
         self.assertEqual(a2.to_address(), self.addressc)
 
     def test_creation_address(self):
-        a1 = P2pkhAddress.from_address(self.address)
+        a1 = Address.from_address(self.address)
         self.assertEqual(a1.to_hash160(), self.hash160)
-        a2 = P2pkhAddress.from_address(self.addressc)
+        a2 = Address.from_address(self.addressc)
         self.assertEqual(a2.to_hash160(), self.hash160c)
 
 
