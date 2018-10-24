@@ -19,7 +19,8 @@ from ecdsa.util import sigencode_string, sigdecode_string
 from sympy.ntheory import sqrt_mod
 
 # TODELETE if any of these is updated WE NEED to uninstall/install lib again
-from bitcoinutils.constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES
+from bitcoinutils.constants import NETWORK_WIF_PREFIXES,
+                                   NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
 from bitcoinutils.setup import setup, get_network
 
 
@@ -50,7 +51,9 @@ class PrivateKey:
     to_bytes()
         returns the key's raw bytes
     sign_message(message, compressed=True)
-        signs and returns the message with the private key
+        signs the message's digest and returns the signature
+    sign_transaction(tx, compressed=True)
+        signs the transaction's digest and returns the signature
     get_public_key()
         returns the corresponding PublicKey object
     """
@@ -196,6 +199,27 @@ class PrivateKey:
                     return sig
             except:
                 continue
+
+
+    def sign_transaction(self, tx, sighash=SIGHASH_ALL, compressed=True):
+        """Signs a transaction with the private key
+
+        Bitcoin uses the normal DER format for transactions.
+
+        Returns a Bitcoin DER signature in hex string
+        """
+        #transaction for signing for ALL is the following
+        #if sighash=SIGHASH_ALL
+
+        tx_for_signing = tx.serialize()
+
+
+        # create transaction digest -- note double hashing
+        tx_digest = hashlib.sha256( hashlib.sha256(tx_for_signing).digest() ).digest()
+        signature = self.key.sign_digest(tx_digest, sigencode=sigencode_der)
+
+        return signature.decode('utf-8')
+
 
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
