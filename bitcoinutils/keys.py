@@ -10,18 +10,18 @@
 # LICENSE file.
 
 import re
+import struct
 import hashlib
 from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
-from ecdsa.util import sigencode_string, sigdecode_string
+from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
 
 # TODELETE if any of these is updated WE NEED to uninstall/install lib again
-from bitcoinutils.constants import NETWORK_WIF_PREFIXES,
-                                   NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
-from bitcoinutils.setup import setup, get_network
+from bitcoinutils.constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
+from bitcoinutils.setup import get_network
 
 
 # method used by both PrivateKey and PublicKey - TODO clean - add in another module?
@@ -201,24 +201,39 @@ class PrivateKey:
                 continue
 
 
-    def sign_transaction(self, tx, sighash=SIGHASH_ALL, compressed=True):
+    def sign_transaction(self, tx, txin_index, script, sighash=SIGHASH_ALL, compressed=True):
         """Signs a transaction with the private key
 
-        Bitcoin uses the normal DER format for transactions.
+        Bitcoin uses the normal DER format for transactions. Each input is
+        signed separately (thus txin_index is required). The script of the
+        input we wish to spend is required and replaces the transaction's
+        script sig in order to calculate the correct transaction hash (which 
+        is what is actually signed!)
 
-        Returns a Bitcoin DER signature in hex string
+        Returns a signature for that input
         """
-        #transaction for signing for ALL is the following
-        #if sighash=SIGHASH_ALL
+        # deferred import to avoid circular dependency
+        from bitcoinutils.transactions import Transaction
 
-        tx_for_signing = tx.serialize()
+        tmp_tx = Transaction.copy(tx)
+        tmp_tx.inputs[txin_index].script_sig = script
+
+        #transaction for signing for ALL is the following
+        #if sighash=SIGHASH_ALL use stream... not good for other SIGHASHes
+
+        # need something that returns bytes but for the SIGHASH part...
+        tx_for_signing = tx.stream()
+        # add sighash to be hashed
+        tx_for_signing += struct.pack('<i', sighash) # TODO: or '<i' ??!?! 'B' ???
 
 
         # create transaction digest -- note double hashing
         tx_digest = hashlib.sha256( hashlib.sha256(tx_for_signing).digest() ).digest()
         signature = self.key.sign_digest(tx_digest, sigencode=sigencode_der)
+        # add sighash in the signature
+        signature += struct.pack('B', sighash)
 
-        return signature.decode('utf-8')
+        return hexlify(signature).decode('utf-8')
 
 
     def get_public_key(self):
@@ -652,21 +667,6 @@ class Address:
 
 def main():
     pass
-    #setup('mainnet')
-    #priv = PrivateKey()
-    #print(priv.to_wif())
-    #priv = PrivateKey(secret_exponent = 1)
-    #priv = PrivateKey.from_wif('KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn')
-    #message = "The test!"
-    #pub = priv.get_public_key()
-    #print(priv.to_wif())
-    #print(pub.to_hex())
-    #address = pub.get_address().to_address()
-    #print(address)
-    #signature = priv.sign_message(message)
-    #print(signature)
-    #print(message)
-    #assert PublicKey.verify_message(address, signature, message)
 
 if __name__ == "__main__":
     main()
