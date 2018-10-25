@@ -207,7 +207,7 @@ class PrivateKey:
         Bitcoin uses the normal DER format for transactions. Each input is
         signed separately (thus txin_index is required). The script of the
         input we wish to spend is required and replaces the transaction's
-        script sig in order to calculate the correct transaction hash (which 
+        script sig in order to calculate the correct transaction hash (which
         is what is actually signed!)
 
         Returns a signature for that input
@@ -224,13 +224,18 @@ class PrivateKey:
         # need something that returns bytes but for the SIGHASH part...
         tx_for_signing = tx.stream()
         # add sighash to be hashed
-        tx_for_signing += struct.pack('<i', sighash) # TODO: or '<i' ??!?! 'B' ???
+        # Note that although sighash is one byte it is hashed as a 4 byte value.
+        # There is no real reason for this other than that the original implementation
+        # of Bitcoin stored sighash as an integer (which serializes as a 4
+        # bytes), i.e. it should be converted to one byte before serialization.
+        # It is converted to 1 byte before serializing to send to the network
+        tx_for_signing += struct.pack('<i', sighash)
 
 
         # create transaction digest -- note double hashing
         tx_digest = hashlib.sha256( hashlib.sha256(tx_for_signing).digest() ).digest()
         signature = self.key.sign_digest(tx_digest, sigencode=sigencode_der)
-        # add sighash in the signature
+        # add sighash in the signature -- as one byte!
         signature += struct.pack('B', sighash)
 
         return hexlify(signature).decode('utf-8')

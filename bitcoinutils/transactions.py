@@ -116,7 +116,7 @@ class TxInput:
         # note that we reverse the byte order for the tx hash since the string
         # was displayed in little-endian!
         txid_bytes = unhexlify(self.txid)[::-1]
-        txout_bytes = struct.pack('i', self.txout_index)
+        txout_bytes = struct.pack('<i', self.txout_index)
         script_sig_bytes = script_to_bytes(self.script_sig)
         data = txid_bytes + txout_bytes + \
                 struct.pack('B', len(script_sig_bytes)) + \
@@ -177,7 +177,9 @@ class TxOutput:
     def stream(self):
         # internally all little-endian except hashes
         # note struct uses little-endian by default
-        amount_bytes = struct.pack('Q', int(self.amount * SHATOSHIS_PER_BITCOIN))
+        # 0.29*100000000 results in 28999999.999999996 so we round to the
+        # closest integer
+        amount_bytes = struct.pack('<Q', round(self.amount * SHATOSHIS_PER_BITCOIN))
         script_bytes = script_to_bytes(self.script_pubkey)
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
         return data
