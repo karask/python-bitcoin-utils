@@ -19,9 +19,37 @@ from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheo
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
 
-# TODELETE if any of these is updated WE NEED to uninstall/install lib again
-from bitcoinutils.constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
-from bitcoinutils.setup import get_network
+from .constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
+from .setup import get_network
+
+
+# ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
+# This is done modulo p which (secp256k1) is:
+# p is the finite field prime number and is equal to:
+# 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+# Note that we could alse get that from ecdsa lib from the curve, e.g.:
+# SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
+_p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+# Curve's a and b are (y**2 = x**3 + a*x + b)
+_a = 0x0000000000000000000000000000000000000000000000000000000000000000
+_b = 0x0000000000000000000000000000000000000000000000000000000000000007
+# Curve's generator point is:
+_Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+_Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+# prime number of points in the group (the order)
+_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+
+# The ECDSA curve (secp256k1) is:
+# Note that we could get that from ecdsa lib, e.g.:
+# SECP256k1.__dict__['curve']
+_curve = ellipticcurve.CurveFp( _p, _a, _b )
+
+# The generator base point is:
+# Note that we could get that from ecdsa lib, e.g.:
+# SECP256k1.__dict__['generator']
+_G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
+
+
 
 
 # method used by both PrivateKey and PublicKey - TODO clean - add in another module?
@@ -201,7 +229,7 @@ class PrivateKey:
                 continue
 
 
-    def sign_transaction(self, tx, txin_index, script, sighash=SIGHASH_ALL, compressed=True):
+    def sign_input(self, tx, txin_index, script, sighash=SIGHASH_ALL, compressed=True):
         """Signs a transaction with the private key
 
         Bitcoin uses the normal DER format for transactions. Each input is
@@ -212,32 +240,74 @@ class PrivateKey:
 
         Returns a signature for that input
         """
-        # deferred import to avoid circular dependency
-        from bitcoinutils.transactions import Transaction
 
-        tmp_tx = Transaction.copy(tx)
-        tmp_tx.inputs[txin_index].script_sig = script
+        # the tx knows how to calculate the digest for the corresponding
+        # sighash)
+        tx_digest = tx.get_transaction_digest(txin_index, script, sighash)
 
-        #transaction for signing for ALL is the following
-        #if sighash=SIGHASH_ALL use stream... not good for other SIGHASHes
+        # note that deterministic signing is used
+        signature = self.key.sign_digest_deterministic(tx_digest,
+                                                       sigencode=sigencode_der,
+                                                       hashfunc=hashlib.sha256)
 
-        # need something that returns bytes but for the SIGHASH part...
-        tx_for_signing = tx.stream()
-        # add sighash to be hashed
-        # Note that although sighash is one byte it is hashed as a 4 byte value.
-        # There is no real reason for this other than that the original implementation
-        # of Bitcoin stored sighash as an integer (which serializes as a 4
-        # bytes), i.e. it should be converted to one byte before serialization.
-        # It is converted to 1 byte before serializing to send to the network
-        tx_for_signing += struct.pack('<i', sighash)
+        # make sure that signature complies with Low S standardness rule of
+        # BIP62: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
+        #
+        # Both R ans S cannot start with 0x00 (be signed as negative) unless
+        # they are higher than 2^128 or start with 0x80.
+        #
+        # The S part of the signature is equivalent to (order-S). This allows
+        # for txid malleability attacks where S is modified with (order-S) and
+        # thus a valid signature... but the txid hash would be different!
+        #
+        # For this reason Low S standardness rule specifies that all S's need
+        # to be less than half of the curve order (SECP256k1). If it is not we
+        # ensure it is by substrituting it with (order-S).
 
+        # get DER values individually -- DER structure is.. blah
+        #der_prefix = signature[0]
+        #length_total = signature[1]
+        #der_type_int = signature[2]
+        #length_r = signature[3]
+        #R = signature[4:4+length_r]
+        #length_s = signature[5 + length_r]
+        #S = signature[5 + length_r + 1:]
+        #S_as_bigint = int( hexlify(S).decode('utf-8'), 16 )
+        #print("{} {} - {}_{}_{}_{} - {}_{}_{}_{}".format(der_prefix, length_total,
+        #   der_type_int, length_r, R, int(R[0]), der_type_int, length_s, S, int(S[0])))
+        #print(S_as_bigint)
 
-        # create transaction digest -- note double hashing
-        tx_digest = hashlib.sha256( hashlib.sha256(tx_for_signing).digest() ).digest()
-        signature = self.key.sign_digest(tx_digest, sigencode=sigencode_der)
+        # update R, S if necessary -- in Bitcoin DER signatures' R should have a
+        # prefix of 0x00 only if it starts with 0x80 or higher
+        # NOTE this is not necessary since the ecdsa lib takes care of that
+
+        # update S if necessary -- Low S standardness rule
+        #half_order = _order // 2
+        # TODO improve logic... what if S started at 33 already! (probably
+        # did!!)
+        #if S_as_bigint > half_order:
+        #    new_S_as_bigint = _order - S_as_bigint
+        #    # convert bigint to bytes - remember no padding necessary!
+        #    new_S = unhexlify( format(new_S_as_bigint, 'x') )
+        #    if new_S[0] >= 0x80:
+        #        new_S = struct.pack('B', 0x00) + new_S
+        #        length_s += 1
+        #        length_total += 1
+        #else:
+        #    new_S = S
+        #new_S = S
+
+        #print(hexlify(signature).decode('utf-8'))
+        #print("-------------")
+        #signature = struct.pack('BBBB', der_prefix, length_total, der_type_int, length_r) + R + \
+        #                struct.pack('BB', der_type_int, length_s) + new_S
+        #print(hexlify(signature).decode('utf-8'))
+
         # add sighash in the signature -- as one byte!
         signature += struct.pack('B', sighash)
 
+        # note that this is the final sig that needs to be added in the
+        # script_sig (i.e. the DER signature plus the sighash)
         return hexlify(signature).decode('utf-8')
 
 
@@ -273,32 +343,6 @@ class PublicKey:
         returns the corresponding Address object
     """
 
-    # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
-    # This is done modulo p which (secp256k1) is:
-    # p is the finite field prime number and is equal to:
-    # 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
-    # Note that we could alse get that from ecdsa lib from the curve, e.g.:
-    # SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
-    _p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-    # Curve's a and b are (y**2 = x**3 + a*x + b)
-    _a = 0x0000000000000000000000000000000000000000000000000000000000000000
-    _b = 0x0000000000000000000000000000000000000000000000000000000000000007
-    # Curve's generator point is:
-    _Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
-    _Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-    # prime number of points in the group (the order)
-    _order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-
-    # The ECDSA curve (secp256k1) is:
-    # Note that we could get that from ecdsa lib, e.g.:
-    # SECP256k1.__dict__['curve']
-    _curve = ellipticcurve.CurveFp( _p, _a, _b )
-
-    # The generator base point is:
-    # Note that we could get that from ecdsa lib, e.g.:
-    # SECP256k1.__dict__['generator']
-    _G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
-
 
     def __init__(self, hex_str):
         """
@@ -329,7 +373,7 @@ class PublicKey:
             x_coord = int( hex_str[2:], 16 )
 
             # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
-            y_values = sqrt_mod( (x_coord**3 + 7) % self._p, self._p, True )
+            y_values = sqrt_mod( (x_coord**3 + 7) % _p, _p, True )
 
             # check SEC format's first byte to determine which of the 2 values to use
             if first_byte_in_hex == '02':
@@ -439,20 +483,20 @@ class PublicKey:
         #
 
         # get signature's r and s
-        r,s = sigdecode_string(sig[1:], self._order)
+        r,s = sigdecode_string(sig[1:], _order)
 
         # ger R's x coordinate
-        x = r + (recid // 2) * self._order
+        x = r + (recid // 2) * _order
 
         # get R's y coordinate (y**2 = x**3 + 7)
-        y_values = sqrt_mod( (x**3 + 7) % self._p, self._p, True )
+        y_values = sqrt_mod( (x**3 + 7) % _p, _p, True )
         if (y_values[0] - recid) % 2 == 0:
             y = y_values[0]
         else:
             y = y_values[1]
 
         # get R (recovered ephemeral key) from x,y
-        R = ellipticcurve.Point(self._curve, x, y, self._order)
+        R = ellipticcurve.Point(_curve, x, y, _order)
 
         # get e (hash of message encoded as big integer)
         e = int(hexlify(message_digest), 16)
@@ -460,9 +504,9 @@ class PublicKey:
         # compute public key Q = r^-1 (sR - eG)
         # because Point substraction is not defined we will instead use:
         # Q = r^-1 (sR + (-eG) )
-        minus_e = -e % self._order
-        inv_r = numbertheory.inverse_mod(r, self._order)
-        Q = inv_r * ( s*R + minus_e*self._G )
+        minus_e = -e % _order
+        inv_r = numbertheory.inverse_mod(r, _order)
+        Q = inv_r * ( s*R + minus_e*_G )
 
         # instantiate the public key and verify message
         public_key = VerifyingKey.from_public_point( Q, curve = SECP256k1 )

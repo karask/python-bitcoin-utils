@@ -10,7 +10,7 @@
 # LICENSE file.
 
 #import re
-#import hashlib
+import hashlib
 import struct
 #from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
@@ -18,6 +18,9 @@ from binascii import unhexlify, hexlify
 #from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
 #from ecdsa.util import sigencode_string, sigdecode_string
 #from sympy.ntheory import sqrt_mod
+
+from .constants import SIGHASH_ALL
+
 
 OP_CODES = {
     'OP_DUP'            : b'\x76',
@@ -29,6 +32,8 @@ OP_CODES = {
 
 def op_push_data(data):
     """Data is hex string ... Blah"""
+    # TODO consult following link for push operators standardness BIP62
+    # https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
     data_bytes = unhexlify(data)
 
     if len(data_bytes) < 0x4c:
@@ -107,7 +112,7 @@ class TxInput:
     def stream(self):
         # Internally Bitcoin uses little-endian byte order as it improves
         # speed. Hashes are defined and implemented as big-endian thus
-        # those are transmitted in big-endian ordre. However, when hashes are
+        # those are transmitted in big-endian order. However, when hashes are
         # displayed Bitcoin uses little-endian order because it is sometimes
         # convenient to consider hashes as little-endian integers (and not
         # strings)
@@ -116,7 +121,7 @@ class TxInput:
         # note that we reverse the byte order for the tx hash since the string
         # was displayed in little-endian!
         txid_bytes = unhexlify(self.txid)[::-1]
-        txout_bytes = struct.pack('<i', self.txout_index)
+        txout_bytes = struct.pack('<L', self.txout_index)
         script_sig_bytes = script_to_bytes(self.script_sig)
         data = txid_bytes + txout_bytes + \
                 struct.pack('B', len(script_sig_bytes)) + \
@@ -253,6 +258,41 @@ class Transaction:
         ins = [TxInput.copy(txin) for txin in tx.inputs]
         outs = [TxOutput.copy(txout) for txout in tx.outputs]
         return cls(ins, outs, tx.locktime, tx.version)
+
+
+    def get_transaction_digest(self, txin_index, script, sighash=SIGHASH_ALL):
+        # clone transaction to modify without messing up the tx
+        tmp_tx = Transaction.copy(self)
+
+        # make sure all input scriptSigs are empty
+        for txin in tmp_tx.inputs:
+            txin.script_sig = b''
+
+        # the temporary transaction requires to set the scriptSig to the
+        # scriptPubKey of the UTXO we are trying to spend
+        # TODO Delete script's OP_CODESEPARATORs, if any
+        tmp_tx.inputs[txin_index].script_sig = script
+
+        # by default SIGHASH_ALL will be used
+
+        # TODO: here manage NONE SINGLE ANYONECANPAY
+        #if sighash=SIGHASH_ALL use stream... not good for other SIGHASHes
+
+        # get the byte stream of the temporary transaction
+        tx_for_signing = tmp_tx.stream()
+
+        # add sighash to be hashed
+        # Note that although sighash is one byte it is hashed as a 4 byte value.
+        # There is no real reason for this other than that the original implementation
+        # of Bitcoin stored sighash as an integer (which serializes as a 4
+        # bytes), i.e. it should be converted to one byte before serialization.
+        # It is converted to 1 byte before serializing to send to the network
+        tx_for_signing += struct.pack('<i', sighash)
+
+        # create transaction digest -- note double hashing
+        tx_digest = hashlib.sha256( hashlib.sha256(tx_for_signing).digest()).digest()
+
+        return tx_digest
 
 
     def stream(self):
