@@ -9,95 +9,46 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-#import re
 import hashlib
 import struct
-#from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
-#from base58check import b58encode, b58decode
-#from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
-#from ecdsa.util import sigencode_string, sigdecode_string
-#from sympy.ntheory import sqrt_mod
 
-from .constants import SIGHASH_ALL
+from .constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
+                       DEFAULT_TX_VERSION, SHATOSHIS_PER_BITCOIN, SIGHASH_ALL
+from .script import OP_CODES, script_to_bytes
 
 
-OP_CODES = {
-    'OP_DUP'            : b'\x76',
-    'OP_EQUAL'          : b'\x87',
-    'OP_EQUALVERIFY'    : b'\x88',
-    'OP_HASH160'        : b'\xa9',
-    'OP_CHECKSIG'       : b'\xac'
-}
-
-def op_push_data(data):
-    """Data is hex string ... Blah"""
-    # TODO consult following link for push operators standardness BIP62
-    # https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
-    data_bytes = unhexlify(data)
-
-    if len(data_bytes) < 0x4c:
-        return chr(len(data_bytes)).encode() + data_bytes
-    elif len(data_bytes) < 0xff:
-        return b'\x4c' + chr(len(data_bytes)).encode() + data_bytes
-    elif len(data_bytes) < 0xffff:
-        return b'\x4d' + struct.pack('<H', len(data_bytes)) + data_bytes
-    elif len(data_bytes) < 0xffffffff:
-        return b'\x4e' + struct.pack('<I', len(data_bytes)) + data_bytes
-    else:
-        raise ValueError("Data too large. Cannot push into script")
-
-def script_to_bytes(script):
-    """..."""
-    script_bytes = b''
-    for token in script:
-        if token in OP_CODES:
-            script_bytes += OP_CODES[token]
-        else:
-            script_bytes += op_push_data(token)
-    return script_bytes
-
-
-DEFAULT_TX_SEQUENCE = b'\xff\xff\xff\xff'
-DEFAULT_TX_LOCKTIME = b'\x00\x00\x00\x00'
-# TX version 2 was introduced in BIP-68 with relative locktime -- tx v1 do not
-# support relative locktime
-DEFAULT_TX_VERSION  = b'\x02\x00\x00\x00'
-SHATOSHIS_PER_BITCOIN = 100000000
 
 class TxInput:
-    """Represents an ECDSA private key.
+    """Represents a transaction input.
+
+    A transaction input requires a transaction id of a UTXO and the index of
+    that UTXO.
 
     Attributes
     ----------
-    key : bytes
-        the raw key of 32 bytes
+    txid : str
+        the transaction id as a hex string (little-endian as displayed by
+        tools)
+    txout_index : int
+        the index of the UTXO that we want to spend
+    script_sig : list (strings)
+        the op code and data of the script as string
+    sequence : bytes
+        the input sequence (for timelocks, RBF, etc.)
 
     Methods
     -------
-    from_wif(wif)
-        creates an object from a WIF of WIFC format (string)
-    to_wif(compressed=True)
-        returns as WIFC (compressed) or WIF format (string)
-    to_bytes()
-        returns the key's raw bytes
-    sign_message(message, compressed=True)
-        signs and returns the message with the private key
-    get_public_key()
-        returns the corresponding PublicKey object
+    stream()
+        converts TxInput to bytes
+    copy()
+        creates a copy of the object (classmethod)
     """
 
     def __init__(self, txid, txout_index, script_sig=b'',
                  sequence=DEFAULT_TX_SEQUENCE):
-        """With no parameters a random key is created
+        """See TxInput description"""
 
-        Parameters
-        ----------
-        wif : str, optional
-            the key in WIF of WIFC format (default None)
-        secret_exponent : int, optional
-            used to create a specific key deterministically (default None)
-        """
         # expected in the format used for displaying Bitcoin hashes
         self.txid = txid
         self.txout_index = txout_index
@@ -110,16 +61,17 @@ class TxInput:
 
 
     def stream(self):
+        """Converts to bytes"""
+
         # Internally Bitcoin uses little-endian byte order as it improves
         # speed. Hashes are defined and implemented as big-endian thus
         # those are transmitted in big-endian order. However, when hashes are
         # displayed Bitcoin uses little-endian order because it is sometimes
         # convenient to consider hashes as little-endian integers (and not
         # strings)
-        # https://bitcoin.stackexchange.com/questions/2063/why-does-the-bitcoin-protocol-use-the-little-endian-notation
-        # note struct uses little-endian by default
-        # note that we reverse the byte order for the tx hash since the string
-        # was displayed in little-endian!
+        # - note that we reverse the byte order for the tx hash since the string
+        #   was displayed in little-endian!
+        # - note that python's struct uses little-endian by default
         txid_bytes = unhexlify(self.txid)[::-1]
         txout_bytes = struct.pack('<L', self.txout_index)
         script_sig_bytes = script_to_bytes(self.script_sig)
@@ -130,60 +82,47 @@ class TxInput:
 
     @classmethod
     def copy(cls, txin):
+        """Deep copy of TxInput"""
+
         return cls(txin.txid, txin.txout_index, txin.script_sig,
                        txin.sequence)
 
 
 
 class TxOutput:
-    """Represents an ECDSA public key.
+    """Represents a transaction output
 
     Attributes
     ----------
-    key : bytes
-        the raw public key of 64 bytes (x, y coordinates of the ECDSA curve
+    amount : float
+        the value we want to send to this output (in BTC)
+    script_pubkey : list (string)
+        the script that will lock this amount
 
     Methods
     -------
-    from_hex(hex_str)
-        creates an object from a hex string in SEC format
-    from_message_signature(signature)
-        NO-OP!
-    verify_message(address, signature, message)
-        Class method that constructs the public key, confirms the address and
-        verifies the signature
-    to_hex(compressed=True)
-        returns the key as hex string (in SEC format - compressed by default)
-    to_bytes()
-        returns the key's raw bytes
-    get_address(compressed=True))
-        returns the corresponding Address object
+    stream()
+        converts TxInput to bytes
+    copy()
+        creates a copy of the object (classmethod)
     """
 
 
     def __init__(self, amount, script_pubkey):
-        """
-        Parameters
-        ----------
-        hex_str : str
-            the public key in hex string
+        """See TxOutput description"""
 
-        Raises
-        ------
-        TypeError
-            If first byte of public key (corresponding to SEC format) is
-            invalid.
-        """
-        # ...
         self.amount = amount
         self.script_pubkey = script_pubkey
 
 
     def stream(self):
+        """Converts to bytes"""
+
         # internally all little-endian except hashes
         # note struct uses little-endian by default
         # 0.29*100000000 results in 28999999.999999996 so we round to the
-        # closest integer
+        # closest integer -- this is because the result is represented as
+        # fractions
         amount_bytes = struct.pack('<Q', round(self.amount * SHATOSHIS_PER_BITCOIN))
         script_bytes = script_to_bytes(self.script_pubkey)
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
@@ -192,55 +131,41 @@ class TxOutput:
 
     @classmethod
     def copy(cls, txout):
+        """Deep copy of TxInput"""
+
         return cls(txout.amount, txout.script_pubkey)
 
 
 class Transaction:
-    """Represents a Bitcoin address derived from a public key
+    """Represents a Bitcoin transaction
 
     Attributes
     ----------
-    hash160 : str
-        the hash160 string representation of the address; hash160 represents
-        two consequtive hashes of the public key, first a SHA-256 and then an
-        RIPEMD-160
+    inputs : list (TxInput)
+        A list of all the transaction inputs
+    outputs : list (TxOutput)
+        A list of all the transaction outputs
+    locktime : bytes
+        The transaction's locktime parameter
+    version : bytes
+        The transaction version
 
     Methods
     -------
-    from_address(address)
-        instantiates an object from address string encoding
-    from_hash160(hash160_str)
-        instantiates an object from a hash160 hex string
-    to_address()
-        returns the address's string encoding
-    to_hash160()
-        returns the address's hash160 hex string representation
-
-    Raises
-    ------
-    TypeError
-        No parameters passed
-    ValueError
-        If an invalid address or hash160 is provided.
+    stream()
+        Converts Transaction to bytes
+    serialize()
+        Converts Transaction to hex string
+    copy()
+        creates a copy of the object (classmethod)
+    get_transaction_digest(txin_index, script, sighash)
+        returns the transaction input's digest that is to be signed according
+        to sighash
     """
 
     def __init__(self, inputs=[], outputs=[], locktime=DEFAULT_TX_LOCKTIME,
                  version=DEFAULT_TX_VERSION):
-        """
-        Parameters
-        ----------
-        address : str
-            the address as a string
-        hash160 : str
-            the hash160 hex string representation
-
-        Raises
-        ------
-        TypeError
-            No parameters passed
-        ValueError
-            If an invalid address or hash160 is provided.
-        """
+        """See Transaction description"""
         self.inputs = inputs
         self.outputs = outputs
 
@@ -255,12 +180,32 @@ class Transaction:
 
     @classmethod
     def copy(cls, tx):
+        """Deep copy of TxInput"""
+
         ins = [TxInput.copy(txin) for txin in tx.inputs]
         outs = [TxOutput.copy(txout) for txout in tx.outputs]
         return cls(ins, outs, tx.locktime, tx.version)
 
 
     def get_transaction_digest(self, txin_index, script, sighash=SIGHASH_ALL):
+        """Returns the transaction's digest for signing.
+
+        SIGHASH types (see constants.py):
+            SIGHASH_ALL
+            SIGHASH_NONE
+            SIGHASH_SINGLE
+            SIGHASH_ANYONECANPAY (only combined with one of the above)
+
+        Attributes
+        ----------
+        txin_index : int
+            The index of the input that we wish to sign
+        script : list (string)
+            The scriptPubKey of the UTXO that we want to spend
+        sighash : int
+            The type of the signature hash to be created
+        """
+
         # clone transaction to modify without messing up the tx
         tmp_tx = Transaction.copy(self)
 
@@ -268,20 +213,22 @@ class Transaction:
         for txin in tmp_tx.inputs:
             txin.script_sig = b''
 
-        # the temporary transaction requires to set the scriptSig to the
-        # scriptPubKey of the UTXO we are trying to spend
         # TODO Delete script's OP_CODESEPARATORs, if any
+
+        # the temporary transaction's scriptSig needs to be set to the
+        # scriptPubKey of the UTXO we are trying to spend
         tmp_tx.inputs[txin_index].script_sig = script
 
+        #
         # by default SIGHASH_ALL will be used
-
+        #
         # TODO: here manage NONE SINGLE ANYONECANPAY
         #if sighash=SIGHASH_ALL use stream... not good for other SIGHASHes
 
         # get the byte stream of the temporary transaction
         tx_for_signing = tmp_tx.stream()
 
-        # add sighash to be hashed
+        # add sighash bytes to be hashed
         # Note that although sighash is one byte it is hashed as a 4 byte value.
         # There is no real reason for this other than that the original implementation
         # of Bitcoin stored sighash as an integer (which serializes as a 4
@@ -296,6 +243,8 @@ class Transaction:
 
 
     def stream(self):
+        """Converts to bytes"""
+
         data = self.version
         txin_count_bytes = chr(len(self.inputs)).encode()
         txout_count_bytes = chr(len(self.outputs)).encode()
@@ -310,6 +259,8 @@ class Transaction:
 
 
     def serialize(self):
+        """Converts to hex string"""
+
         return hexlify(self.stream()).decode('utf-8')
 
 
