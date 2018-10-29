@@ -264,44 +264,50 @@ class PrivateKey:
         # to be less than half of the curve order (SECP256k1). If it is not we
         # ensure it is by substrituting it with (order-S).
 
-        # get DER values individually -- DER structure is.. blah
-        #der_prefix = signature[0]
-        #length_total = signature[1]
-        #der_type_int = signature[2]
-        #length_r = signature[3]
-        #R = signature[4:4+length_r]
-        #length_s = signature[5 + length_r]
-        #S = signature[5 + length_r + 1:]
-        #S_as_bigint = int( hexlify(S).decode('utf-8'), 16 )
-        #print("{} {} - {}_{}_{}_{} - {}_{}_{}_{}".format(der_prefix, length_total,
-        #   der_type_int, length_r, R, int(R[0]), der_type_int, length_s, S, int(S[0])))
-        #print(S_as_bigint)
+        # get DER values individually -- DER structure is:
+        #   1-byte   -- 0x30 to specify a DER compound object (R,S)
+        #   1-byte   -- length of the compound object
+        #   1-byte   -- 0x02 to specify integer type for R
+        #   1-byte   -- length of signature's R value
+        #   variable -- R value
+        #   1-byte   -- 0x02 to specify integer type for S
+        #   1-byte   -- length of signature's S value
+        #   variable -- S value
+
+        der_prefix = signature[0]
+        length_total = signature[1]
+        der_type_int = signature[2]
+        length_r = signature[3]
+        R = signature[4:4+length_r]
+        length_s = signature[5 + length_r]
+        S = signature[5 + length_r + 1:]
+        S_as_bigint = int( hexlify(S).decode('utf-8'), 16 )
 
         # update R, S if necessary -- in Bitcoin DER signatures' R should have a
         # prefix of 0x00 only if it starts with 0x80 or higher
         # NOTE this is not necessary since the ecdsa lib takes care of that
 
         # update S if necessary -- Low S standardness rule
-        #half_order = _order // 2
-        # TODO improve logic... what if S started at 33 already! (probably
-        # did!!)
-        #if S_as_bigint > half_order:
-        #    new_S_as_bigint = _order - S_as_bigint
-        #    # convert bigint to bytes - remember no padding necessary!
-        #    new_S = unhexlify( format(new_S_as_bigint, 'x') )
-        #    if new_S[0] >= 0x80:
-        #        new_S = struct.pack('B', 0x00) + new_S
-        #        length_s += 1
-        #        length_total += 1
-        #else:
-        #    new_S = S
-        #new_S = S
+        half_order = _order // 2
+        # if S is larger than half the order then substructed from order and
+        # use that as S since it is equivalent.
+        if S_as_bigint > half_order:
+            # make sure length is 33 bytes (it should be)
+            assert length_s == 0x21
 
-        #print(hexlify(signature).decode('utf-8'))
-        #print("-------------")
-        #signature = struct.pack('BBBB', der_prefix, length_total, der_type_int, length_r) + R + \
-        #                struct.pack('BB', der_type_int, length_s) + new_S
-        #print(hexlify(signature).decode('utf-8'))
+            new_S_as_bigint = _order - S_as_bigint
+            # convert bigint to bytes -- remember no padding necessary!
+            new_S = unhexlify( format(new_S_as_bigint, 'x') )
+            # new value should be 32 bytes
+            assert len(new_S) == 0x20
+            # reduce appropriate lengths 
+            length_s -= 1
+            length_total -= 1
+        else:
+            new_S = S
+
+        signature = struct.pack('BBBB', der_prefix, length_total, der_type_int, length_r) + R + \
+                        struct.pack('BB', der_type_int, length_s) + new_S
 
         # add sighash in the signature -- as one byte!
         signature += struct.pack('B', sighash)
