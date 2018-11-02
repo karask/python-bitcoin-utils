@@ -19,8 +19,8 @@ from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheo
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
 
-from .constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
-from .setup import get_network
+from constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
+from setup import get_network
 
 
 # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
@@ -200,6 +200,7 @@ class PrivateKey:
             28 - 0x1C = first key with odd y
             29 - 0x1D = second key with even y
             30 - 0x1E = second key with odd y
+
         If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
 
         Returns a Bitcoin compact signature in Base64
@@ -330,7 +331,7 @@ class PublicKey:
     Attributes
     ----------
     key : bytes
-        the raw public key of 64 bytes (x, y coordinates of the ECDSA curve
+        the raw public key of 64 bytes (x, y coordinates of the ECDSA curve)
 
     Methods
     -------
@@ -457,6 +458,7 @@ class PublicKey:
             28 - 0x1C = first key with odd y
             29 - 0x1D = second key with even y
             30 - 0x1E = second key with odd y
+
         If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
 
         Raises

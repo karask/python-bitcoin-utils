@@ -13,9 +13,9 @@ import hashlib
 import struct
 from binascii import unhexlify, hexlify
 
-from .constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
-                       DEFAULT_TX_VERSION, SHATOSHIS_PER_BITCOIN, SIGHASH_ALL
-from .script import OP_CODES, script_to_bytes
+from constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
+                      DEFAULT_TX_VERSION, SHATOSHIS_PER_BITCOIN, SIGHASH_ALL
+from script import OP_CODES, script_to_bytes
 
 
 
