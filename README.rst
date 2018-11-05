@@ -15,9 +15,9 @@ $ pip install bitcoin-utils
 Examples
 --------
 Keys and Addresses
-  examples/keys_addresses.py -- creates a private key which we use to derive a public key and in turn an address. We also use the private key to sign a message and then verify it using the public key. 
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/keys_addresses.py - creates a private key which we use to derive a public key and in turn an address. We also use the private key to sign a message and then verify it using the public key. 
 
 Create P2PKH Transaction
-  examples/p2pkh_transaction.py --creates a simple transaction with one input and two outputs.
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/p2pkh_transaction.py - creates a simple transaction with one input and two outputs.
 
 Please explore the code base or the API documentation (BitcoinUtilities.pdf) for supported functionality and other options.
