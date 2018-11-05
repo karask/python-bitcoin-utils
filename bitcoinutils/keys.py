@@ -19,8 +19,8 @@ from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheo
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
 
-from constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
-from setup import get_network
+from bitcoinutils.constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
+from bitcoinutils.setup import get_network
 
 
 # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7

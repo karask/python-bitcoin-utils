@@ -11,10 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   usage/privkeys
-   usage/pubkeys
-   usage/addresses
-   usage/p2pkh_transactions
+   usage/keys
+   usage/transactions
 
 
 Indices and tables

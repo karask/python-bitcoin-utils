@@ -13,9 +13,9 @@ import hashlib
 import struct
 from binascii import unhexlify, hexlify
 
-from constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
+from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                       DEFAULT_TX_VERSION, SHATOSHIS_PER_BITCOIN, SIGHASH_ALL
-from script import OP_CODES, script_to_bytes
+from bitcoinutils.script import OP_CODES, script_to_bytes
 
 
 
@@ -131,7 +131,7 @@ class TxOutput:
 
     @classmethod
     def copy(cls, txout):
-        """Deep copy of TxInput"""
+        """Deep copy of TxOutput"""
 
         return cls(txout.amount, txout.script_pubkey)
 
@@ -180,7 +180,7 @@ class Transaction:
 
     @classmethod
     def copy(cls, tx):
-        """Deep copy of TxInput"""
+        """Deep copy of Transaction"""
 
         ins = [TxInput.copy(txin) for txin in tx.inputs]
         outs = [TxOutput.copy(txout) for txout in tx.outputs]
