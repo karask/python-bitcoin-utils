@@ -14,10 +14,6 @@ def main():
     txout = TxOutput(0.1, ['OP_DUP', 'OP_HASH160', addr.to_hash160(),
                            'OP_EQUALVERIFY', 'OP_CHECKSIG'])
 
-    #addr = Address('2MxQYbQLegzGTQFy11d3ZM3X4pMLayXEErb')
-    #txout = TxOutput(0.2, ['OP_HASH160', addr.to_hash160(), 'OP_EQUAL'])
-    #change_addr = Address('mytmhndz4UbEMeoSZorXXrLpPfeoFUDzEp')
-
     # create another output to get the change - remaining 0.01 is tx fees
     change_addr = Address('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
     change_txout = TxOutput(0.29, ['OP_DUP', 'OP_HASH160',
