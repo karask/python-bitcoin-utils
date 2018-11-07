@@ -230,8 +230,8 @@ class PrivateKey:
                 continue
 
 
-    def sign_input(self, tx, txin_index, script, sighash=SIGHASH_ALL, compressed=True):
-        """Signs a transaction with the private key
+    def sign_input(self, tx, txin_index, script, sighash=SIGHASH_ALL):
+        """Signs a transaction input with the private key
 
         Bitcoin uses the normal DER format for transactions. Each input is
         signed separately (thus txin_index is required). The script of the
@@ -301,7 +301,7 @@ class PrivateKey:
             new_S = unhexlify( format(new_S_as_bigint, 'x') )
             # new value should be 32 bytes
             assert len(new_S) == 0x20
-            # reduce appropriate lengths 
+            # reduce appropriate lengths
             length_s -= 1
             length_total -= 1
         else:

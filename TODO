@@ -1,5 +1,6 @@
 - sign_message should be deterministic
 - add SIGHASH NONE/SINGLE/ANYONECANPAY
+- test create p2pkh transaction with >1 inputs
 - add P2SH addresses and tx creation (abstract Address)
 
 - make all code < 80 chars !?

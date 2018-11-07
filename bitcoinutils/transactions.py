@@ -14,7 +14,8 @@ import struct
 from binascii import unhexlify, hexlify
 
 from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
-                      DEFAULT_TX_VERSION, SHATOSHIS_PER_BITCOIN, SIGHASH_ALL
+                      DEFAULT_TX_VERSION, SHATOSHIS_PER_BITCOIN, SIGHASH_ALL, \
+                      SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
 from bitcoinutils.script import OP_CODES, script_to_bytes
 
 
@@ -120,6 +121,7 @@ class TxOutput:
 
         # internally all little-endian except hashes
         # note struct uses little-endian by default
+
         # 0.29*100000000 results in 28999999.999999996 so we round to the
         # closest integer -- this is because the result is represented as
         # fractions
@@ -156,6 +158,8 @@ class Transaction:
         Converts Transaction to bytes
     serialize()
         Converts Transaction to hex string
+    get_txid()
+        Calculates txid and returns it
     copy()
         creates a copy of the object (classmethod)
     get_transaction_digest(txin_index, script, sighash)
@@ -191,10 +195,13 @@ class Transaction:
         """Returns the transaction's digest for signing.
 
         SIGHASH types (see constants.py):
-            SIGHASH_ALL
-            SIGHASH_NONE
-            SIGHASH_SINGLE
+            SIGHASH_ALL - signs all inputs and outputs (default)
+            SIGHASH_NONE - signs all of the inputs
+            SIGHASH_SINGLE - signs all inputs but only txin_index output
             SIGHASH_ANYONECANPAY (only combined with one of the above)
+                with ALL - signs all outputs but only txin_index input
+                with NONE - signs only the txin_index input
+                with SINGLE - signs txin_index input and output
 
         Attributes
         ----------
@@ -206,24 +213,63 @@ class Transaction:
             The type of the signature hash to be created
         """
 
-        # clone transaction to modify without messing up the tx
+        # clone transaction to modify without messing up the real transaction
         tmp_tx = Transaction.copy(self)
 
         # make sure all input scriptSigs are empty
         for txin in tmp_tx.inputs:
             txin.script_sig = b''
 
-        # TODO Delete script's OP_CODESEPARATORs, if any
+        #
+        # TODO Deal with (delete?) script's OP_CODESEPARATORs, if any
+        # Very early versions of Bitcoin were using a different design for
+        # scripts that were flawed. OP_CODESEPARATOR has no purpose currently
+        # but we could not delete it for compatibility purposes. If it exists
+        # in a script it needs to be removed.
+        #
 
         # the temporary transaction's scriptSig needs to be set to the
-        # scriptPubKey of the UTXO we are trying to spend
+        # scriptPubKey of the UTXO we are trying to spend - this is required to
+        # get the correct transaction digest (which is then signed)
         tmp_tx.inputs[txin_index].script_sig = script
 
         #
-        # by default SIGHASH_ALL will be used
+        # by default we sign all inputs/outputs (SIGHASH_ALL is used)
         #
-        # TODO: here manage NONE SINGLE ANYONECANPAY
-        #if sighash=SIGHASH_ALL use stream... not good for other SIGHASHes
+
+        # whether 0x0n or 0x8n, bitwise AND'ing will result to n
+        if (sighash & 0x1f) == SIGHASH_NONE:
+            # do not include outputs in digest (i.e. do not sign outputs)
+            tmp_tx.outputs = []
+
+            # do not include sequence of other inputs (zero them for digest)
+            for i in range(len(tmp_tx.inputs)):
+                if i != txin_index:
+                    tmp_tx.inputs[i].sequence = 0x0000000000000000
+
+        elif (sighash & 0x1f) == SIGHASH_SINGLE:
+            # only sign the output that corresponds to txin_index
+
+            if txin_index >= len(tmp_tx.outputs):
+                raise ValueError('Transaction index is greater than the \
+                                 available outputs')
+
+            # zero out all outputs except the one corresponding to txin_index
+            txout_len = len(tmp_tx.outputs)
+            txout = tmp_tx.outputs[txin_index]
+            tmp_tx.outputs = []
+            for i in range(txout_len):
+                tmp_tx.outputs.append( TxOutput(0, []) )
+            tmp_tx.outputs[txin_index] = txout
+
+            # do not include sequence of other inputs (zero them for digest)
+            for i in range(len(tmp_tx.inputs)):
+                if i != txin_index:
+                    tmp_tx.inputs[i].sequence = 0x0000000000000000
+
+        # bitwise AND'ing 0x8n to 0x80 will result to true
+        if sighash & SIGHASH_ANYONECANPAY:
+            pass
 
         # get the byte stream of the temporary transaction
         tx_for_signing = tmp_tx.stream()
@@ -258,6 +304,15 @@ class Transaction:
         return data
 
 
+    def get_txid(self):
+        """Hashes the serialized tx to get a unique id"""
+
+        data = self.stream()
+        hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
+        # note that we reverse the hash for display purposes
+        return hexlify(hash[::-1]).decode('utf-8')
+
+
     def serialize(self):
         """Converts to hex string"""
 
@@ -265,6 +320,7 @@ class Transaction:
 
 
 def main():
+    # READ SEGWIT BIPs
     # READ EXAMPLE SERIALIZATION OF SEGWIT TX:
     # https://medium.com/coinmonks/how-to-create-a-raw-bitcoin-transaction-step-by-step-239b888e87f2
     pass
