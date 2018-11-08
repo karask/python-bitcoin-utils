@@ -17,7 +17,7 @@ from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     DEFAULT_TX_VERSION, SATOSHIS_PER_BITCOIN, NEGATIVE_SATOSHI, \
                     EMPTY_TX_SEQUENCE, SIGHASH_ALL, SIGHASH_NONE, \
                     SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
-from bitcoinutils.script import OP_CODES, script_to_bytes
+from bitcoinutils.script import Script
 
 
 
@@ -47,7 +47,7 @@ class TxInput:
         creates a copy of the object (classmethod)
     """
 
-    def __init__(self, txid, txout_index, script_sig=b'',
+    def __init__(self, txid, txout_index, script_sig=Script([]),
                  sequence=DEFAULT_TX_SEQUENCE):
         """See TxInput description"""
 
@@ -76,7 +76,7 @@ class TxInput:
         # - note that python's struct uses little-endian by default
         txid_bytes = unhexlify(self.txid)[::-1]
         txout_bytes = struct.pack('<L', self.txout_index)
-        script_sig_bytes = script_to_bytes(self.script_sig)
+        script_sig_bytes = self.script_sig.to_bytes()
         data = txid_bytes + txout_bytes + \
                 struct.pack('B', len(script_sig_bytes)) + \
                 script_sig_bytes + self.sequence
@@ -127,7 +127,7 @@ class TxOutput:
         # closest integer -- this is because the result is represented as
         # fractions
         amount_bytes = struct.pack('<q', round(self.amount * SATOSHIS_PER_BITCOIN))
-        script_bytes = script_to_bytes(self.script_pubkey)
+        script_bytes = self.script_pubkey.to_bytes()
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
         return data
 
@@ -219,7 +219,7 @@ class Transaction:
 
         # make sure all input scriptSigs are empty
         for txin in tmp_tx.inputs:
-            txin.script_sig = b''
+            txin.script_sig = Script([])
 
         #
         # TODO Deal with (delete?) script's OP_CODESEPARATORs, if any
@@ -261,7 +261,7 @@ class Transaction:
             txout = tmp_tx.outputs[txin_index]
             tmp_tx.outputs = []
             for i in range(txin_index):
-                tmp_tx.outputs.append( TxOutput(NEGATIVE_SATOSHI, []) )
+                tmp_tx.outputs.append( TxOutput(NEGATIVE_SATOSHI, Script([])) )
             tmp_tx.outputs.append(txout)
 
             # do not include sequence of other inputs (zero them for digest)

@@ -21,44 +21,68 @@ OP_CODES = {
     'OP_CHECKSIG'       : b'\xac'
 }
 
-def op_push_data(data):
-    """Converts data to appropriate OP_PUSHDATA OP code including length
+class Script:
+    """Represents any script in Bitcoin
 
-    0x01-0x4b           -> just length plus data bytes
-    0x4c-0xff           -> OP_PUSHDATA1 plus 1-byte-length plus data bytes
-    0x0100-0xffff       -> OP_PUSHDATA2 plus 2-byte-length plus data bytes
-    0x010000-0xffffffff -> OP_PUSHDATA4 plus 4-byte-length plus data bytes
+    A Script contains just a list of OP_CODES and also knows how to serialize
+    into bytes
 
-    Also note that according to standarardness rules (BIP-62) the minimum
-    possible PUSHDATA operator must be used!
+    Attributes
+    ----------
+    script : list
+        the list with all the script OP_CODES and data
+
+    Methods
+    -------
+    to_bytes()
+        returns a serialized byte version of the script
     """
-    data_bytes = unhexlify(data)
 
-    if len(data_bytes) < 0x4c:
-        return chr(len(data_bytes)).encode() + data_bytes
-    elif len(data_bytes) < 0xff:
-        return b'\x4c' + chr(len(data_bytes)).encode() + data_bytes
-    elif len(data_bytes) < 0xffff:
-        return b'\x4d' + struct.pack('<H', len(data_bytes)) + data_bytes
-    elif len(data_bytes) < 0xffffffff:
-        return b'\x4e' + struct.pack('<I', len(data_bytes)) + data_bytes
-    else:
-        raise ValueError("Data too large. Cannot push into script")
+    def __init__(self, script):
+        """See Script description"""
 
-def script_to_bytes(script):
-    """Converts a script to bytes
+        self.script = script
 
-    If an OP code the appropriate byte is included according to:
-    https://en.bitcoin.it/wiki/Script
-    If not consider it data (signature, public key, public key hash, etc.) and
-    and include with appropriate OP_PUSHDATA OP code plus length
-    """
-    script_bytes = b''
-    for token in script:
-        if token in OP_CODES:
-            script_bytes += OP_CODES[token]
+
+    def _op_push_data(self, data):
+        """Converts data to appropriate OP_PUSHDATA OP code including length
+
+        0x01-0x4b           -> just length plus data bytes
+        0x4c-0xff           -> OP_PUSHDATA1 plus 1-byte-length plus data bytes
+        0x0100-0xffff       -> OP_PUSHDATA2 plus 2-byte-length plus data bytes
+        0x010000-0xffffffff -> OP_PUSHDATA4 plus 4-byte-length plus data bytes
+
+        Also note that according to standarardness rules (BIP-62) the minimum
+        possible PUSHDATA operator must be used!
+        """
+        data_bytes = unhexlify(data)
+
+        if len(data_bytes) < 0x4c:
+            return chr(len(data_bytes)).encode() + data_bytes
+        elif len(data_bytes) < 0xff:
+            return b'\x4c' + chr(len(data_bytes)).encode() + data_bytes
+        elif len(data_bytes) < 0xffff:
+            return b'\x4d' + struct.pack('<H', len(data_bytes)) + data_bytes
+        elif len(data_bytes) < 0xffffffff:
+            return b'\x4e' + struct.pack('<I', len(data_bytes)) + data_bytes
         else:
-            script_bytes += op_push_data(token)
-    return script_bytes
+            raise ValueError("Data too large. Cannot push into script")
+
+
+    def to_bytes(self):
+        """Converts the script to bytes
+
+        If an OP code the appropriate byte is included according to:
+        https://en.bitcoin.it/wiki/Script
+        If not consider it data (signature, public key, public key hash, etc.) and
+        and include with appropriate OP_PUSHDATA OP code plus length
+        """
+        script_bytes = b''
+        for token in self.script:
+            if token in OP_CODES:
+                script_bytes += OP_CODES[token]
+            else:
+                script_bytes += self._op_push_data(token)
+        return script_bytes
 
 
