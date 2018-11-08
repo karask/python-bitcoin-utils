@@ -15,10 +15,12 @@ SIGHASH_SINGLE = 0x03
 SIGHASH_ANYONECANPAY = 0x80
 
 DEFAULT_TX_SEQUENCE = b'\xff\xff\xff\xff'
+EMPTY_TX_SEQUENCE = b'\x00\x00\x00\x00'
 DEFAULT_TX_LOCKTIME = b'\x00\x00\x00\x00'
 
 # TX version 2 was introduced in BIP-68 with relative locktime -- tx v1 
 # does not support relative locktime
 DEFAULT_TX_VERSION  = b'\x02\x00\x00\x00'
 
-SHATOSHIS_PER_BITCOIN = 100000000
+SATOSHIS_PER_BITCOIN = 100000000
+NEGATIVE_SATOSHI = -0.00000001

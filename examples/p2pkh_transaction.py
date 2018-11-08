@@ -27,9 +27,13 @@ def main():
     print("\nRaw unsigned transaction:\n" + tx.serialize())
 
     # use the private key corresponding to the address that contains the
-    # UTXO we are trying to spend
-    from_addr = Address('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
+    # UTXO we are trying to spend to sign the input
     sk = PrivateKey('cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9')
+
+    # note that we pass the scriptPubkey as one of the inputs of sign_input
+    # because it is used to replace the scriptSig of the UTXO we are trying to
+    # spend when creating the transaction digest
+    from_addr = Address('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
     sig = sk.sign_input(tx, 0, ['OP_DUP', 'OP_HASH160',
                                 from_addr.to_hash160(), 'OP_EQUALVERIFY',
                                 'OP_CHECKSIG'])

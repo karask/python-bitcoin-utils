@@ -14,8 +14,9 @@ import struct
 from binascii import unhexlify, hexlify
 
 from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
-                      DEFAULT_TX_VERSION, SHATOSHIS_PER_BITCOIN, SIGHASH_ALL, \
-                      SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
+                    DEFAULT_TX_VERSION, SATOSHIS_PER_BITCOIN, NEGATIVE_SATOSHI, \
+                    EMPTY_TX_SEQUENCE, SIGHASH_ALL, SIGHASH_NONE, \
+                    SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
 from bitcoinutils.script import OP_CODES, script_to_bytes
 
 
@@ -125,7 +126,7 @@ class TxOutput:
         # 0.29*100000000 results in 28999999.999999996 so we round to the
         # closest integer -- this is because the result is represented as
         # fractions
-        amount_bytes = struct.pack('<Q', round(self.amount * SHATOSHIS_PER_BITCOIN))
+        amount_bytes = struct.pack('<q', round(self.amount * SATOSHIS_PER_BITCOIN))
         script_bytes = script_to_bytes(self.script_pubkey)
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
         return data
@@ -243,9 +244,10 @@ class Transaction:
             tmp_tx.outputs = []
 
             # do not include sequence of other inputs (zero them for digest)
+            # which means that they can be replaced
             for i in range(len(tmp_tx.inputs)):
                 if i != txin_index:
-                    tmp_tx.inputs[i].sequence = 0x0000000000000000
+                    tmp_tx.inputs[i].sequence = EMPTY_TX_SEQUENCE
 
         elif (sighash & 0x1f) == SIGHASH_SINGLE:
             # only sign the output that corresponds to txin_index
@@ -254,22 +256,25 @@ class Transaction:
                 raise ValueError('Transaction index is greater than the \
                                  available outputs')
 
-            # zero out all outputs except the one corresponding to txin_index
-            txout_len = len(tmp_tx.outputs)
+            # keep only output that corresponds to txin_index -- delete all outputs
+            # after txin_index and zero out all outputs upto txin_index
             txout = tmp_tx.outputs[txin_index]
             tmp_tx.outputs = []
-            for i in range(txout_len):
-                tmp_tx.outputs.append( TxOutput(0, []) )
-            tmp_tx.outputs[txin_index] = txout
+            for i in range(txin_index):
+                tmp_tx.outputs.append( TxOutput(NEGATIVE_SATOSHI, []) )
+            tmp_tx.outputs.append(txout)
 
             # do not include sequence of other inputs (zero them for digest)
+            # which means that they can be replaced
             for i in range(len(tmp_tx.inputs)):
                 if i != txin_index:
-                    tmp_tx.inputs[i].sequence = 0x0000000000000000
+                    tmp_tx.inputs[i].sequence = EMPTY_TX_SEQUENCE
 
         # bitwise AND'ing 0x8n to 0x80 will result to true
         if sighash & SIGHASH_ANYONECANPAY:
-            pass
+            # ignore all other inputs from the signature which means that
+            # anyone can add new inputs
+            tmp_tx.inputs = [tmp_tx.inputs[txin_index]]
 
         # get the byte stream of the temporary transaction
         tx_for_signing = tmp_tx.stream()
