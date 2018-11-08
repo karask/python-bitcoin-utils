@@ -200,9 +200,9 @@ class Transaction:
             SIGHASH_NONE - signs all of the inputs
             SIGHASH_SINGLE - signs all inputs but only txin_index output
             SIGHASH_ANYONECANPAY (only combined with one of the above)
-                with ALL - signs all outputs but only txin_index input
-                with NONE - signs only the txin_index input
-                with SINGLE - signs txin_index input and output
+            - with ALL - signs all outputs but only txin_index input
+            - with NONE - signs only the txin_index input
+            - with SINGLE - signs txin_index input and output
 
         Attributes
         ----------
