@@ -9,6 +9,9 @@ NETWORK_P2PKH_PREFIXES = { 'mainnet': b'\x00',
 NETWORK_P2SH_PREFIXES = { 'mainnet': b'\x05',
                           'testnet': b'\xc4' }
 
+P2PKH_ADDRESS = "p2pkh"
+P2SH_ADDRESS = "p2sh"
+
 SIGHASH_ALL = 0x01
 SIGHASH_NONE = 0x02
 SIGHASH_SINGLE = 0x03
@@ -18,7 +21,7 @@ DEFAULT_TX_SEQUENCE = b'\xff\xff\xff\xff'
 EMPTY_TX_SEQUENCE = b'\x00\x00\x00\x00'
 DEFAULT_TX_LOCKTIME = b'\x00\x00\x00\x00'
 
-# TX version 2 was introduced in BIP-68 with relative locktime -- tx v1 
+# TX version 2 was introduced in BIP-68 with relative locktime -- tx v1
 # does not support relative locktime
 DEFAULT_TX_VERSION  = b'\x02\x00\x00\x00'
 

@@ -2,7 +2,9 @@ import unittest
 
 from context import bitcoinutils
 from bitcoinutils.setup import setup, get_network
-from bitcoinutils.keys import PrivateKey, PublicKey, Address
+from bitcoinutils.keys import PrivateKey, PublicKey, P2pkhAddress, \
+        P2shAddress
+from bitcoinutils.script import Script
 
 class TestPrivateKeys(unittest.TestCase):
     def setUp(self):
@@ -51,7 +53,7 @@ class TestPublicKeys(unittest.TestCase):
         self.assertEqual(pub.get_address(compressed=False).to_address(), self.address)
 
 
-class TestAddresses(unittest.TestCase):
+class TestP2pkhAddresses(unittest.TestCase):
     def setUp(self):
         setup('mainnet')
         self.hash160 = '91b24bf9f5288532960ac687abb035127b1d28a5'
@@ -60,15 +62,15 @@ class TestAddresses(unittest.TestCase):
         self.addressc = '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH'
 
     def test_creation_hash(self):
-        a1 = Address.from_hash160(self.hash160)
+        a1 = P2pkhAddress.from_hash160(self.hash160)
         self.assertEqual(a1.to_address(), self.address)
-        a2 = Address.from_hash160(self.hash160c)
+        a2 = P2pkhAddress.from_hash160(self.hash160c)
         self.assertEqual(a2.to_address(), self.addressc)
 
     def test_creation_address(self):
-        a1 = Address.from_address(self.address)
+        a1 = P2pkhAddress.from_address(self.address)
         self.assertEqual(a1.to_hash160(), self.hash160)
-        a2 = Address.from_address(self.addressc)
+        a2 = P2pkhAddress.from_address(self.addressc)
         self.assertEqual(a2.to_hash160(), self.hash160c)
 
 
@@ -91,6 +93,19 @@ class TestSignAndVerify(unittest.TestCase):
         self.assertTrue(PublicKey.verify_message(self.external_address,
                                                  self.external_signature,
                                                  self.message))
+
+class TestP2shAddresses(unittest.TestCase):
+    def setUp(self):
+        setup('mainnet')
+        self.priv = PrivateKey.from_wif('5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf')
+        self.pub = self.priv.get_public_key()
+        self.script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
+        self.p2sh_address = '2N2oRX99iRKav4qqYaYdi3omcqdAYu7eQ5c'
+
+    def test_p2sh_creation(self):
+        addr = P2shAddress.from_script(self.script)
+        self.assertTrue(addr.to_address(), self.p2sh_address)
+
 
 if __name__ == '__main__':
     unittest.main()

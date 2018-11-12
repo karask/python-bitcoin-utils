@@ -1,5 +1,5 @@
 from bitcoinutils.setup import setup
-from bitcoinutils.keys import Address, PrivateKey, PublicKey
+from bitcoinutils.keys import P2pkhAddress, PrivateKey, PublicKey
 
 def main():
     # always remember to setup the network

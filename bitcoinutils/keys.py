@@ -12,6 +12,7 @@
 import re
 import struct
 import hashlib
+from abc import ABC, abstractmethod
 from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
@@ -19,8 +20,11 @@ from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheo
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
 
-from bitcoinutils.constants import NETWORK_WIF_PREFIXES, NETWORK_P2PKH_PREFIXES, SIGHASH_ALL
+from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
+        NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
+        P2PKH_ADDRESS, P2SH_ADDRESS
 from bitcoinutils.setup import get_network
+from bitcoinutils.script import Script
 
 
 # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
@@ -347,7 +351,7 @@ class PublicKey:
     to_bytes()
         returns the key's raw bytes
     get_address(compressed=True))
-        returns the corresponding Address object
+        returns the corresponding P2pkhAddress object
     """
 
 
@@ -550,7 +554,7 @@ class PublicKey:
 
 
     def get_address(self, compressed=True):
-        """Returns the corresponding Address (default compressed)"""
+        """Returns the corresponding P2PKH Address (default compressed)"""
 
         pubkey = unhexlify( self.to_hex(compressed) )
         hashsha256 = hashlib.sha256(pubkey).digest()
@@ -558,17 +562,17 @@ class PublicKey:
         hashripemd160.update(hashsha256)
         hash160 = hashripemd160.digest()
         addr_string_hex = hexlify(hash160).decode('utf-8')
-        return Address(hash160=addr_string_hex)
+        return P2pkhAddress(hash160=addr_string_hex)
 
 
-class Address:
+class Address(ABC):
     """Represents a Bitcoin address
 
     Attributes
     ----------
     hash160 : str
         the hash160 string representation of the address; hash160 represents
-        two consequtive hashes of the public key or the redeam script, first 
+        two consequtive hashes of the public key or the redeam script, first
         a SHA-256 and then an RIPEMD-160
 
     Methods
@@ -577,6 +581,8 @@ class Address:
         instantiates an object from address string encoding
     from_hash160(hash160_str)
         instantiates an object from a hash160 hex string
+    from_script(redeem_script)
+        instantiates an object from a redeem_script
     to_address()
         returns the address's string encoding
     to_hash160()
@@ -589,8 +595,8 @@ class Address:
     ValueError
         If an invalid address or hash160 is provided.
     """
-
-    def __init__(self, address=None, hash160=None):
+    @abstractmethod
+    def __init__(self, address=None, hash160=None, script=None):
         """
         Parameters
         ----------
@@ -598,6 +604,8 @@ class Address:
             the address as a string
         hash160 : str
             the hash160 hex string representation
+        script : Script object
+            instantiates an Address object from a redeem script
 
         Raises
         ------
@@ -617,8 +625,15 @@ class Address:
                 self.hash160 = self._address_to_hash160(address)
             else:
                 raise ValueError("Invalid value for parameter address.")
+        elif script:
+            # TODO for now just check that is an instance of Script
+            if isinstance(script, Script):
+                self.hash160 = self._script_to_hash160(script)
+            else:
+                raise TypeError("A Script class is required.")
         else:
             raise TypeError("A valid address or hash160 is required.")
+
 
     @classmethod
     def from_address(cls, address):
@@ -634,6 +649,13 @@ class Address:
         return cls(hash160=hash160)
 
 
+    @classmethod
+    def from_script(cls, script):
+        """Creates and address object from a Script object"""
+
+        return cls(script=script)
+
+
     def _address_to_hash160(self, address):
         """Converts an address to it's hash160 equivalent
 
@@ -646,6 +668,20 @@ class Address:
         data = data_checksum[1:-4]
         #checksum = data_checksum[-4:]
         return hexlify(data).decode('utf-8')
+
+
+    def _script_to_hash160(self, script):
+        """Converts an address to it's hash160 equivalent
+
+	Base58CheckDecode the address and remove network_prefix and checksum.
+	"""
+
+        script_bytes = script.to_bytes()
+        hashsha256 = hashlib.sha256(script_bytes).digest()
+        hashripemd160 = hashlib.new('ripemd160')
+        hashripemd160.update(hashsha256)
+        hash160 = hashripemd160.digest()
+        return hexlify(hash160).decode('utf-8')
 
 
     def _is_hash160_valid(self, hash160):
@@ -683,6 +719,14 @@ class Address:
         network_prefix = data_checksum[:1]
         checksum = data_checksum[-4:]
 
+        # check correct network (depending on address type)
+        if self.get_type() == P2PKH_ADDRESS:
+            if network_prefix != NETWORK_P2PKH_PREFIXES[get_network()]:
+                return False
+        elif self.get_type() == P2SH_ADDRESS:
+            if network_prefix != NETWORK_P2SH_PREFIXES[get_network()]:
+                return False
+
         # check address' checksum
         data_hash = hashlib.sha256(hashlib.sha256(data).digest()).digest()
 
@@ -714,12 +758,43 @@ class Address:
         hash160_encoded = self.hash160.encode('utf-8')
         hash160_bytes = unhexlify(hash160_encoded)
 
-        data = NETWORK_P2PKH_PREFIXES[get_network()] + hash160_bytes
+        if self.get_type() == P2PKH_ADDRESS:
+            data = NETWORK_P2PKH_PREFIXES[get_network()] + hash160_bytes
+        elif self.get_type() == P2SH_ADDRESS:
+            data = NETWORK_P2SH_PREFIXES[get_network()] + hash160_bytes
+
         data_hash = hashlib.sha256(hashlib.sha256(data).digest()).digest()
         checksum = data_hash[0:4]
         address_bytes = b58encode( data + checksum )
 
         return address_bytes.decode('utf-8')
+
+
+class P2pkhAddress(Address):
+    """Encapsulates a P2PKH address.
+
+    Check Address class for details
+    """
+
+    def __init__(self, address=None, hash160=None):
+        super().__init__(address=address, hash160=hash160)
+
+    def get_type(self):
+        return P2PKH_ADDRESS
+
+
+class P2shAddress(Address):
+    """Encapsulates a P2PKH address.
+
+    Check Address class for details
+    """
+
+    def __init__(self, address=None, hash160=None, script=None):
+        super().__init__(address=address, hash160=hash160, script=script)
+
+    def get_type(self):
+        return P2SH_ADDRESS
+
 
 
 def main():
