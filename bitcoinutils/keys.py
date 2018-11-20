@@ -24,7 +24,7 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
         P2PKH_ADDRESS, P2SH_ADDRESS
 from bitcoinutils.setup import get_network
-from bitcoinutils.script import Script
+import bitcoinutils.script
 
 
 # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
@@ -311,6 +311,7 @@ class PrivateKey:
         else:
             new_S = S
 
+        # reconstruct signature
         signature = struct.pack('BBBB', der_prefix, length_total, der_type_int, length_r) + R + \
                         struct.pack('BB', der_type_int, length_s) + new_S
 
@@ -627,7 +628,7 @@ class Address(ABC):
                 raise ValueError("Invalid value for parameter address.")
         elif script:
             # TODO for now just check that is an instance of Script
-            if isinstance(script, Script):
+            if isinstance(script, bitcoinutils.script.Script):
                 self.hash160 = self._script_to_hash160(script)
             else:
                 raise TypeError("A Script class is required.")
@@ -671,9 +672,9 @@ class Address(ABC):
 
 
     def _script_to_hash160(self, script):
-        """Converts an address to it's hash160 equivalent
+        """Converts a script to it's hash160 equivalent
 
-	Base58CheckDecode the address and remove network_prefix and checksum.
+        RIPEMD160( SHA256( script ) )
 	"""
 
         script_bytes = script.to_bytes()

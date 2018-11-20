@@ -12,6 +12,9 @@
 import struct
 from binascii import unhexlify, hexlify
 
+import bitcoinutils.keys
+
+
 # Bitcoin's op codes. Complete list at: https://en.bitcoin.it/wiki/Script
 OP_CODES = {
     'OP_DUP'            : b'\x76',
@@ -84,5 +87,23 @@ class Script:
             else:
                 script_bytes += self._op_push_data(token)
         return script_bytes
+
+    def to_hex(self):
+        """Converts the script to hexadecimal"""
+
+        b = self.to_bytes()
+        return hexlify(b).decode('utf-8')
+
+
+    def to_p2sh_script_pub_key(self):
+        """Converts script to p2sh scriptPubKey (locking script)
+
+        Calculates the hash160 (via the address) of the script and uses it to
+        construct a P2SH script.
+        """
+
+        address = bitcoinutils.keys.P2shAddress.from_script(self)
+        return Script(['OP_HASH160', address.to_hash160(), 'OP_EQUAL'])
+
 
 

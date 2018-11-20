@@ -1,6 +1,9 @@
+- add P2pkhAddress.to_script_pub_key() and update some tests/examples
 - sign_message should be deterministic
-- abstract Address for p2pkh and p2sh
-- add P2SH addresses and tx creation (abstract Address)
-
+- fix doc columns (newline does not exist!)
+- add explicit documentation for each module before members...
+- add all (?) opcodes in Script to be made available to P2SH
+- add test for default P2PK
+- segwit
 - make all code < 80 chars !?
 

@@ -96,14 +96,16 @@ class TestSignAndVerify(unittest.TestCase):
 
 class TestP2shAddresses(unittest.TestCase):
     def setUp(self):
-        setup('mainnet')
-        self.priv = PrivateKey.from_wif('5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf')
+        setup('testnet')
+        self.priv = PrivateKey.from_wif('cTALNpTpRbbxTCJ2A5Vq88UxT44w1PE2cYqiB3n4hRvzyCev1Wwo')
         self.pub = self.priv.get_public_key()
-        self.script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
-        self.p2sh_address = '2N2oRX99iRKav4qqYaYdi3omcqdAYu7eQ5c'
+        self.p2sh_address = '2NDkr9uD2MSY5em3rsjkff8fLZcJzCfY3W1'
 
     def test_p2sh_creation(self):
-        addr = P2shAddress.from_script(self.script)
+        script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
+        addr = P2shAddress.from_script(script)
+        print(addr.to_address())
+        print(self.p2sh_address)
         self.assertTrue(addr.to_address(), self.p2sh_address)
 
 

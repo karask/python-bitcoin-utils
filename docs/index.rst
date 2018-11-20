@@ -13,6 +13,7 @@ Contents:
 
    usage/keys
    usage/transactions
+   usage/script
 
 
 Indices and tables
