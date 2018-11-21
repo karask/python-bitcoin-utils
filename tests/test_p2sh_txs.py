@@ -24,14 +24,12 @@ class TestCreateP2shTransaction(unittest.TestCase):
         self.txin_spend = TxInput('7db363d5a7fabb64ccce154e906588f1936f34481223ea8c1f2c935b0a0c945b', 0)
         # self.p2pk_sk , self.p2pk_redeem_script from above
         self.to_addr = self.from_addr
-        self.txout2 = TxOutput( 0.08, Script(['OP_DUP', 'OP_HASH160', self.to_addr.to_hash160(), 'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
+        self.txout2 = TxOutput( 0.08, self.to_addr.to_script_pub_key() )
         self.spend_p2sh_result = '02000000015b940c0a5b932c1f8cea231248346f93f18865904e15cecc64bbfaa7d563b37d000000006c47304402204984c2089bf55d5e24851520ea43c431b0d79f90d464359899f27fb40a11fbd302201cc2099bfdc18c3a412afb2ef1625abad8a2c6b6ae0bf35887b787269a6f2d4d01232103a2fef1829e0742b89c218c51898d9e7cb9d51201ba2bf9d9e9214ebb6af32708acffffffff0100127a00000000001976a914fd337ad3bf81e086d96a68e1f8d6a0a510f8c24a88ac00000000'
 
     def test_signed_send_to_p2sh(self):
         tx = Transaction([self.txin], [self.txout])
-        sig = self.sk.sign_input( tx, 0, Script(['OP_DUP', 'OP_HASH160',
-                                                self.from_addr.to_hash160(),
-                                                'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
+        sig = self.sk.sign_input( tx, 0, self.from_addr.to_script_pub_key() )
         pk = self.sk.get_public_key().to_hex()
         self.txin.script_sig = Script([sig, pk])
         self.assertEqual(tx.serialize(), self.create_p2sh_and_send_result)

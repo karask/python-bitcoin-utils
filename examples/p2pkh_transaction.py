@@ -28,10 +28,13 @@ def main():
                                   'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
 
     # create another output to get the change - remaining 0.01 is tx fees
+    # note that this time we used to_script_pub_key() to create the P2PKH
+    # script
     change_addr = P2pkhAddress('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
-    change_txout = TxOutput(0.29, Script(['OP_DUP', 'OP_HASH160',
-                                         change_addr.to_hash160(),
-                                         'OP_EQUALVERIFY', 'OP_CHECKSIG']))
+    change_txout = TxOutput(0.29, change_addr.to_script_pub_key())
+    #change_txout = TxOutput(0.29, Script(['OP_DUP', 'OP_HASH160',
+    #                                     change_addr.to_hash160(),
+    #                                     'OP_EQUALVERIFY', 'OP_CHECKSIG']))
 
     # create transaction from inputs/outputs -- default locktime is used
     tx = Transaction([txin], [txout, change_txout])

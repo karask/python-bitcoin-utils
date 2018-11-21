@@ -17,13 +17,9 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
         self.txout = TxOutput( 0.1, Script(['OP_DUP', 'OP_HASH160', self.addr.to_hash160(),
                                            'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
         self.change_addr = P2pkhAddress('mytmhndz4UbEMeoSZorXXrLpPfeoFUDzEp')
-        self.change_txout = TxOutput( 0.29, Script(['OP_DUP', 'OP_HASH160',
-                                                  self.change_addr.to_hash160(),
-                                                  'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
+        self.change_txout = TxOutput( 0.29, self.change_addr.to_script_pub_key())
         self.change_low_s_addr = P2pkhAddress('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
-        self.change_low_s_txout = TxOutput( 0.29, Script(['OP_DUP', 'OP_HASH160',
-                                                         self.change_low_s_addr.to_hash160(),
-                                                         'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
+        self.change_low_s_txout = TxOutput( 0.29, self.change_low_s_addr.to_script_pub_key())
         self.sk = PrivateKey('cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9')
         self.from_addr = P2pkhAddress('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
 
@@ -74,9 +70,7 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
 
     def test_signed_low_s_SIGALL_tx_1_input_2_outputs(self):
         tx = Transaction([self.txin], [self.txout, self.change_low_s_txout])
-        sig = self.sk.sign_input( tx, 0, Script(['OP_DUP', 'OP_HASH160',
-                                         self.from_addr.to_hash160(),
-                                         'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
+        sig = self.sk.sign_input( tx, 0, self.from_addr.to_script_pub_key() )
         pk = self.sk.get_public_key().to_hex()
         self.txin.script_sig = Script([sig, pk])
         self.assertEqual(tx.serialize(), self.core_tx_signed_low_s_SIGALL_result)
@@ -97,10 +91,9 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
 
     def test_signed_low_s_SIGSINGLE_tx_1_input_2_outputs(self):
         tx = Transaction([self.sig_txin1], [self.sig_txout1, self.sig_txout2] )
-        sig = self.sig_sk1.sign_input( tx, 0, Script(['OP_DUP', 'OP_HASH160',
-                                         self.sig_from_addr1.to_hash160(),
-                                         'OP_EQUALVERIFY', 'OP_CHECKSIG']),
-                                 SIGHASH_SINGLE)
+        sig = self.sig_sk1.sign_input( tx, 0,
+                                      self.sig_from_addr1.to_script_pub_key(),
+                                     SIGHASH_SINGLE)
         pk = self.sig_sk1.get_public_key().to_hex()
         self.sig_txin1.script_sig = Script([sig, pk])
         self.assertEqual(tx.serialize(), self.sig_sighash_single_result)
@@ -167,9 +160,8 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
                                          self.sig_from_addr1.to_hash160(),
                                          'OP_EQUALVERIFY', 'OP_CHECKSIG']),
                                  SIGHASH_ALL|SIGHASH_ANYONECANPAY)
-        sig2 = self.sig_sk2.sign_input(tx, 1, Script(['OP_DUP', 'OP_HASH160',
-                                         self.sig_from_addr2.to_hash160(),
-                                         'OP_EQUALVERIFY', 'OP_CHECKSIG']),
+        sig2 = self.sig_sk2.sign_input(tx, 1,
+                                       self.sig_from_addr2.to_script_pub_key(),
                                  SIGHASH_SINGLE|SIGHASH_ANYONECANPAY)
         pk = self.sig_sk1.get_public_key().to_hex()
         pk2 = self.sig_sk2.get_public_key().to_hex()

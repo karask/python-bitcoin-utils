@@ -55,9 +55,7 @@ def main():
 
     # use the private key corresponding to the address that contains the
     # UTXO we are trying to spend to create the signature for the txin
-    sig = sk.sign_input(tx, 0, Script(['OP_DUP', 'OP_HASH160',
-                                from_addr.to_hash160(), 'OP_EQUALVERIFY',
-                                'OP_CHECKSIG']) )
+    sig = sk.sign_input(tx, 0, from_addr.to_script_pub_key() )
     #print(sig)
 
     # get public key as hex

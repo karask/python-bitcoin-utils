@@ -36,9 +36,7 @@ def main():
     #txin_script_pub_key = redeem_script.to_p2sh_script_pub_key()
 
     to_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-    txout = TxOutput( 0.08, Script(['OP_DUP', 'OP_HASH160',
-                                    to_addr.to_hash160(), 'OP_EQUALVERIFY',
-                                    'OP_CHECKSIG']) )
+    txout = TxOutput( 0.08, to_addr.to_script_pub_key() )
 
     # no change address - the remaining 0.01 tBTC will go to miners)
 

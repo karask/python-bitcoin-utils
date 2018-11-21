@@ -775,10 +775,22 @@ class P2pkhAddress(Address):
     """Encapsulates a P2PKH address.
 
     Check Address class for details
+
+    Methods
+    -------
+    get_type()
+        returns the type of address
+    to_script_pub_key()
+        returns the scriptPubKey (P2PKH) that corresponds to this address
     """
 
     def __init__(self, address=None, hash160=None):
         super().__init__(address=address, hash160=hash160)
+
+    def to_script_pub_key(self):
+        return bitcoinutils.script.Script(['OP_DUP', 'OP_HASH160',
+                                           self.to_hash160(), 'OP_EQUALVERIFY',
+                                           'OP_CHECKSIG'])
 
     def get_type(self):
         return P2PKH_ADDRESS
@@ -788,6 +800,11 @@ class P2shAddress(Address):
     """Encapsulates a P2PKH address.
 
     Check Address class for details
+
+    Methods
+    -------
+    get_type()
+        returns the type of address
     """
 
     def __init__(self, address=None, hash160=None, script=None):
