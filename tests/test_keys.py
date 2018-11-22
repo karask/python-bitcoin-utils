@@ -83,10 +83,12 @@ class TestSignAndVerify(unittest.TestCase):
         self.pub = self.priv.get_public_key()
         self.address = self.pub.get_address().to_address()
         self.external_address = '1LbxJuEHPsoFRVo3qM1YJRg7DfRD1RvUDe'
+        self.deterministic_signature = 'IEiQ7kHfGqlxHSOcUftzR4gChjupJbuIIJCiY3LryQ9SXwPeRoBtJYkrNd/rgU7RP9jX6i2IaGGYMLt9bW+/bbI='
         self.external_signature = 'H+yEsMrKoLqcdegOxYbZ4MFpQkRJligl1whXQDY2+g7EptxmOj9vC3n5ykdHkof0qEbmyV62syaKh+9C95V5R34='
 
     def test_sign_and_verify(self):
         signature = self.priv.sign_message(self.message)
+        self.assertEqual(signature, self.deterministic_signature)
         self.assertTrue(PublicKey.verify_message(self.address, signature, self.message))
 
     def test_verify_external(self):

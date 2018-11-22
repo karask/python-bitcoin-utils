@@ -191,7 +191,7 @@ class PrivateKey:
 
 
     def sign_message(self, message, compressed=True):
-        """Signs the message with the private key
+        """Signs the message with the private key (deterministically)
 
         Bitcoin uses a compact format for message signatures (for tx sigs it
         uses normal DER format). The format has the normal r and s parameters
