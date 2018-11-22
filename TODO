@@ -1,5 +1,3 @@
-- add P2pkhAddress.to_script_pub_key() and update some tests/examples
-- sign_message should be deterministic
 - fix doc columns (newline does not exist!)
 - add explicit documentation for each module before members...
 - add all (?) opcodes in Script to be made available to P2SH

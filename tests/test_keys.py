@@ -104,8 +104,6 @@ class TestP2shAddresses(unittest.TestCase):
     def test_p2sh_creation(self):
         script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
         addr = P2shAddress.from_script(script)
-        print(addr.to_address())
-        print(self.p2sh_address)
         self.assertTrue(addr.to_address(), self.p2sh_address)
 
 
