@@ -10,6 +10,7 @@
 # LICENSE file.
 
 import struct
+import hashlib
 from binascii import unhexlify, hexlify
 
 import bitcoinutils.keys
@@ -217,6 +218,15 @@ class Script:
 
         address = bitcoinutils.keys.P2shAddress.from_script(self)
         return Script(['OP_HASH160', address.to_hash160(), 'OP_EQUAL'])
+
+
+    def to_p2wsh_script_pub_key(self):
+        """Converts script to p2wsh scriptPubKey (locking script)
+
+        Calculates the sha256 of the script and uses it to construct a P2WSH script.
+        """
+        sha256 = hashlib.sha256( self.to_bytes() ).digest()
+        return Script(['OP_0', hexlify(sha256).decode('utf-8')])
 
 
 

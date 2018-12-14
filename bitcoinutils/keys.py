@@ -22,8 +22,10 @@ from sympy.ntheory import sqrt_mod
 
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
-        P2PKH_ADDRESS, P2SH_ADDRESS
+        P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
+        NETWORK_SEGWIT_PREFIXES, SEGWIT_VERSION
 from bitcoinutils.setup import get_network
+import bitcoinutils.bech32
 import bitcoinutils.script
 
 
@@ -561,16 +563,35 @@ class PublicKey:
                                       sigdecode=sigdecode_string)
 
 
-    def get_address(self, compressed=True):
-        """Returns the corresponding P2PKH Address (default compressed)"""
+    def _to_hash160(self, compressed=True):
+        """Returns the RIPEMD( SHA256( ) ) of the public key"""
 
         pubkey = unhexlify( self.to_hex(compressed) )
         hashsha256 = hashlib.sha256(pubkey).digest()
         hashripemd160 = hashlib.new('ripemd160')
         hashripemd160.update(hashsha256)
         hash160 = hashripemd160.digest()
+        return hash160
+
+
+    def get_address(self, compressed=True):
+        """Returns the corresponding P2PKH Address (default compressed)"""
+
+        hash160 = self._to_hash160(compressed)
         addr_string_hex = hexlify(hash160).decode('utf-8')
         return P2pkhAddress(hash160=addr_string_hex)
+
+
+    def get_segwit_address(self):
+        """Returns the corresponding P2WPKH address
+
+        Only compressed is allowed. It is otherwise identical to normal P2PKH
+        address.
+        """
+        hash160 = self._to_hash160(True)
+        addr_string_hex = hexlify(hash160).decode('utf-8')
+        return P2wpkhAddress(witness_hash=addr_string_hex)
+
 
 
 class Address(ABC):
@@ -681,7 +702,7 @@ class Address(ABC):
     def _script_to_hash160(self, script):
         """Converts a script to it's hash160 equivalent
 
-        RIPEMD160( SHA256( script ) )
+        RIPEMD160( SHA256( script ) ) - required for P2SH addresses
 	"""
 
         script_bytes = script.to_bytes()
@@ -785,26 +806,28 @@ class P2pkhAddress(Address):
 
     Methods
     -------
-    get_type()
-        returns the type of address
     to_script_pub_key()
         returns the scriptPubKey (P2PKH) that corresponds to this address
+    get_type()
+        returns the type of address
     """
 
     def __init__(self, address=None, hash160=None):
         super().__init__(address=address, hash160=hash160)
 
     def to_script_pub_key(self):
+        """Returns the scriptPubKey (P2PKH) that corresponds to this address"""
         return bitcoinutils.script.Script(['OP_DUP', 'OP_HASH160',
                                            self.to_hash160(), 'OP_EQUALVERIFY',
                                            'OP_CHECKSIG'])
 
     def get_type(self):
+        """Returns the type of address"""
         return P2PKH_ADDRESS
 
 
 class P2shAddress(Address):
-    """Encapsulates a P2PKH address.
+    """Encapsulates a P2SH address.
 
     Check Address class for details
 
@@ -818,7 +841,212 @@ class P2shAddress(Address):
         super().__init__(address=address, hash160=hash160, script=script)
 
     def get_type(self):
+        """Returns the type of address"""
         return P2SH_ADDRESS
+
+
+
+
+
+class SegwitAddress(ABC):
+    """Represents a Bitcoin segwit address
+
+    Note that currently the python bech32 reference implementation is used (by
+    Pieter Wuille).
+
+    Attributes
+    ----------
+    witness_hash : str
+        the hash string representation of either the address; it can be either
+        a public key hash (P2WPKH) or the hash of the script (P2WSH)
+
+    Methods
+    -------
+    from_address(address)
+        instantiates an object from address string encoding
+    from_hash(hash_str)
+        instantiates an object from a hash hex string
+    from_script(witness_script)
+        instantiates an object from a witness_script
+    to_address()
+        returns the address's string encoding (Bech32)
+    to_hash()
+        returns the address's hash hex string representation
+
+    Raises
+    ------
+    TypeError
+        No parameters passed
+    ValueError
+        If an invalid address or hash is provided.
+    """
+    @abstractmethod
+    def __init__(self, address=None, witness_hash=None, script=None):
+        """
+        Parameters
+        ----------
+        address : str
+            the address as a string
+        witness_hash : str
+            the hash hex string representation
+        script : Script object
+            instantiates an Address object from a witness script
+
+        Raises
+        ------
+        TypeError
+            No parameters passed
+        ValueError
+            If an invalid address or hash is provided.
+        """
+
+        if witness_hash:
+            self.witness_hash = witness_hash
+        elif address:
+            self.witness_hash = self._address_to_hash(address)
+        elif script:
+            # TODO for now just check that is an instance of Script
+            if isinstance(script, bitcoinutils.script.Script):
+                self.witness_hash = self._script_to_hash(script)
+            else:
+                raise TypeError("A Script class is required.")
+        else:
+            raise TypeError("A valid address or hash is required.")
+
+
+    @classmethod
+    def from_address(cls, address):
+        """Creates and address object from an address string"""
+
+        return cls(address=address)
+
+
+    @classmethod
+    def from_hash(cls, witness_hash):
+        """Creates and address object from a hash string"""
+
+        return cls(witness_hash=witness_hash)
+
+
+    @classmethod
+    def from_script(cls, script):
+        """Creates and address object from a Script object"""
+
+        return cls(script=script)
+
+
+    def _address_to_hash(self, address):
+        """Converts an address to it's hash equivalent
+
+	The size of the address determines between P2WPKH and P2WSH.
+        Then Bech32 decodes the address removing network prefix, checksum,
+        witness version.
+
+        Uses a segwit's python reference implementation for now. (TODO)
+	"""
+
+        witness_version, witness_int_array = bitcoinutils.bech32.decode(NETWORK_SEGWIT_PREFIXES[get_network()], address)
+        if witness_version == None:
+            raise ValueError("Invalid value for parameter address.")
+        if witness_version != SEGWIT_VERSION:
+            raise TypeError("Invalid segwit version.")
+
+        return hexlify( bytes(witness_int_array) ).decode('utf-8')
+
+
+    def _script_to_hash(self, script):
+        """Converts a script to it's hash equivalent
+
+        Uses a segwit's python reference implementation for now. (TODO)
+	"""
+
+        script_bytes = script.to_bytes()
+        hashsha256 = hashlib.sha256(script_bytes).digest()
+        return hexlify(hashsha256).decode('utf-8')
+
+        # TODO TODELETE !?
+        #script_bytes = script.to_bytes()
+        #hash_bytes = script_bytes[2:]
+        #return hexlify(hash_bytes).decode('utf-8')
+
+
+    def to_hash(self):
+        """Returns as hash hex string"""
+
+        return self.witness_hash
+
+
+    def to_address(self):
+        """Returns as address string
+
+        Uses a segwit's python reference implementation for now. (TODO)
+        """
+
+        # convert hex string hash to int array (required by bech32 lib)
+        hash_bytes = unhexlify( self.witness_hash.encode('utf-8') )
+        witness_int_array = memoryview(hash_bytes).tolist()
+
+        return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()], SEGWIT_VERSION, witness_int_array)
+
+
+
+class P2wpkhAddress(SegwitAddress):
+    """Encapsulates a P2WPKH address.
+
+    Check Address class for details
+
+    Methods
+    -------
+    to_script_pub_key()
+        returns the scriptPubKey of a P2WPKH witness script
+    get_type()
+        returns the type of address
+    """
+
+    # TODO allow creation directly from Bech32 address !!!!!!
+    def __init__(self, address=None, witness_hash=None):
+        """Allow creation only from hash160 of public key"""
+
+        super().__init__(address=address, witness_hash=witness_hash)
+
+
+    def to_script_pub_key(self):
+        """Returns the scriptPubKey of a P2WPKH witness script"""
+        return bitcoinutils.script.Script(['OP_0', self.to_hash()])
+
+
+    def get_type(self):
+        """Returns the type of address"""
+        return P2WPKH_ADDRESS_V0
+
+
+class P2wshAddress(SegwitAddress):
+    """Encapsulates a P2WSH address.
+
+    Check Address class for details
+
+    Methods
+    -------
+    from_script(witness_script)
+        instantiates an object from a witness_script
+    get_type()
+        returns the type of address
+    """
+
+    def __init__(self, address=None, witness_hash=None, script=None):
+        """Allow creation only from hash160 of public key"""
+
+        super().__init__(address=None, witness_hash=None, script=script)
+
+
+    def to_script_pub_key(self):
+        """Returns the scriptPubKey of a P2WPKH witness script"""
+        return bitcoinutils.script.Script(['OP_0', self.to_hash()])
+
+
+    def get_type(self):
+        """Returns the type of address"""
+        return P2WSH_ADDRESS_V0
 
 
 

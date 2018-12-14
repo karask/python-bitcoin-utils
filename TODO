@@ -1,7 +1,6 @@
 - fix doc columns (newline does not exist!)
 - add explicit documentation for each module before members...
-- add all (?) opcodes in Script to be made available to P2SH
 - add test for default P2PK
-- segwit
+- segwit transactions cration
 - make all code < 80 chars !?
 

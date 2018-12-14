@@ -9,8 +9,14 @@ NETWORK_P2PKH_PREFIXES = { 'mainnet': b'\x00',
 NETWORK_P2SH_PREFIXES = { 'mainnet': b'\x05',
                           'testnet': b'\xc4' }
 
+NETWORK_SEGWIT_PREFIXES = { 'mainnet' : 'bc',  # b'\x03\x03\x00\x02\x03',
+                            'testnet' : 'tb' } #b'\x03\x03\x00\x14\x02' }
+
 P2PKH_ADDRESS = "p2pkh"
 P2SH_ADDRESS = "p2sh"
+P2WPKH_ADDRESS_V0 = "p2wpkhv0"
+P2WSH_ADDRESS_V0 = "p2wshv0"
+SEGWIT_VERSION = 0
 
 SIGHASH_ALL = 0x01
 SIGHASH_NONE = 0x02

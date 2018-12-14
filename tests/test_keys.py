@@ -3,7 +3,7 @@ import unittest
 from context import bitcoinutils
 from bitcoinutils.setup import setup, get_network
 from bitcoinutils.keys import PrivateKey, PublicKey, P2pkhAddress, \
-        P2shAddress
+        P2shAddress, P2wpkhAddress, P2wshAddress
 from bitcoinutils.script import Script
 
 class TestPrivateKeys(unittest.TestCase):
@@ -107,6 +107,39 @@ class TestP2shAddresses(unittest.TestCase):
         script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
         addr = P2shAddress.from_script(script)
         self.assertTrue(addr.to_address(), self.p2sh_address)
+
+
+class TestP2WPKHAddresses(unittest.TestCase):
+    def setUp(self):
+        setup('testnet')
+        self.priv = PrivateKey.from_wif('cVdte9ei2xsVjmZSPtyucG43YZgNkmKTqhwiUA8M4Fc3LdPJxPmZ')
+        self.pub = self.priv.get_public_key()
+        self.correct_p2wpkh_address = 'tb1qxmt9xgewg6mxc4mvnzvrzu4f2v0gy782fydg0w'
+        self.correct_p2sh_p2wpkh_address = '2N8Z5t3GyPW1hSAEJZqQ1GUkZ9ofoGhgKPf'
+        self.correct_p2wsh_address = 'tb1qy4kdfavhluvnhpwcqmqrd8x0ge2ynnsl7mv2mdmdskx4g3fc6ckq8f44jg'
+        self.correct_p2sh_p2wsh_address = 'tb1qy4kdfavhluvnhpwcqmqrd8x0ge2ynnsl7mv2mdmdskx4g3fc6ckq8f44jg'
+
+    def test_p2wpkh_creation_pubkey(self):
+        addr = P2wpkhAddress.from_hash(self.pub.get_segwit_address().to_hash())
+        self.assertTrue(self.correct_p2wpkh_address, addr.to_address())
+
+    def test_p2sh_p2wpkh_creation_pubkey(self):
+        addr = PrivateKey.from_wif('cTmyBsxMQ3vyh4J3jCKYn2Au7AhTKvqeYuxxkinsg6Rz3BBPrYKK').get_public_key().get_segwit_address()
+        p2sh_addr = P2shAddress.from_script(addr.to_script_pub_key())
+        self.assertTrue(p2sh_addr.to_address(), self.correct_p2sh_p2wpkh_address)
+
+    def test_p2wsh_creation_1multisig(self):
+        p2wpkh_key = PrivateKey.from_wif('cNn8itYxAng4xR4eMtrPsrPpDpTdVNuw7Jb6kfhFYZ8DLSZBCg37')
+        script = Script(['OP_1', p2wpkh_key.get_public_key().to_hex(), 'OP_1', 'OP_CHECKMULTISIG'])
+        p2wsh_addr = P2wshAddress.from_script(script)
+        self.assertTrue(p2wsh_addr.to_address(), self.correct_p2wsh_address)
+
+    def test_p2sh_p2wsh_creation_1multisig(self):
+        p2wpkh_key = PrivateKey.from_wif('cNn8itYxAng4xR4eMtrPsrPpDpTdVNuw7Jb6kfhFYZ8DLSZBCg37')
+        script = Script(['OP_1', p2wpkh_key.get_public_key().to_hex(), 'OP_1', 'OP_CHECKMULTISIG'])
+        p2wsh_addr = P2wshAddress.from_script(script)
+        p2sh_p2wsh_addr = P2shAddress.from_script(p2wsh_addr.to_script_pub_key())
+        self.assertTrue(p2sh_p2wsh_addr.to_address(), self.correct_p2sh_p2wsh_address)
 
 
 if __name__ == '__main__':
