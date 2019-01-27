@@ -52,6 +52,10 @@ class TestPublicKeys(unittest.TestCase):
         pub = PublicKey(self.public_key_hex)
         self.assertEqual(pub.get_address(compressed=False).to_address(), self.address)
 
+    def test_pubkey_to_hash160(self):
+        pub = PublicKey(self.public_key_hex)
+        self.assertEqual(pub.get_address().to_hash160(), pub.to_hash160())
+
 
 class TestP2pkhAddresses(unittest.TestCase):
     def setUp(self):

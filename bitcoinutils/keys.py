@@ -360,8 +360,12 @@ class PublicKey:
         returns the key as hex string (in SEC format - compressed by default)
     to_bytes()
         returns the key's raw bytes
+    to_hash160()
+        returns the hash160 hex string of the public key
     get_address(compressed=True))
         returns the corresponding P2pkhAddress object
+    get_segwit_address()
+        returns the corresponding P2wpkhAddress object
     """
 
 
@@ -564,7 +568,7 @@ class PublicKey:
 
 
     def _to_hash160(self, compressed=True):
-        """Returns the RIPEMD( SHA256( ) ) of the public key"""
+        """Returns the RIPEMD( SHA256( ) ) of the public key in bytes"""
 
         pubkey = unhexlify( self.to_hex(compressed) )
         hashsha256 = hashlib.sha256(pubkey).digest()
@@ -572,6 +576,11 @@ class PublicKey:
         hashripemd160.update(hashsha256)
         hash160 = hashripemd160.digest()
         return hash160
+
+    def to_hash160(self, compressed=True):
+        """Returns the RIPEMD( SHA256( ) ) of the public key in hex"""
+
+        return hexlify(self._to_hash160(compressed)).decode('utf-8')
 
 
     def get_address(self, compressed=True):
