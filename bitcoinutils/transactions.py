@@ -56,7 +56,7 @@ class TxInput:
         self.txout_index = txout_index
         self.script_sig = script_sig
         # if user provided a sequence it would be as string (for now...)
-        if sequence != DEFAULT_TX_SEQUENCE:
+        if type(sequence) is str: #TODELETE old --> DEFAULT_TX_SEQUENCE:
             self.sequence = unhexlify(sequence)
         else:
             self.sequence = sequence

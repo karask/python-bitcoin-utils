@@ -26,6 +26,8 @@ SIGHASH_ANYONECANPAY = 0x80
 DEFAULT_TX_SEQUENCE = b'\xff\xff\xff\xff'
 EMPTY_TX_SEQUENCE = b'\x00\x00\x00\x00'
 DEFAULT_TX_LOCKTIME = b'\x00\x00\x00\x00'
+#ABSOLUTE_TIMELOCK_SEQUENCE = b'\xff\xff\xff\xfe'
+#RELATIVE_TIMELOCK_SEQUENCE = b'\xef\xff\xff\xff'
 
 # TX version 2 was introduced in BIP-68 with relative locktime -- tx v1
 # does not support relative locktime
