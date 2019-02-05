@@ -56,7 +56,7 @@ class TxInput:
         self.txout_index = txout_index
         self.script_sig = script_sig
         # if user provided a sequence it would be as string (for now...)
-        if type(sequence) is str: #TODELETE old --> DEFAULT_TX_SEQUENCE:
+        if type(sequence) is str: 
             self.sequence = unhexlify(sequence)
         else:
             self.sequence = sequence
@@ -137,6 +137,75 @@ class TxOutput:
         """Deep copy of TxOutput"""
 
         return cls(txout.amount, txout.script_pubkey)
+
+
+class Sequence:
+    """Represents a relative timelock sequence. Used to provide the sequence to
+    transaction inputs and to scripts.
+
+    Attributes
+    ----------
+    value : int
+        The value of the block height or the 512 seconds increments
+    is_type_block : bool
+        Specifies if the type of sequence (block height or 512 secs increments)
+
+    Methods
+    -------
+    for_input_sequence()
+        Serializes the relative sequence as required in a transaction
+    for_script()
+        Serialized the relative sequence as required in a script
+
+    Raises
+    ------
+        ValueError
+            if the value is not within range of 2 bytes.
+    """
+
+    def __init__(self, value, is_type_block=True):
+        self.value = value
+        if self.value < 0 or self.value > 0xffff:
+            raise ValueError('Sequence should be between 0 and 65535')
+        self.is_type_block = is_type_block
+
+    def for_input_sequence(self):
+        """Creates a relative timelock sequence value as expected from TxInput sequence
+        attribute"""
+        # most significant bit is already 0 so relative timelocks are enabled
+        seq = 0
+        # if not block height type set 23 bit
+        if not self.is_type_block:
+            seq |= 1 << 22
+        # set the value
+        seq |= self.value
+        seq_bytes = seq.to_bytes(4, byteorder='little')
+        return seq_bytes
+
+    def for_script(self):
+        """Creates a relative timelock sequence value as expected in scripts"""
+        seq = self.value
+
+        # Relative timelocks are not allowed to be negative.
+        # seq is at most 2 bytes so if the 16th (for 2 bytes) or 8th (for 1
+        # byte) bit is set then the number could be interpreted as negative
+        # so we need to add a hex sign by adding a byte with all bits unset
+        # (i.e. 0)
+        if seq > 0xff:          # seq is 2 bytes
+            seq_bytes = seq.to_bytes(2, byteorder='little')
+            if seq & (1 << 15):
+                seq_bytes += b'\x00'
+        else:                   # seq is 1 byte
+            seq_bytes = seq.to_bytes(1, byteorder='little')
+            if seq & (1 << 7):
+                seq_bytes += b'\x00'
+
+        # if not block-height type then set 23 bit
+        if not self.is_type_block:
+            seq |= 1 << 22
+
+        return hexlify(seq_bytes).decode('utf-8')
+
 
 
 class Transaction:

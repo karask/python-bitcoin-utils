@@ -1,3 +1,5 @@
+- integers in script should be placed as simple integers!
+  . we need to convert to hex _and_ put DER signing (00 at the end of hex) -- is signing always needed?
 - fix doc columns (newline does not exist!)
 - add explicit documentation for each module before members...
 - add test for default P2PK
