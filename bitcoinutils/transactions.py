@@ -16,7 +16,10 @@ from binascii import unhexlify, hexlify
 from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     DEFAULT_TX_VERSION, SATOSHIS_PER_BITCOIN, NEGATIVE_SATOSHI, \
                     EMPTY_TX_SEQUENCE, SIGHASH_ALL, SIGHASH_NONE, \
-                    SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
+                    SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, \
+                    ABSOLUTE_TIMELOCK_SEQUENCE, REPLACE_BY_FEE_SEQUENCE, \
+                    TYPE_ABSOLUTE_TIMELOCK, TYPE_RELATIVE_TIMELOCK, \
+                    TYPE_REPLACE_BY_FEE
 from bitcoinutils.script import Script
 
 
@@ -56,7 +59,7 @@ class TxInput:
         self.txout_index = txout_index
         self.script_sig = script_sig
         # if user provided a sequence it would be as string (for now...)
-        if type(sequence) is str: 
+        if type(sequence) is str:
             self.sequence = unhexlify(sequence)
         else:
             self.sequence = sequence
@@ -140,71 +143,103 @@ class TxOutput:
 
 
 class Sequence:
-    """Represents a relative timelock sequence. Used to provide the sequence to
+    """Helps setting up appropriate sequence. Used to provide the sequence to
     transaction inputs and to scripts.
 
     Attributes
     ----------
     value : int
         The value of the block height or the 512 seconds increments
+    seq_type : int
+        Specifies the type of sequence (TYPE_RELATIVE_SEQUNCE |
+        TYPE_ABSOLUTE_SEQUENCE | TYPE_REPLACE_BY_FEE
     is_type_block : bool
-        Specifies if the type of sequence (block height or 512 secs increments)
+        If type is TYPE_RELATIVE_SEQUENCE then this specifies its type (block height
+        or 512 secs increments)
 
     Methods
     -------
     for_input_sequence()
         Serializes the relative sequence as required in a transaction
     for_script()
-        Serialized the relative sequence as required in a script
+        Returns the appropriate integer for a script; e.g. for relative timelocks
 
     Raises
     ------
-        ValueError
-            if the value is not within range of 2 bytes.
+    ValueError
+        if the value is not within range of 2 bytes.
     """
 
-    def __init__(self, value, is_type_block=True):
+    def __init__(self, seq_type, value=None, is_type_block=True):
+        self.seq_type = seq_type
         self.value = value
-        if self.value < 0 or self.value > 0xffff:
-            raise ValueError('Sequence should be between 0 and 65535')
+        if self.seq_type == TYPE_RELATIVE_TIMELOCK and (self.value < 1 or self.value > 0xffff):
+            raise ValueError('Sequence should be between 1 and 65535')
         self.is_type_block = is_type_block
 
     def for_input_sequence(self):
         """Creates a relative timelock sequence value as expected from TxInput sequence
         attribute"""
-        # most significant bit is already 0 so relative timelocks are enabled
-        seq = 0
-        # if not block height type set 23 bit
-        if not self.is_type_block:
-            seq |= 1 << 22
-        # set the value
-        seq |= self.value
-        seq_bytes = seq.to_bytes(4, byteorder='little')
-        return seq_bytes
+        if self.seq_type == TYPE_ABSOLUTE_TIMELOCK:
+            return ABSOLUTE_TIMELOCK_SEQUENCE
+
+        if self.seq_type == TYPE_REPLACE_BY_FEE:
+            return REPLACE_BY_FEE_SEQUENCE
+
+        if self.seq_type == TYPE_RELATIVE_TIMELOCK:
+            # most significant bit is already 0 so relative timelocks are enabled
+            seq = 0
+            # if not block height type set 23 bit
+            if not self.is_type_block:
+                seq |= 1 << 22
+            # set the value
+            seq |= self.value
+            seq_bytes = seq.to_bytes(4, byteorder='little')
+            return seq_bytes
+
+
 
     def for_script(self):
-        """Creates a relative timelock sequence value as expected in scripts"""
-        seq = self.value
+        """Creates a relative/absolute timelock sequence value as expected in scripts"""
+        if self.seq_type == TYPE_REPLACE_BY_FEE:
+            raise ValueError('RBF is not to be included in a script.')
 
-        # Relative timelocks are not allowed to be negative.
-        # seq is at most 2 bytes so if the 16th (for 2 bytes) or 8th (for 1
-        # byte) bit is set then the number could be interpreted as negative
-        # so we need to add a hex sign by adding a byte with all bits unset
-        # (i.e. 0)
-        if seq > 0xff:          # seq is 2 bytes
-            seq_bytes = seq.to_bytes(2, byteorder='little')
-            if seq & (1 << 15):
-                seq_bytes += b'\x00'
-        else:                   # seq is 1 byte
-            seq_bytes = seq.to_bytes(1, byteorder='little')
-            if seq & (1 << 7):
-                seq_bytes += b'\x00'
+        script_integer = self.value
 
         # if not block-height type then set 23 bit
-        if not self.is_type_block:
-            seq |= 1 << 22
+        if self.seq_type == TYPE_RELATIVE_TIMELOCK and not self.is_type_block:
+            script_integer |= 1 << 22
 
-        return hexlify(seq_bytes).decode('utf-8')
+        return script_integer
+
+
+class Locktime:
+    """Helps setting up appropriate locktime.
+
+    Attributes
+    ----------
+    value : int
+        The value of the block height or the 512 seconds increments
+
+    Methods
+    -------
+    for_transaction()
+        Serializes the locktime as required in a transaction
+
+    Raises
+    ------
+    ValueError
+        if the value is not within range of 2 bytes.
+    """
+
+    def __init__(self, value):
+        self.value = value
+
+    def for_transaction(self):
+        """Creates a timelock as expected from Transaction"""
+
+        locktime_bytes = self.value.to_bytes(4, byteorder='little')
+        return locktime_bytes
 
 
 
@@ -244,7 +279,7 @@ class Transaction:
         self.outputs = outputs
 
         # if user provided a locktime it would be as string (for now...)
-        if locktime != DEFAULT_TX_LOCKTIME:
+        if type(locktime) is str:
             self.locktime = unhexlify(locktime)
         else:
             self.locktime = locktime

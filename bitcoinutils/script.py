@@ -153,6 +153,11 @@ class Script:
     -------
     to_bytes()
         returns a serialized byte version of the script
+
+    Raises
+    ------
+    ValueError
+        If string data is too large or integer is negative
     """
 
     def __init__(self, script):
@@ -186,6 +191,29 @@ class Script:
             raise ValueError("Data too large. Cannot push into script")
 
 
+    def _push_integer(self, integer):
+        """Converts integer to bytes; as signed little-endian integer
+
+        Currently supports only positive integers
+        """
+
+        if integer < 0:
+            raise ValueError('Integer is currently required to be positive.')
+
+        # bytes requires to represent the integer
+        number_of_bytes = (integer.bit_length() + 7) // 8
+
+        # convert to little-endian bytes
+        integer_bytes = integer.to_bytes(number_of_bytes, byteorder='little')
+
+        # if last bit is set then we need to add sign to signify positive
+        # integer
+        if integer & (1 << number_of_bytes*8 - 1):
+            integer_bytes += b'\x00'
+
+        return self._op_push_data( hexlify(integer_bytes) )
+
+
     def to_bytes(self):
         """Converts the script to bytes
 
@@ -199,7 +227,10 @@ class Script:
             if token in OP_CODES:
                 script_bytes += OP_CODES[token]
             else:
-                script_bytes += self._op_push_data(token)
+                if type(token) is int:
+                    script_bytes += self._push_integer(token)
+                else:
+                    script_bytes += self._op_push_data(token)
         return script_bytes
 
     def to_hex(self):
