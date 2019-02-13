@@ -2,7 +2,7 @@ python-bitcoin-utils
 ====================
 This is a bitcoin library that provides tools/utilities to interact with the Bitcoin network. One of the primary goals of the library is to explain the low-level details of Bitcoin. The code is easy to read and properly documented explaining in detail all the thorny aspects of the implementation. It is a low-level library which assumes some high-level understanding of how Bitcoin works. In the future this might change.
 
-This is an early version of the library (v0.2.3) and currently, it supports private/public keys, all type of addresses (incl.segwit) and creation of P2PKH and P2SH transactions (with all SIGHASH types). All script op codes are included. Timelock and non-standanrd transactions are supported. More functionality will be added continuously and the documentation will be improved as the work progresses.
+This is an early version of the library (v0.2.4) and currently, it supports private/public keys, all type of addresses (incl.segwit) and creation of P2PKH and P2SH transactions (with all SIGHASH types). All script op codes are included. Timelock and non-standanrd transactions are supported. More functionality will be added continuously and the documentation will be improved as the work progresses.
 
 The API documentation can be build with Sphinx but is also available as a PDF for convenience. One can currently use the library for experimenting and learning the inner workings of Bitcoin. It is not meant for production yet and parts of the API might be updated with new versions.
 
@@ -38,5 +38,10 @@ Create a non-standard tx
 Spend a non-standard tx
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_non_std_tx.py - spends funds from script OP_ADD OP_5 OP_EQUAL 
 
+Create a P2SH address with a relative timelock
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/create_p2sh_csv_p2pkh_address.py - creates a P2SH address that locks funds (sent to it) with a private key (P2PKH) and a relative locktime of 200 blocks in the future.
 
-Please explore the code base or the API documentation (BitcoinUtilities.pdf) for supported functionality and other options.
+Spend from a timelocked address
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2sh_csv_p2pkh.py - spends from a P2SH(CSV+P2PKH) address as created from above.
+
+Please explore the codebase or the API documentation (BitcoinUtilities.pdf) for supported functionality and other options.
