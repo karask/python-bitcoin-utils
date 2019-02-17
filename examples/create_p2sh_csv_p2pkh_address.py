@@ -27,7 +27,7 @@ def main():
     #
 
     # set values
-    relative_blocks = 200
+    relative_blocks = 20
 
     seq = Sequence(TYPE_RELATIVE_TIMELOCK, relative_blocks)
 

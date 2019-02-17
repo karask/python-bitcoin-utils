@@ -28,11 +28,12 @@ def main():
     #
 
     # set values
-    relative_blocks = 200
-    txid = 'f557c623e55f0affc696b742630770df2342c4aac395e0ed470923247bc51b95'
+    relative_blocks = 20
+    txid = '76c102821b916a625bd3f0c3c6e35d5c308b7c23e78b8866b06a3a466041db0a'
+    #txid = 'f557c623e55f0affc696b742630770df2342c4aac395e0ed470923247bc51b95'
     vout = 0
 
-    seq = Sequence(TYPE_RELATIVE_TIMELOCK, 200)
+    seq = Sequence(TYPE_RELATIVE_TIMELOCK, relative_blocks)
 
     # create transaction input from tx id of UTXO (contained 11.1 tBTC)
     txin = TxInput(txid, vout, sequence=seq.for_input_sequence())
