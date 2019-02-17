@@ -205,6 +205,7 @@ class Script:
 
         # convert to little-endian bytes
         integer_bytes = integer.to_bytes(number_of_bytes, byteorder='little')
+        print(integer_bytes)
 
         # if last bit is set then we need to add sign to signify positive
         # integer
@@ -224,8 +225,13 @@ class Script:
         """
         script_bytes = b''
         for token in self.script:
+            # add op codes directly
             if token in OP_CODES:
                 script_bytes += OP_CODES[token]
+            # if integer between 0 and 16 add the appropriate op code
+            elif type(token) is int and token >= 0 and token <= 16:
+                script_bytes += OP_CODES['OP_' + str(token)]
+            # it is data, so add accordingly
             else:
                 if type(token) is int:
                     script_bytes += self._push_integer(token)
