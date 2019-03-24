@@ -10,6 +10,8 @@ The API documentation can be build with Sphinx but is also available as a PDF fo
 
 Installation
 ------------
+Python version 3 is required. Then just install with:
+
 $ pip install bitcoin-utils
 
 Examples
