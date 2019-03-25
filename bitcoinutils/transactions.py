@@ -299,14 +299,14 @@ class Transaction:
     def get_transaction_digest(self, txin_index, script, sighash=SIGHASH_ALL):
         """Returns the transaction's digest for signing.
 
-        SIGHASH types (see constants.py):
-            SIGHASH_ALL - signs all inputs and outputs (default)
-            SIGHASH_NONE - signs all of the inputs
-            SIGHASH_SINGLE - signs all inputs but only txin_index output
-            SIGHASH_ANYONECANPAY (only combined with one of the above)
-            - with ALL - signs all outputs but only txin_index input
-            - with NONE - signs only the txin_index input
-            - with SINGLE - signs txin_index input and output
+        |  SIGHASH types (see constants.py):
+        |      SIGHASH_ALL - signs all inputs and outputs (default)
+        |      SIGHASH_NONE - signs all of the inputs
+        |      SIGHASH_SINGLE - signs all inputs but only txin_index output
+        |      SIGHASH_ANYONECANPAY (only combined with one of the above)
+        |      - with ALL - signs all outputs but only txin_index input
+        |      - with NONE - signs only the txin_index input
+        |      - with SINGLE - signs txin_index input and output
 
         Attributes
         ----------

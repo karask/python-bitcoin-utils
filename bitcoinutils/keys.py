@@ -169,25 +169,26 @@ class PrivateKey:
     def to_wif(self, compressed=True):
         """Returns key in WIFC or WIF string
 
-        key_bytes = (32 bytes number) [ + 0x01 if compressed ]
-        network_prefix = (1 byte version number)
-        data_hash = SHA-256( SHA-256( key_bytes ) )
-        checksum = (first 4 bytes of data_hash)
-        wif = Base58CheckEncode( key_bytes + checksum )
+        |  Pseudocode:
+        |      network_prefix = (1 byte version number)
+        |      data = network_prefix + (32 bytes number) [ + 0x01 if compressed ]
+        |      data_hash = SHA-256( SHA-256( data ) )
+        |      checksum = (first 4 bytes of data_hash)
+        |      wif = Base58CheckEncode( data + checksum )
         """
 
         # add network prefix to the key
-        key_bytes = NETWORK_WIF_PREFIXES[get_network()] + self.to_bytes()
+        data = NETWORK_WIF_PREFIXES[get_network()] + self.to_bytes()
 
         if compressed == True:
             key_bytes += b'\x01'
 
         # double hash and get the first 4 bytes for checksum
-        data_hash = hashlib.sha256(hashlib.sha256(key_bytes).digest()).digest()
+        data_hash = hashlib.sha256(hashlib.sha256(data).digest()).digest()
         checksum = data_hash[0:4]
 
         # suffix the key bytes with the checksum and encode to base58check
-        wif = b58encode( key_bytes + checksum )
+        wif = b58encode( data + checksum )
 
         return wif.decode('utf-8')
 
@@ -201,11 +202,11 @@ class PrivateKey:
         extra information. Using the prefix the public key can be
         reconstructed when verifying the signature.
 
-        Prefix values:
-            27 - 0x1B = first key with even y
-            28 - 0x1C = first key with odd y
-            29 - 0x1D = second key with even y
-            30 - 0x1E = second key with odd y
+        |  Prefix values:
+        |      27 - 0x1B = first key with even y
+        |      28 - 0x1C = first key with odd y
+        |      29 - 0x1D = second key with even y
+        |      30 - 0x1E = second key with odd y
 
         If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
 
@@ -471,11 +472,11 @@ class PublicKey:
         extra information. Using the prefix the public key can be
         reconstructed from the signature.
 
-        Prefix values:
-            27 - 0x1B = first key with even y
-            28 - 0x1C = first key with odd y
-            29 - 0x1D = second key with even y
-            30 - 0x1E = second key with odd y
+        |  Prefix values:
+        |      27 - 0x1B = first key with even y
+        |      28 - 0x1C = first key with odd y
+        |      29 - 0x1D = second key with even y
+        |      30 - 0x1E = second key with odd y
 
         If key is compressed add 4 (31 - 0x1F, 32 - 0x20, 33 - 0x21, 34 - 0x22 respectively)
 
@@ -787,11 +788,12 @@ class Address(ABC):
     def to_address(self):
         """Returns as address string
 
-        network_prefix = (1 byte version number)
-        data = network_prefix + hash160_bytes
-        data_hash = SHA-256( SHA-256( hash160_bytes ) )
-        checksum = (first 4 bytes of data_hash)
-        address_bytes = Base58CheckEncode( data + checksum )
+        |  Pseudocode:
+        |      network_prefix = (1 byte version number)
+        |      data = network_prefix + hash160_bytes
+        |      data_hash = SHA-256( SHA-256( hash160_bytes ) )
+        |      checksum = (first 4 bytes of data_hash)
+        |      address_bytes = Base58CheckEncode( data + checksum )
         """
         hash160_encoded = self.hash160.encode('utf-8')
         hash160_bytes = unhexlify(hash160_encoded)
