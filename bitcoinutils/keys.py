@@ -171,7 +171,7 @@ class PrivateKey:
 
         |  Pseudocode:
         |      network_prefix = (1 byte version number)
-        |      data = network_prefix + (32 bytes number) [ + 0x01 if compressed ]
+        |      data = network_prefix + (32 bytes number/key) [ + 0x01 if compressed ]
         |      data_hash = SHA-256( SHA-256( data ) )
         |      checksum = (first 4 bytes of data_hash)
         |      wif = Base58CheckEncode( data + checksum )
@@ -181,7 +181,7 @@ class PrivateKey:
         data = NETWORK_WIF_PREFIXES[get_network()] + self.to_bytes()
 
         if compressed == True:
-            key_bytes += b'\x01'
+            data += b'\x01'
 
         # double hash and get the first 4 bytes for checksum
         data_hash = hashlib.sha256(hashlib.sha256(data).digest()).digest()
