@@ -1,6 +1,3 @@
-- Constantins "Data push larger than necessary)" when values < than 100 (127)
-- add units tests for P2SH(CSV+P2PKH)
-- fix doc columns (newline does not exist!)
 - add explicit documentation for each module before members...
 - segwit transactions cration
 - add node proxy
