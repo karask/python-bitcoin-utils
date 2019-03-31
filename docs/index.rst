@@ -14,6 +14,7 @@ Contents:
    usage/keys
    usage/transactions
    usage/script
+   usage/proxy
 
 
 Indices and tables
