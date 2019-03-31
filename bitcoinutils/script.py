@@ -205,7 +205,6 @@ class Script:
 
         # convert to little-endian bytes
         integer_bytes = integer.to_bytes(number_of_bytes, byteorder='little')
-        print(integer_bytes)
 
         # if last bit is set then we need to add sign to signify positive
         # integer
