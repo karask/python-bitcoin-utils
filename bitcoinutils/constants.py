@@ -1,16 +1,36 @@
+# Copyright (C) 2018 The python-bitcoin-utils developers
+#
+# This file is part of python-bitcoin-utils
+#
+# It is subject to the license terms in the LICENSE file found in the top-level
+# directory of this distribution.
+#
+# No part of python-bitcoin-utils, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE file.
+
+
 # TODO organise constants in sections
 
+NETWORK_DEFAULT_PORTS = { 'mainnet': 8332,
+                          'testnet': 18332,
+                          'regtest': 18443 }
+
 NETWORK_WIF_PREFIXES = { 'mainnet': b'\x80',
-                         'testnet': b'\xef' }
+                         'testnet': b'\xef',
+                         'regtest': b'\xef' }
 
 NETWORK_P2PKH_PREFIXES = { 'mainnet': b'\x00',
-                           'testnet': b'\x6f' }
+                           'testnet': b'\x6f',
+                           'regtest': b'\x6f' }
 
 NETWORK_P2SH_PREFIXES = { 'mainnet': b'\x05',
-                          'testnet': b'\xc4' }
+                          'testnet': b'\xc4',
+                          'regtest': b'\xc4' }
 
-NETWORK_SEGWIT_PREFIXES = { 'mainnet' : 'bc',  # b'\x03\x03\x00\x02\x03',
-                            'testnet' : 'tb' } #b'\x03\x03\x00\x14\x02' }
+NETWORK_SEGWIT_PREFIXES = { 'mainnet' : 'bc',  #b'\x03\x03\x00\x02\x03',
+                            'testnet' : 'tb',  #b'\x03\x03\x00\x14\x02',
+                            'regtest' : 'tb' } #b'\x03\x03\x00\x14\x02' }
 
 P2PKH_ADDRESS = "p2pkh"
 P2SH_ADDRESS = "p2sh"
