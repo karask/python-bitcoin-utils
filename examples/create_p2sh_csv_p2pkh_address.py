@@ -31,7 +31,7 @@ def main():
 
     seq = Sequence(TYPE_RELATIVE_TIMELOCK, relative_blocks)
 
-    # secret key corresponding to the pubkey needed for the P2SH (P2PK) transaction
+    # secret key corresponding to the pubkey needed for the P2SH (P2PKH) transaction
     p2pkh_sk = PrivateKey('cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9')
 
     # get the address (from the public key)
