@@ -151,10 +151,10 @@ class Sequence:
     value : int
         The value of the block height or the 512 seconds increments
     seq_type : int
-        Specifies the type of sequence (TYPE_RELATIVE_SEQUNCE |
-        TYPE_ABSOLUTE_SEQUENCE | TYPE_REPLACE_BY_FEE
+        Specifies the type of sequence (TYPE_RELATIVE_TIMELOCK |
+        TYPE_ABSOLUTE_TIMELOCK | TYPE_REPLACE_BY_FEE
     is_type_block : bool
-        If type is TYPE_RELATIVE_SEQUENCE then this specifies its type 
+        If type is TYPE_RELATIVE_TIMELOCK then this specifies its type 
         (block height or 512 secs increments)
 
     Methods

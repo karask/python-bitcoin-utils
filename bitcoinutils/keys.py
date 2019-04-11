@@ -311,8 +311,8 @@ class PrivateKey:
             assert length_s == 0x21
 
             new_S_as_bigint = _order - S_as_bigint
-            # convert bigint to bytes -- remember no padding necessary!
-            new_S = unhexlify( format(new_S_as_bigint, 'x') )
+            # convert bigint to bytes
+            new_S = unhexlify( format(new_S_as_bigint, 'x').zfill(64) )
             # new value should be 32 bytes
             assert len(new_S) == 0x20
             # reduce appropriate lengths

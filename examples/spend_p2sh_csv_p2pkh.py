@@ -37,7 +37,7 @@ def main():
     # create transaction input from tx id of UTXO (contained 11.1 tBTC)
     txin = TxInput(txid, vout, sequence=seq.for_input_sequence())
 
-    # secret key needed to spend P2PK that is wrapped by P2SH
+    # secret key needed to spend P2PKH that is wrapped by P2SH
     p2pkh_sk = PrivateKey('cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9')
     p2pkh_pk = p2pkh_sk.get_public_key().to_hex()
     p2pkh_addr = p2pkh_sk.get_public_key().get_address()
