@@ -1,5 +1,5 @@
 - add explicit documentation for each module before members...
-- segwit transactions cration
-- add node proxy
+- segwit transactions creation
+- node proxy should accept full url as well
 - make all code < 80 chars !?
 
