@@ -50,7 +50,7 @@ class TxInput:
         creates a copy of the object (classmethod)
     """
 
-    def __init__(self, txid, txout_index, script_sig=Script([]),
+    def __init__(self, txid, txout_index, script_sig=Script([]), witnesses=Script([]),
                  sequence=DEFAULT_TX_SEQUENCE):
         """See TxInput description"""
 
@@ -58,6 +58,8 @@ class TxInput:
         self.txid = txid
         self.txout_index = txout_index
         self.script_sig = script_sig
+        self.witnesses = witnesses
+
         # if user provided a sequence it would be as string (for now...)
         if type(sequence) is str:
             self.sequence = unhexlify(sequence)
@@ -273,10 +275,11 @@ class Transaction:
     """
 
     def __init__(self, inputs=[], outputs=[], locktime=DEFAULT_TX_LOCKTIME,
-                 version=DEFAULT_TX_VERSION):
+                 version=DEFAULT_TX_VERSION, has_segwit = False):
         """See Transaction description"""
         self.inputs = inputs
         self.outputs = outputs
+        self.has_segwit = has_segwit
 
         # if user provided a locktime it would be as string (for now...)
         if type(locktime) is str:
@@ -397,10 +400,111 @@ class Transaction:
         return tx_digest
 
 
+    def get_transaction_segwit_digest(self, txin_index, script, amount, sighash=SIGHASH_ALL):
+        """Returns the segwit transaction's digest for signing.
+
+                |  SIGHASH types (see constants.py):
+                |      SIGHASH_ALL - signs all inputs and outputs (default)
+                |      SIGHASH_NONE - signs all of the inputs
+                |      SIGHASH_SINGLE - signs all inputs but only txin_index output
+                |      SIGHASH_ANYONECANPAY (only combined with one of the above)
+                |      - with ALL - signs all outputs but only txin_index input
+                |      - with NONE - signs only the txin_index input
+                |      - with SINGLE - signs txin_index input and output
+
+                Attributes
+                ----------
+                txin_index : int
+                    The index of the input that we wish to sign
+                script : list (string)
+                    The scriptPubKey of the UTXO that we want to spend
+                sighash : int
+                    The type of the signature hash to be created
+                """
+
+        # clone transaction to modify without messing up the real transaction
+        tmp_tx = Transaction.copy(self)
+
+        bos_hash_prevouts = b''
+        hash_sequence = b''
+        hash_outputs = b''
+
+        # Judging the signature type
+        basic_sig_hash_type = (sighash & 0x1f)
+        anyone_can_pay = basic_sig_hash_type == SIGHASH_ANYONECANPAY
+        sign_all = (basic_sig_hash_type != SIGHASH_SINGLE) and (basic_sig_hash_type != SIGHASH_NONE)
+
+        # Hash all input
+        if not anyone_can_pay:
+            for txin in tmp_tx.inputs:
+                bos_hash_prevouts += unhexlify(txin.txid)[::-1] + \
+                                    struct.pack('<L', txin.txout_index)
+            bos_hash_prevouts = hashlib.sha256(hashlib.sha256(bos_hash_prevouts).digest()).digest()
+
+        # Hash all input sequence
+        if not anyone_can_pay and sign_all:
+            for txin in tmp_tx.inputs:
+                hash_sequence += txin.sequence
+            hash_sequence = hashlib.sha256(hashlib.sha256(hash_sequence).digest()).digest()
+
+        if sign_all:
+            # Hash all output
+            for txout in tmp_tx.outputs:
+                amount_bytes = struct.pack('<q', round(txout.amount * SATOSHIS_PER_BITCOIN))
+                script_bytes = txout.script_pubkey.to_bytes()
+                hash_outputs += amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
+            hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
+        elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(tmp_tx.outputs):
+            # Hash one output
+            txout = tmp_tx.outputs[txin_index]
+            amount_bytes = struct.pack('<q', round(txout.amount * SATOSHIS_PER_BITCOIN))
+            script_bytes = txout.script_pubkey.to_bytes()
+            hash_outputs = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
+            hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
+
+        # add sighash bytes to be hashed
+        tx_for_signing = self.version
+
+        # add sighash bytes to be hashed
+        tx_for_signing += bos_hash_prevouts + hash_sequence
+
+        # add tx txin
+        txin = self.inputs[txin_index]
+        tx_for_signing += unhexlify(txin.txid)[::-1] + \
+                          struct.pack('<L', txin.txout_index)
+
+        # add tx sign
+        tx_for_signing += struct.pack('B', len(script.to_bytes()))
+        tx_for_signing += script.to_bytes()
+
+        # add txin amount
+        tx_for_signing += struct.pack('<q', round(amount * SATOSHIS_PER_BITCOIN))
+
+        # add tx sequence
+        tx_for_signing += txin.sequence
+
+        # add txouts hash
+        tx_for_signing += hash_outputs
+
+        # add locktime
+        tx_for_signing += self.locktime
+
+        # add sighash type
+        tx_for_signing += struct.pack('<i', sighash)
+
+        return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
+
+
     def stream(self):
         """Converts to bytes"""
 
         data = self.version
+        if self.has_segwit:
+            # marker
+            data += b'\x00'
+            # flag
+            data += b'\x01'
+
         txin_count_bytes = chr(len(self.inputs)).encode()
         txout_count_bytes = chr(len(self.outputs)).encode()
         data += txin_count_bytes
@@ -409,6 +513,12 @@ class Transaction:
         data += txout_count_bytes
         for txout in self.outputs:
             data += txout.stream()
+        if self.has_segwit:
+            for txin in self.inputs:
+                # add witnesses script Count
+                witnesses_count_bytes = chr(len(txin.witnesses.script)).encode()
+                data += witnesses_count_bytes
+                data += txin.witnesses.to_bytes(True)
         data += self.locktime
         return data
 

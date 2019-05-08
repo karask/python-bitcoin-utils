@@ -245,6 +245,20 @@ class PrivateKey:
 
 
     def sign_input(self, tx, txin_index, script, sighash=SIGHASH_ALL):
+        # the tx knows how to calculate the digest for the corresponding
+        # sighash)
+        tx_digest = tx.get_transaction_digest(txin_index, script, sighash)
+        return self._sign_input(tx_digest, sighash)
+
+
+    def sign_segwit_input(self, tx, txin_index, script, amount, sighash=SIGHASH_ALL):
+        # the tx knows how to calculate the digest for the corresponding
+        # sighash)
+        tx_digest = tx.get_transaction_segwit_digest(txin_index, script, amount, sighash)
+        return self._sign_input(tx_digest, sighash)
+
+
+    def _sign_input(self, tx_digest, sighash=SIGHASH_ALL):
         """Signs a transaction input with the private key
 
         Bitcoin uses the normal DER format for transactions. Each input is
@@ -255,10 +269,6 @@ class PrivateKey:
 
         Returns a signature for that input
         """
-
-        # the tx knows how to calculate the digest for the corresponding
-        # sighash)
-        tx_digest = tx.get_transaction_digest(txin_index, script, sighash)
 
         # note that deterministic signing is used
         signature = self.key.sign_digest_deterministic(tx_digest,

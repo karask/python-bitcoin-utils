@@ -190,6 +190,9 @@ class Script:
         else:
             raise ValueError("Data too large. Cannot push into script")
 
+    def _segwit_op_push_data(self, data):
+        data_bytes = unhexlify(data)
+        return chr(len(data_bytes)).encode() + data_bytes
 
     def _push_integer(self, integer):
         """Converts integer to bytes; as signed little-endian integer
@@ -214,7 +217,7 @@ class Script:
         return self._op_push_data( hexlify(integer_bytes) )
 
 
-    def to_bytes(self):
+    def to_bytes(self, segwit = False):
         """Converts the script to bytes
 
         If an OP code the appropriate byte is included according to:
@@ -235,7 +238,11 @@ class Script:
                 if type(token) is int:
                     script_bytes += self._push_integer(token)
                 else:
-                    script_bytes += self._op_push_data(token)
+                    if segwit:
+                        script_bytes += self._segwit_op_push_data(token)
+                    else:
+                        script_bytes += self._op_push_data(token)
+
         return script_bytes
 
     def to_hex(self):
