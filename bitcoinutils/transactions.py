@@ -425,17 +425,18 @@ class Transaction:
         # clone transaction to modify without messing up the real transaction
         tmp_tx = Transaction.copy(self)
 
-        bos_hash_prevouts = b''
-        hash_sequence = b''
-        hash_outputs = b''
+        bos_hash_prevouts = b'\x00' * 32
+        hash_sequence = b'\x00' * 32
+        hash_outputs = b'\x00' * 32
 
         # Judging the signature type
         basic_sig_hash_type = (sighash & 0x1f)
-        anyone_can_pay = basic_sig_hash_type == SIGHASH_ANYONECANPAY
+        anyone_can_pay = sighash& 0xf0 == SIGHASH_ANYONECANPAY
         sign_all = (basic_sig_hash_type != SIGHASH_SINGLE) and (basic_sig_hash_type != SIGHASH_NONE)
 
         # Hash all input
         if not anyone_can_pay:
+            bos_hash_prevouts = b''
             for txin in tmp_tx.inputs:
                 bos_hash_prevouts += unhexlify(txin.txid)[::-1] + \
                                     struct.pack('<L', txin.txout_index)
@@ -443,12 +444,14 @@ class Transaction:
 
         # Hash all input sequence
         if not anyone_can_pay and sign_all:
+            hash_sequence = b''
             for txin in tmp_tx.inputs:
                 hash_sequence += txin.sequence
             hash_sequence = hashlib.sha256(hashlib.sha256(hash_sequence).digest()).digest()
 
         if sign_all:
             # Hash all output
+            hash_outputs = b''
             for txout in tmp_tx.outputs:
                 amount_bytes = struct.pack('<q', round(txout.amount * SATOSHIS_PER_BITCOIN))
                 script_bytes = txout.script_pubkey.to_bytes()
