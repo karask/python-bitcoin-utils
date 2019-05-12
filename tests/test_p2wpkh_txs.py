@@ -94,29 +94,30 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
     def test_signed_send_to_p2wpkh(self):
         # Non-segregated witness transaction
-        tx = Transaction([self.txin1], [self.txout1])
+        tx = Transaction([self.txin1], [self.txout1],witnesses = [])
         sig = self.sk.sign_input(tx, 0, self.p2pkh_addr.to_script_pub_key())
         pk = self.sk.get_public_key().to_hex()
         self.txin1.script_sig = Script([sig, pk])
         self.assertEqual(tx.serialize(), self.create_send_to_p2wpkh_result)
 
     def test_spend_p2wpkh(self):
-        tx = Transaction([self.txin_spend], [self.txout2], has_segwit=True)
+        tx = Transaction([self.txin_spend], [self.txout2], has_segwit=True,witnesses = [])
         sig = self.sk.sign_segwit_input(tx, 0, self.p2pkh_redeem_script, self.txin_spend_amount)
         pk = self.sk.get_public_key().to_hex()
-        self.txin_spend.witnesses = Script([sig, pk])
+        tx.witnesses.append(Script([sig, pk]))
         self.assertEqual(tx.serialize(), self.spend_p2pkh_result)
 
     def test_p2pkh_and_p2wpkh_to_p2pkh(self):
-        tx = Transaction([self.txin_spend_p2pkh, self.txin_spend_p2wpkh], [self.txout3], has_segwit=True)
+        tx = Transaction([self.txin_spend_p2pkh, self.txin_spend_p2wpkh], [self.txout3], has_segwit=True,witnesses = [])
         # spend_p2pkh
         sig1 = self.sk.sign_input(tx, 0, self.p2pkh_addr.to_script_pub_key())
         pk1 = self.sk.get_public_key().to_hex()
         self.txin_spend_p2pkh.script_sig = Script([sig1, pk1])
+        tx.witnesses.append(Script([]))
         # spend_p2wpkh
         sig2 = self.sk.sign_segwit_input(tx, 1, self.p2pkh_redeem_script, self.txin_spend_p2wpkh_amount)
         pk2 = self.sk.get_public_key().to_hex()
-        self.txin_spend_p2wpkh.witnesses = Script([sig2, pk2])
+        tx.witnesses.append(Script([sig2, pk2]))
 
         self.assertEqual(tx.serialize(), self.p2pkh_and_p2wpkh_to_p2pkh_result)
 
@@ -125,12 +126,12 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         SIGHASH_NONE:signs all of the inputs
         """
         # First, only txin1 and txout1 are added to the transaction.
-        tx = Transaction([self.txin1_signone], [self.txout1_signone], has_segwit=True)
+        tx = Transaction([self.txin1_signone], [self.txout1_signone], has_segwit=True,witnesses = [])
         pk = self.sk.get_public_key().to_hex()
 
         sig_signone = self.sk.sign_segwit_input(tx, 0, self.p2pkh_redeem_script, self.txin1_signone_amount,
                                                 SIGHASH_NONE)
-        self.txin1_signone.witnesses = Script([sig_signone, pk])
+        tx.witnesses.append(Script([sig_signone, pk]))
         # Adding additional output signatures will not be affected
         tx.outputs.append(self.txout2_signone)
 
@@ -140,12 +141,12 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         """
         SIGHASH_SINGLE:signs all inputs but only txin_index output
         """
-        tx = Transaction([self.txin1_sigsingle], [self.txout1_sigsingle], has_segwit=True)
+        tx = Transaction([self.txin1_sigsingle], [self.txout1_sigsingle], has_segwit=True,witnesses = [])
         pk = self.sk.get_public_key().to_hex()
 
         sig_signone = self.sk.sign_segwit_input(tx, 0, self.p2pkh_redeem_script, self.txin1_sigsingle_amount,
                                                 SIGHASH_SINGLE)
-        self.txin1_sigsingle.witnesses = Script([sig_signone, pk])
+        tx.witnesses.append(Script([sig_signone, pk]))
 
         tx.outputs.append(self.txout2_sigsingle)
         self.assertEqual(tx.serialize(), self.test_sigsingle_send_result)
@@ -154,18 +155,18 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         """
         SIGHASH_ALL | SIGHASH_ANYONECANPAY:signs all outputs but only txin_index input
         """
-        tx = Transaction([self.txin1_siganyonecanpay_all], [self.txout1_siganyonecanpay_all,self.txout2_siganyonecanpay_all], has_segwit=True)
+        tx = Transaction([self.txin1_siganyonecanpay_all], [self.txout1_siganyonecanpay_all,self.txout2_siganyonecanpay_all], has_segwit=True,witnesses = [])
         pk = self.sk.get_public_key().to_hex()
 
         sig_signone = self.sk.sign_segwit_input(tx, 0, self.p2pkh_redeem_script, self.txin1_siganyonecanpay_all_amount,
                                                 SIGHASH_ALL | SIGHASH_ANYONECANPAY)
-        self.txin1_siganyonecanpay_all.witnesses = Script([sig_signone, pk])
+        tx.witnesses.append(Script([sig_signone, pk]))
 
         tx.inputs.append(self.txin2_siganyonecanpay_all)
 
         sig = self.sk.sign_segwit_input(tx, 1, self.p2pkh_redeem_script, self.txin2_siganyonecanpay_all_amount,
                                         SIGHASH_ALL)
-        self.txin2_siganyonecanpay_all.witnesses = Script([sig, pk])
+        tx.witnesses.append(Script([sig, pk]))
 
         self.assertEqual(tx.serialize(), self.test_siganyonecanpay_all_send_result)
 
@@ -173,19 +174,19 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         """
         SIGHASH_NONE | SIGHASH_ANYONECANPAY:signs only the txin_index input
         """
-        tx = Transaction([self.txin1_siganyonecanpay_none], [self.txout1_siganyonecanpay_none], has_segwit=True)
+        tx = Transaction([self.txin1_siganyonecanpay_none], [self.txout1_siganyonecanpay_none], has_segwit=True,witnesses = [])
         pk = self.sk.get_public_key().to_hex()
 
         sig_signone = self.sk.sign_segwit_input(tx, 0, self.p2pkh_redeem_script, self.txin1_siganyonecanpay_none_amount,
                                                 SIGHASH_NONE | SIGHASH_ANYONECANPAY)
-        self.txin1_siganyonecanpay_none.witnesses = Script([sig_signone, pk])
+        tx.witnesses.append(Script([sig_signone, pk]))
 
         tx.inputs.append(self.txin2_siganyonecanpay_none)
         tx.outputs.append(self.txout2_siganyonecanpay_none)
 
         sig = self.sk.sign_segwit_input(tx, 1, self.p2pkh_redeem_script, self.txin2_siganyonecanpay_none_amount,
                                         SIGHASH_ALL)
-        self.txin2_siganyonecanpay_none.witnesses = Script([sig, pk])
+        tx.witnesses.append(Script([sig, pk]))
 
         self.assertEqual(tx.serialize(), self.test_siganyonecanpay_none_send_result)
 
@@ -193,12 +194,12 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         """
         SIGHASH_SINGLE | SIGHASH_ANYONECANPAY:signs txin_index input and output
         """
-        tx = Transaction([self.txin1_siganyonecanpay_single], [self.txout1_siganyonecanpay_single], has_segwit=True)
+        tx = Transaction([self.txin1_siganyonecanpay_single], [self.txout1_siganyonecanpay_single], has_segwit=True,witnesses = [])
         pk = self.sk.get_public_key().to_hex()
 
         sig_signone = self.sk.sign_segwit_input(tx, 0, self.p2pkh_redeem_script, self.txin1_siganyonecanpay_single_amount,
                                                 SIGHASH_SINGLE | SIGHASH_ANYONECANPAY)
-        self.txin1_siganyonecanpay_single.witnesses = Script([sig_signone, pk])
+        tx.witnesses.append(Script([sig_signone, pk]))
 
         tx.outputs.append(self.txout2_siganyonecanpay_single)
 

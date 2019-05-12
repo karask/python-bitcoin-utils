@@ -52,7 +52,7 @@ def main():
     print("\nRaw transaction:\n" + tx.serialize())
 
     sig1 = priv0.sign_segwit_input(tx, 0, redeem_script1, amount)
-    txin.witnesses = Script([sig1, pub.to_hex()])
+    tx.witnesses.append(Script([sig1, pub.to_hex()]))
 
     # print raw signed transaction ready to be broadcasted
     print("\nRaw signed transaction:\n" + tx.serialize())

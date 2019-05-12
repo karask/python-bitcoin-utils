@@ -44,7 +44,7 @@ def main():
     tx = Transaction([txin], [txOut1, txOut2], has_segwit=True)
 
     sig1 = priv1.sign_segwit_input(tx, 0, p2sh_redeem_script, amount)
-    txin.witnesses = Script(['OP_0', sig1, p2sh_redeem_script.to_hex()])
+    tx.witnesses.append(Script(['OP_0', sig1, p2sh_redeem_script.to_hex()]))
 
     # print raw signed transaction ready to be broadcasted
     print("\nRaw signed transaction:\n" + tx.serialize())

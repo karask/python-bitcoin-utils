@@ -10,6 +10,7 @@
 # LICENSE file.
 
 import struct
+import copy
 import hashlib
 from binascii import unhexlify, hexlify
 
@@ -165,6 +166,11 @@ class Script:
 
         self.script = script
 
+    @classmethod
+    def copy(cls, script):
+        """Deep copy of Script"""
+        scripts = copy.deepcopy(script.script)
+        return cls(scripts)
 
     def _op_push_data(self, data):
         """Converts data to appropriate OP_PUSHDATA OP code including length
@@ -270,6 +276,5 @@ class Script:
         """
         sha256 = hashlib.sha256( self.to_bytes() ).digest()
         return Script(['OP_0', hexlify(sha256).decode('utf-8')])
-
 
 

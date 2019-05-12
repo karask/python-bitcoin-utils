@@ -50,15 +50,13 @@ class TxInput:
         creates a copy of the object (classmethod)
     """
 
-    def __init__(self, txid, txout_index, script_sig=Script([]), witnesses=Script([]),
-                 sequence=DEFAULT_TX_SEQUENCE):
+    def __init__(self, txid, txout_index, script_sig=Script([]), sequence=DEFAULT_TX_SEQUENCE):
         """See TxInput description"""
 
         # expected in the format used for displaying Bitcoin hashes
         self.txid = txid
         self.txout_index = txout_index
         self.script_sig = script_sig
-        self.witnesses = witnesses
 
         # if user provided a sequence it would be as string (for now...)
         if type(sequence) is str:
@@ -275,11 +273,12 @@ class Transaction:
     """
 
     def __init__(self, inputs=[], outputs=[], locktime=DEFAULT_TX_LOCKTIME,
-                 version=DEFAULT_TX_VERSION, has_segwit = False):
+                 version=DEFAULT_TX_VERSION, has_segwit = False, witnesses = []):
         """See Transaction description"""
         self.inputs = inputs
         self.outputs = outputs
         self.has_segwit = has_segwit
+        self.witnesses = witnesses
 
         # if user provided a locktime it would be as string (for now...)
         if type(locktime) is str:
@@ -296,7 +295,8 @@ class Transaction:
 
         ins = [TxInput.copy(txin) for txin in tx.inputs]
         outs = [TxOutput.copy(txout) for txout in tx.outputs]
-        return cls(ins, outs, tx.locktime, tx.version)
+        witnes = [Script.copy(witne) for witne in tx.witnesses]
+        return cls(ins, outs, tx.locktime, tx.version, tx.has_segwit, witnes)
 
 
     def get_transaction_digest(self, txin_index, script, sighash=SIGHASH_ALL):
@@ -384,7 +384,7 @@ class Transaction:
             tmp_tx.inputs = [tmp_tx.inputs[txin_index]]
 
         # get the byte stream of the temporary transaction
-        tx_for_signing = tmp_tx.stream()
+        tx_for_signing = tmp_tx.stream(False)
 
         # add sighash bytes to be hashed
         # Note that although sighash is one byte it is hashed as a 4 byte value.
@@ -498,11 +498,11 @@ class Transaction:
         return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
 
 
-    def stream(self):
+    def stream(self,has_segwit):
         """Converts to bytes"""
 
         data = self.version
-        if self.has_segwit:
+        if has_segwit:
             # marker
             data += b'\x00'
             # flag
@@ -516,12 +516,12 @@ class Transaction:
         data += txout_count_bytes
         for txout in self.outputs:
             data += txout.stream()
-        if self.has_segwit:
-            for txin in self.inputs:
+        if has_segwit:
+            for witnesse in self.witnesses:
                 # add witnesses script Count
-                witnesses_count_bytes = chr(len(txin.witnesses.script)).encode()
+                witnesses_count_bytes = chr(len(witnesse.script)).encode()
                 data += witnesses_count_bytes
-                data += txin.witnesses.to_bytes(True)
+                data += witnesse.to_bytes(True)
         data += self.locktime
         return data
 
@@ -529,7 +529,7 @@ class Transaction:
     def get_txid(self):
         """Hashes the serialized tx to get a unique id"""
 
-        data = self.stream()
+        data = self.stream(self.has_segwit)
         hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode('utf-8')
@@ -538,7 +538,7 @@ class Transaction:
     def serialize(self):
         """Converts to hex string"""
 
-        return hexlify(self.stream()).decode('utf-8')
+        return hexlify(self.stream(self.has_segwit)).decode('utf-8')
 
 
 def main():
