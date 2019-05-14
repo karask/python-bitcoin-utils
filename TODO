@@ -11,8 +11,10 @@
 - node proxy should accept full url as well
 - make all code < 80 chars !?
 
+- witnesses=[] is initialized in Transaction class but still needed in the segwit testcases! -- check why and clean
 - commit docs/usage/proxy.rst
 - clean and comment the segwit examples !
 - add segwit examples in README !
 - segwit in documentation !?
 
+- after some of the above are cleaned... add to PYPI...
