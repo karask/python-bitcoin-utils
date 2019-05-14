@@ -85,6 +85,7 @@ class TxInput:
                 script_sig_bytes + self.sequence
         return data
 
+
     @classmethod
     def copy(cls, txin):
         """Deep copy of TxInput"""
@@ -256,6 +257,11 @@ class Transaction:
         The transaction's locktime parameter
     version : bytes
         The transaction version
+    has_segwit : bool
+        Specifies a tx that includes segwit inputs
+    witnesses : list (Script)
+        The witness scripts that correspond to the inputs
+
 
     Methods
     -------
@@ -273,7 +279,7 @@ class Transaction:
     """
 
     def __init__(self, inputs=[], outputs=[], locktime=DEFAULT_TX_LOCKTIME,
-                 version=DEFAULT_TX_VERSION, has_segwit = False, witnesses = []):
+                 version=DEFAULT_TX_VERSION, has_segwit=False, witnesses=[]):
         """See Transaction description"""
         self.inputs = inputs
         self.outputs = outputs
@@ -295,8 +301,8 @@ class Transaction:
 
         ins = [TxInput.copy(txin) for txin in tx.inputs]
         outs = [TxOutput.copy(txout) for txout in tx.outputs]
-        witnes = [Script.copy(witne) for witne in tx.witnesses]
-        return cls(ins, outs, tx.locktime, tx.version, tx.has_segwit, witnes)
+        wits = [Script.copy(witness) for witness in tx.witnesses]
+        return cls(ins, outs, tx.locktime, tx.version, tx.has_segwit, wits)
 
 
     def get_transaction_digest(self, txin_index, script, sighash=SIGHASH_ALL):
@@ -418,6 +424,9 @@ class Transaction:
                     The index of the input that we wish to sign
                 script : list (string)
                     The scriptPubKey of the UTXO that we want to spend
+                amount : float
+                    The amount of the UTXO to spend is included in the
+                    signature for segwit
                 sighash : int
                     The type of the signature hash to be created
                 """
@@ -425,7 +434,9 @@ class Transaction:
         # clone transaction to modify without messing up the real transaction
         tmp_tx = Transaction.copy(self)
 
-        bos_hash_prevouts = b'\x00' * 32
+        # TODO consult ref. impl. in BIP-143 and update if needed
+        # requires cleanup and further explanations
+        hash_prevouts = b'\x00' * 32
         hash_sequence = b'\x00' * 32
         hash_outputs = b'\x00' * 32
 
@@ -436,11 +447,11 @@ class Transaction:
 
         # Hash all input
         if not anyone_can_pay:
-            bos_hash_prevouts = b''
+            hash_prevouts = b''
             for txin in tmp_tx.inputs:
-                bos_hash_prevouts += unhexlify(txin.txid)[::-1] + \
+                hash_prevouts += unhexlify(txin.txid)[::-1] + \
                                     struct.pack('<L', txin.txout_index)
-            bos_hash_prevouts = hashlib.sha256(hashlib.sha256(bos_hash_prevouts).digest()).digest()
+            hash_prevouts = hashlib.sha256(hashlib.sha256(hash_prevouts).digest()).digest()
 
         # Hash all input sequence
         if not anyone_can_pay and sign_all:
@@ -469,7 +480,7 @@ class Transaction:
         tx_for_signing = self.version
 
         # add sighash bytes to be hashed
-        tx_for_signing += bos_hash_prevouts + hash_sequence
+        tx_for_signing += hash_prevouts + hash_sequence
 
         # add tx txin
         txin = self.inputs[txin_index]
@@ -517,11 +528,11 @@ class Transaction:
         for txout in self.outputs:
             data += txout.stream()
         if has_segwit:
-            for witnesse in self.witnesses:
+            for witness in self.witnesses:
                 # add witnesses script Count
-                witnesses_count_bytes = chr(len(witnesse.script)).encode()
+                witnesses_count_bytes = chr(len(witness.script)).encode()
                 data += witnesses_count_bytes
-                data += witnesse.to_bytes(True)
+                data += witness.to_bytes(True)
         data += self.locktime
         return data
 
@@ -542,9 +553,6 @@ class Transaction:
 
 
 def main():
-    # READ SEGWIT BIPs
-    # READ EXAMPLE SERIALIZATION OF SEGWIT TX:
-    # https://medium.com/coinmonks/how-to-create-a-raw-bitcoin-transaction-step-by-step-239b888e87f2
     pass
 
 if __name__ == "__main__":

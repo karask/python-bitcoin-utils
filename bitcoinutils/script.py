@@ -166,11 +166,13 @@ class Script:
 
         self.script = script
 
+
     @classmethod
     def copy(cls, script):
         """Deep copy of Script"""
         scripts = copy.deepcopy(script.script)
         return cls(scripts)
+
 
     def _op_push_data(self, data):
         """Converts data to appropriate OP_PUSHDATA OP code including length
@@ -196,9 +198,11 @@ class Script:
         else:
             raise ValueError("Data too large. Cannot push into script")
 
+
     def _segwit_op_push_data(self, data):
         data_bytes = unhexlify(data)
         return chr(len(data_bytes)).encode() + data_bytes
+
 
     def _push_integer(self, integer):
         """Converts integer to bytes; as signed little-endian integer
@@ -245,11 +249,16 @@ class Script:
                     script_bytes += self._push_integer(token)
                 else:
                     if segwit:
+                        # TODO this should be temporariy and replaced by
+                        # a method that calculates compactSize/VarInt for
+                        # each script element - probably add TxInputWitness
+                        # which will know how to serialize
                         script_bytes += self._segwit_op_push_data(token)
                     else:
                         script_bytes += self._op_push_data(token)
 
         return script_bytes
+
 
     def to_hex(self):
         """Converts the script to hexadecimal"""
