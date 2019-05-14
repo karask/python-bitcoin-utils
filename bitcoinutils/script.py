@@ -10,6 +10,7 @@
 # LICENSE file.
 
 import struct
+import copy
 import hashlib
 from binascii import unhexlify, hexlify
 
@@ -166,6 +167,13 @@ class Script:
         self.script = script
 
 
+    @classmethod
+    def copy(cls, script):
+        """Deep copy of Script"""
+        scripts = copy.deepcopy(script.script)
+        return cls(scripts)
+
+
     def _op_push_data(self, data):
         """Converts data to appropriate OP_PUSHDATA OP code including length
 
@@ -191,6 +199,11 @@ class Script:
             raise ValueError("Data too large. Cannot push into script")
 
 
+    def _segwit_op_push_data(self, data):
+        data_bytes = unhexlify(data)
+        return chr(len(data_bytes)).encode() + data_bytes
+
+
     def _push_integer(self, integer):
         """Converts integer to bytes; as signed little-endian integer
 
@@ -214,7 +227,7 @@ class Script:
         return self._op_push_data( hexlify(integer_bytes) )
 
 
-    def to_bytes(self):
+    def to_bytes(self, segwit = False):
         """Converts the script to bytes
 
         If an OP code the appropriate byte is included according to:
@@ -235,8 +248,17 @@ class Script:
                 if type(token) is int:
                     script_bytes += self._push_integer(token)
                 else:
-                    script_bytes += self._op_push_data(token)
+                    if segwit:
+                        # TODO this should be temporariy and replaced by
+                        # a method that calculates compactSize/VarInt for
+                        # each script element - probably add TxInputWitness
+                        # which will know how to serialize
+                        script_bytes += self._segwit_op_push_data(token)
+                    else:
+                        script_bytes += self._op_push_data(token)
+
         return script_bytes
+
 
     def to_hex(self):
         """Converts the script to hexadecimal"""
@@ -263,6 +285,5 @@ class Script:
         """
         sha256 = hashlib.sha256( self.to_bytes() ).digest()
         return Script(['OP_0', hexlify(sha256).decode('utf-8')])
-
 
 

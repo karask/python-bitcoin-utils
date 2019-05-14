@@ -1,5 +1,17 @@
+- create TxInputWitness class that includes the witness script and knows how to serialize itself
+- create get_wtxid method!
+- segwit txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation..?
+- tx serialization with no signed inputs produces a serialization which includes the 0001 segwit marker and thus is not identical to bitcoin core (the signed transaction is fine though) -- need a better way to check for segwit
+- should we use copy.deepcopy instead of the tx-related copy methods?
+- serialization of witnesses supports only script of size 252 and lower; that is because a simple len() is used instead of a compactSize/VarInt which allows up to 8 bytes of integers!
+- explain get_transaction_segwit_digest() better and test further
+- test some more segwit txs including nested ones
+- bech32 address for testnet and regtest are intentionally different -- update it!
 - add explicit documentation for each module before members...
-- segwit transactions creation
 - node proxy should accept full url as well
 - make all code < 80 chars !?
+
+- commit docs/usage/proxy.rst
+- clean and comment the segwit examples !
+- segwit in documentation !?
 
