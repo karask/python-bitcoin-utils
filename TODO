@@ -13,5 +13,6 @@
 
 - commit docs/usage/proxy.rst
 - clean and comment the segwit examples !
+- add segwit examples in README !
 - segwit in documentation !?
 
