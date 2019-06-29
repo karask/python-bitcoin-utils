@@ -309,8 +309,13 @@ class PrivateKey:
         S_as_bigint = int( hexlify(S).decode('utf-8'), 16 )
 
         # update R, S if necessary -- in Bitcoin DER signatures' R should have a
-        # prefix of 0x00 only if it starts with 0x80 or higher
-        # NOTE this is not necessary since the ecdsa lib takes care of that
+        # prefix of 0x00 only if it starts with 0x80 or higher -- this was
+        # implemented in Bitcoin Core of v0.17 to always be the case (however,
+        # signatures are still valid even without a Low R value. Because R is
+        # not mutable in the same way that S is, a low R value can only be
+        # found by trying different nonves (RFC6979 - deterministic nonce
+        # generation).
+        # TODO to be 100% compliant with Bitcoin Core (still valid without it)
 
         # update S if necessary -- Low S standardness rule
         half_order = _order // 2

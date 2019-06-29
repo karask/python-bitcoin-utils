@@ -1,7 +1,7 @@
 - create TxInputWitness class that includes the witness script and knows how to serialize itself
 - create get_wtxid method!
 - segwit txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation..?
-- tx serialization with no signed inputs produces a serialization which includes the 0001 segwit marker and thus is not identical to bitcoin core (the signed transaction is fine though) -- need a better way to check for segwit
+- tx serialization with no signed inputs produces a serialization which includes the 0001 segwit marker and thus is not identical to bitcoin core (the signed transaction is fine though) -- this was because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
 - should we use copy.deepcopy instead of the tx-related copy methods?
 - serialization of witnesses supports only script of size 252 and lower; that is because a simple len() is used instead of a compactSize/VarInt which allows up to 8 bytes of integers!
 - explain get_transaction_segwit_digest() better and test further
