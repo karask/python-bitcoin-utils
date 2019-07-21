@@ -10,6 +10,13 @@
 - add explicit documentation for each module before members...
 - node proxy should accept full url as well
 - make all code < 80 chars !?
+- add to bitcoin-rpc lib option to ignore invalid ssl cert
+  . needed to access remotely withut cert (for other validators from clients)
+  . https://github.com/jgarzik/python-bitcoinrpc/pull/50
+  . but not in a lib release yet
+  . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
+
+- return proxy object directly..no need for .get_proxy()
 
 - witnesses=[] is initialized in Transaction class but still needed in the segwit testcases! -- check why and clean
 - commit docs/usage/proxy.rst

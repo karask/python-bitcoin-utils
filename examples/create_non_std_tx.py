@@ -18,15 +18,15 @@ from bitcoinutils.script import Script
 #
 # Note that a non-standard transaction can only be included in a block if a
 # miner agrees with it. For this to work one needs to use a node setup up
-# for regtest so that you can mine your own blocks. In the example below we use
-# testnet which has the same parameters as regtest.
+# for regtest so that you can mine your own blocks; unless you mine your own
+# testnet/mainnet blocks.
 # Node's config file requires:
 #    regtest=1
 #    acceptnonstdtxn=1
 #
 def main():
     # always remember to setup the network
-    setup('testnet') # same params as regest, which the node should run
+    setup('regtest') 
 
     # create transaction input from tx id of UTXO (contained 0.4 tBTC)
     txin = TxInput('e2d08a63a540000222d6a92440436375d8b1bc89a2638dc5366833804287c83f', 1)
