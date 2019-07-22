@@ -26,7 +26,7 @@ from bitcoinutils.script import Script
 #
 def main():
     # always remember to setup the network
-    setup('testnet') 
+    setup('regtest')
 
     # create transaction input from tx id of UTXO (contained 0.4 tBTC)
     txin = TxInput('4d9a6baf45d4b57c875fe83d5e0834568eae4b5ef6e61d13720ef6685168e663', 0)
