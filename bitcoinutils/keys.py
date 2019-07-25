@@ -233,7 +233,7 @@ class PrivateKey:
         if compressed:
             prefix += 4
 
-        address = self.get_public_key().get_address(compressed=compressed).to_address()
+        address = self.get_public_key().get_address(compressed=compressed).to_string()
         for i in range(prefix, prefix + 4):
             recid = chr(i).encode('utf-8')
             sig = b64encode( recid + signature ).decode('utf-8')
@@ -558,7 +558,7 @@ class PublicKey:
             return False
 
         # confirm that the address provided corresponds to that public key
-        if pubkey.get_address(compressed=compressed).to_address() != address:
+        if pubkey.get_address(compressed=compressed).to_string() != address:
             return False
 
         return True
@@ -637,7 +637,7 @@ class Address(ABC):
         instantiates an object from a hash160 hex string
     from_script(redeem_script)
         instantiates an object from a redeem_script
-    to_address()
+    to_string()
         returns the address's string encoding
     to_hash160()
         returns the address's hash160 hex string representation
@@ -800,7 +800,7 @@ class Address(ABC):
         return self.hash160
 
 
-    def to_address(self):
+    def to_string(self):
         """Returns as address string
 
         |  Pseudocode:
@@ -894,7 +894,7 @@ class SegwitAddress(ABC):
         instantiates an object from a hash hex string
     from_script(witness_script)
         instantiates an object from a witness_script
-    to_address()
+    to_string()
         returns the address's string encoding (Bech32)
     to_hash()
         returns the address's hash hex string representation
@@ -1002,7 +1002,7 @@ class SegwitAddress(ABC):
         return self.witness_hash
 
 
-    def to_address(self):
+    def to_string(self):
         """Returns as address string
 
         Uses a segwit's python reference implementation for now. (TODO)

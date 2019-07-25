@@ -42,7 +42,7 @@ def main():
 
     # create a P2SH address from a redeem script
     addr = P2shAddress.from_script(redeem_script)
-    print(addr.to_address())
+    print(addr.to_string())
 
 if __name__ == "__main__":
     main()

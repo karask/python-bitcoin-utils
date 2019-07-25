@@ -9,7 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from jsonrpc_requests import Server
+from bitcoinrpc.authproxy import AuthServiceProxy
 
 from bitcoinutils.setup import get_network
 from bitcoinutils.constants import NETWORK_DEFAULT_PORTS
@@ -21,7 +21,7 @@ class NodeProxy:
     Attributes
     ----------
     proxy : object
-        a jsonrpc-requests Server object
+        a bitcoinrpc AuthServiceProxy object
     """
 
     def __init__(self, rpcuser=None, rpcpassword=None, host=None, port=None):
@@ -53,10 +53,10 @@ class NodeProxy:
         if not port:
             port = NETWORK_DEFAULT_PORTS[get_network()]
 
-        self.proxy = Server("http://{}:{}".format(host, port),
-                            auth=(rpcuser, rpcpassword))
+        self.proxy = AuthServiceProxy("http://{}:{}@{}:{}".format(rpcuser, rpcpassword, host, port))
+
 
     def get_proxy(self):
-        """Returns jsonrpc-requests Server object"""
+        """Returns bitcoinrpc AuthServiceProxy object"""
         return self.proxy
 

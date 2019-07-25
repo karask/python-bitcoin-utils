@@ -36,7 +36,7 @@ def main():
     address = pub.get_address()
 
     # print the address and hash160 - default is compressed address
-    print("Address:", address.to_address())
+    print("Address:", address.to_string())
     print("Hash160:", address.to_hash160())
 
     print("\n--------------------------------------\n")
@@ -47,7 +47,7 @@ def main():
     print("The message to sign:", message)
     print("The signature is:", signature)
 
-    if PublicKey.verify_message(address.to_address(), signature, message):
+    if PublicKey.verify_message(address.to_string(), signature, message):
         print("The signature is valid!")
     else:
         print("The signature is NOT valid!")

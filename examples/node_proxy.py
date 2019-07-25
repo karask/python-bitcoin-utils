@@ -15,10 +15,10 @@ from bitcoinutils.proxy import NodeProxy
 
 def main():
     # always remember to setup the network
-    setup('regtest')
+    setup('testnet')
 
     # get a node proxy using default host and port
-    proxy = NodeProxy('rpcuser', 'rpcpassword').get_proxy()
+    proxy = NodeProxy('rpcuser', 'rpcpw').get_proxy()
 
     # call the node's getblockcount JSON-RPC method
     count = proxy.getblockcount()

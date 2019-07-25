@@ -24,7 +24,7 @@ def main():
     pub = priv.get_public_key()
 
     fromAddress = pub.get_segwit_address()
-    print(fromAddress.to_address())
+    print(fromAddress.to_string())
 
     # amount is needed to sign the segwit input
     fromAddressAmount = 0.01

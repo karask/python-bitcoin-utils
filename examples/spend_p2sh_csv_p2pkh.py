@@ -47,7 +47,7 @@ def main():
 
     # to confirm that address is the same as the one that the funds were sent
     #addr = P2shAddress.from_script(redeem_script)
-    #print(addr.to_address())
+    #print(addr.to_string())
 
     # send/spend to any random address
     to_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')

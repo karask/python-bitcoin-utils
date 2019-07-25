@@ -1,27 +1,36 @@
+SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself
 - create get_wtxid method!
-- segwit txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation..?
-- tx serialization with no signed inputs produces a serialization which includes the 0001 segwit marker and thus is not identical to bitcoin core (the signed transaction is fine though) -- this was because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
-- should we use copy.deepcopy instead of the tx-related copy methods?
+- segwit txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation
+  . this is because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
+  . https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
+- tx serialization with no signed inputs produces a serialization which includes the 0001 segwit marker and thus is not identical to bitcoin core (the signed transaction is fine though) 
+- witnesses=[] is initialized in Transaction class but still needed in the segwit testcases! -- check why and clean
 - serialization of witnesses supports only script of size 252 and lower; that is because a simple len() is used instead of a compactSize/VarInt which allows up to 8 bytes of integers!
 - explain get_transaction_segwit_digest() better and test further
-- test some more segwit txs including nested ones
+- clean and comment the segwit examples !
+  . test some more segwit txs including nested ones
+
+ADDRESSES-related
 - bech32 address for testnet and regtest are intentionally different -- update it!
+
+TX-related
+- should we use copy.deepcopy instead of the tx-related copy methods?
+
+DOC-related
 - add explicit documentation for each module before members...
-- node proxy should accept full url as well
+- commit docs/usage/proxy.rst
+- add segwit examples in README !
+- segwit in documentation !?
+
+CODE-related
 - make all code < 80 chars !?
+
+OTHERLIBS-related
 - add to bitcoin-rpc lib option to ignore invalid ssl cert
   . needed to access remotely withut cert (for other validators from clients)
   . https://github.com/jgarzik/python-bitcoinrpc/pull/50
   . but not in a lib release yet
   . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
 
-- return proxy object directly..no need for .get_proxy()
 
-- witnesses=[] is initialized in Transaction class but still needed in the segwit testcases! -- check why and clean
-- commit docs/usage/proxy.rst
-- clean and comment the segwit examples !
-- add segwit examples in README !
-- segwit in documentation !?
-
-- after some of the above are cleaned... add to PYPI...

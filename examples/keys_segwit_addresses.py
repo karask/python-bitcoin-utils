@@ -34,14 +34,14 @@ def main():
     address = pub.get_segwit_address()
 
     # print the address and hash - default is compressed address
-    print("Native Address:", address.to_address())
+    print("Native Address:", address.to_string())
     segwit_hash = address.to_hash()
     print("Segwit Hash:", segwit_hash)
 
-    # test to_address
+    # test to_string
     addr2 = P2wpkhAddress.from_hash(segwit_hash)
     print("Created P2wpkhAddress from Segwit Hash and calculate address:")
-    print("Native Address:", addr2.to_address())
+    print("Native Address:", addr2.to_string())
 
     #
     # display P2SH-P2WPKH
@@ -51,7 +51,7 @@ def main():
     addr3 = PrivateKey.from_wif('cTmyBsxMQ3vyh4J3jCKYn2Au7AhTKvqeYuxxkinsg6Rz3BBPrYKK').get_public_key().get_segwit_address()
     # wrap in P2SH address
     addr4 = P2shAddress.from_script(addr3.to_script_pub_key())
-    print("P2SH(P2WPKH):", addr4.to_address())
+    print("P2SH(P2WPKH):", addr4.to_string())
 
     #
     # display P2WSH
@@ -59,13 +59,13 @@ def main():
     p2wpkh_key = PrivateKey.from_wif('cNn8itYxAng4xR4eMtrPsrPpDpTdVNuw7Jb6kfhFYZ8DLSZBCg37')
     script = Script(['OP_1', p2wpkh_key.get_public_key().to_hex(), 'OP_1', 'OP_CHECKMULTISIG'])
     p2wsh_addr = P2wshAddress.from_script(script)
-    print("P2WSH of P2PK:", p2wsh_addr.to_address() )
+    print("P2WSH of P2PK:", p2wsh_addr.to_string() )
 
     #
     # display P2SH-P2WSH
     #
     p2sh_p2wsh_addr = P2shAddress.from_script(p2wsh_addr.to_script_pub_key())
-    print("P2SH(P2WSH of P2PK):", p2sh_p2wsh_addr.to_address())
+    print("P2SH(P2WSH of P2PK):", p2sh_p2wsh_addr.to_string())
 
 
 if __name__ == "__main__":

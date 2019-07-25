@@ -50,7 +50,7 @@ class TestPublicKeys(unittest.TestCase):
 
     def test_get_uncompressed_address(self):
         pub = PublicKey(self.public_key_hex)
-        self.assertEqual(pub.get_address(compressed=False).to_address(), self.address)
+        self.assertEqual(pub.get_address(compressed=False).to_string(), self.address)
 
     def test_pubkey_to_hash160(self):
         pub = PublicKey(self.public_key_hex)
@@ -67,9 +67,9 @@ class TestP2pkhAddresses(unittest.TestCase):
 
     def test_creation_hash(self):
         a1 = P2pkhAddress.from_hash160(self.hash160)
-        self.assertEqual(a1.to_address(), self.address)
+        self.assertEqual(a1.to_string(), self.address)
         a2 = P2pkhAddress.from_hash160(self.hash160c)
-        self.assertEqual(a2.to_address(), self.addressc)
+        self.assertEqual(a2.to_string(), self.addressc)
 
     def test_creation_address(self):
         a1 = P2pkhAddress.from_address(self.address)
@@ -85,7 +85,7 @@ class TestSignAndVerify(unittest.TestCase):
         self.key_wifc = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
         self.priv = PrivateKey.from_wif(self.key_wifc)
         self.pub = self.priv.get_public_key()
-        self.address = self.pub.get_address().to_address()
+        self.address = self.pub.get_address().to_string()
         self.external_address = '1LbxJuEHPsoFRVo3qM1YJRg7DfRD1RvUDe'
         self.deterministic_signature = 'IEiQ7kHfGqlxHSOcUftzR4gChjupJbuIIJCiY3LryQ9SXwPeRoBtJYkrNd/rgU7RP9jX6i2IaGGYMLt9bW+/bbI='
         self.external_signature = 'H+yEsMrKoLqcdegOxYbZ4MFpQkRJligl1whXQDY2+g7EptxmOj9vC3n5ykdHkof0qEbmyV62syaKh+9C95V5R34='
@@ -110,7 +110,7 @@ class TestP2shAddresses(unittest.TestCase):
     def test_p2sh_creation(self):
         script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
         addr = P2shAddress.from_script(script)
-        self.assertTrue(addr.to_address(), self.p2sh_address)
+        self.assertTrue(addr.to_string(), self.p2sh_address)
 
 
 class TestP2WPKHAddresses(unittest.TestCase):
@@ -125,25 +125,25 @@ class TestP2WPKHAddresses(unittest.TestCase):
 
     def test_p2wpkh_creation_pubkey(self):
         addr = P2wpkhAddress.from_hash(self.pub.get_segwit_address().to_hash())
-        self.assertTrue(self.correct_p2wpkh_address, addr.to_address())
+        self.assertTrue(self.correct_p2wpkh_address, addr.to_string())
 
     def test_p2sh_p2wpkh_creation_pubkey(self):
         addr = PrivateKey.from_wif('cTmyBsxMQ3vyh4J3jCKYn2Au7AhTKvqeYuxxkinsg6Rz3BBPrYKK').get_public_key().get_segwit_address()
         p2sh_addr = P2shAddress.from_script(addr.to_script_pub_key())
-        self.assertTrue(p2sh_addr.to_address(), self.correct_p2sh_p2wpkh_address)
+        self.assertTrue(p2sh_addr.to_string(), self.correct_p2sh_p2wpkh_address)
 
     def test_p2wsh_creation_1multisig(self):
         p2wpkh_key = PrivateKey.from_wif('cNn8itYxAng4xR4eMtrPsrPpDpTdVNuw7Jb6kfhFYZ8DLSZBCg37')
         script = Script(['OP_1', p2wpkh_key.get_public_key().to_hex(), 'OP_1', 'OP_CHECKMULTISIG'])
         p2wsh_addr = P2wshAddress.from_script(script)
-        self.assertTrue(p2wsh_addr.to_address(), self.correct_p2wsh_address)
+        self.assertTrue(p2wsh_addr.to_string(), self.correct_p2wsh_address)
 
     def test_p2sh_p2wsh_creation_1multisig(self):
         p2wpkh_key = PrivateKey.from_wif('cNn8itYxAng4xR4eMtrPsrPpDpTdVNuw7Jb6kfhFYZ8DLSZBCg37')
         script = Script(['OP_1', p2wpkh_key.get_public_key().to_hex(), 'OP_1', 'OP_CHECKMULTISIG'])
         p2wsh_addr = P2wshAddress.from_script(script)
         p2sh_p2wsh_addr = P2shAddress.from_script(p2wsh_addr.to_script_pub_key())
-        self.assertTrue(p2sh_p2wsh_addr.to_address(), self.correct_p2sh_p2wsh_address)
+        self.assertTrue(p2sh_p2wsh_addr.to_string(), self.correct_p2sh_p2wsh_address)
 
 
 if __name__ == '__main__':
