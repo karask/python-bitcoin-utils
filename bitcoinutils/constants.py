@@ -28,9 +28,9 @@ NETWORK_P2SH_PREFIXES = { 'mainnet': b'\x05',
                           'testnet': b'\xc4',
                           'regtest': b'\xc4' }
 
-NETWORK_SEGWIT_PREFIXES = { 'mainnet' : 'bc',  #b'\x03\x03\x00\x02\x03',
-                            'testnet' : 'tb',  #b'\x03\x03\x00\x14\x02',
-                            'regtest' : 'tb' } #b'\x03\x03\x00\x14\x02' }
+NETWORK_SEGWIT_PREFIXES = { 'mainnet' : 'bc',
+                            'testnet' : 'tb',
+                            'regtest' : 'bcrt' }
 
 P2PKH_ADDRESS = "p2pkh"
 P2SH_ADDRESS = "p2sh"

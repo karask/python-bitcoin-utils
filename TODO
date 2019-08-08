@@ -11,9 +11,6 @@ SEGWIT-related
 - clean and comment the segwit examples !
   . test some more segwit txs including nested ones
 
-ADDRESSES-related
-- bech32 address for testnet and regtest are intentionally different -- update it!
-
 TX-related
 - should we use copy.deepcopy instead of the tx-related copy methods?
 
