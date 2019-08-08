@@ -1,6 +1,5 @@
 SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself
-- create get_wtxid method!
 - segwit txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation
   . this is because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
   . https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-signature-of-a-segwit-tx-different-from-bitcoin-core-signatur

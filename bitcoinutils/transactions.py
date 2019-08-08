@@ -271,11 +271,17 @@ class Transaction:
         Converts Transaction to hex string
     get_txid()
         Calculates txid and returns it
+    get_hash()
+        Calculates tx hash (wtxid) and returns it
+    get_wtxid()
+        Calculates tx hash (wtxid) and returns it
     copy()
         creates a copy of the object (classmethod)
     get_transaction_digest(txin_index, script, sighash)
         returns the transaction input's digest that is to be signed according
-        to sighash
+    get_transaction_segwit_digest(txin_index, script, amount, sighash)
+        returns the transaction input's segwit digest that is to be signed
+        according to sighash
     """
 
     def __init__(self, inputs=[], outputs=[], locktime=DEFAULT_TX_LOCKTIME,
@@ -540,7 +546,18 @@ class Transaction:
     def get_txid(self):
         """Hashes the serialized tx to get a unique id"""
 
-        data = self.stream(self.has_segwit)
+        data = self.stream(False)
+        hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
+        # note that we reverse the hash for display purposes
+        return hexlify(hash[::-1]).decode('utf-8')
+
+    def getwtxid(self):
+        return get_hash()
+
+    def get_hash(self):
+        """Hashes the serialized tx to get a unique id"""
+
+        data = self.stream(True)
         hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode('utf-8')
