@@ -515,7 +515,7 @@ class Transaction:
         return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
 
 
-    def stream(self,has_segwit):
+    def stream(self, has_segwit):
         """Converts to bytes"""
 
         data = self.version
@@ -557,7 +557,7 @@ class Transaction:
     def get_hash(self):
         """Hashes the serialized tx to get a unique id"""
 
-        data = self.stream(True)
+        data = self.stream(self.has_segwit)
         hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode('utf-8')
