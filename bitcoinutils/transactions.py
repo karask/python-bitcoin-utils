@@ -9,6 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
+import math
 import hashlib
 import struct
 from binascii import unhexlify, hexlify
@@ -275,6 +276,10 @@ class Transaction:
         Calculates tx hash (wtxid) and returns it
     get_wtxid()
         Calculates tx hash (wtxid) and returns it
+    get_size()
+        Calculates the tx size
+    get_vsize()
+        Calculates the tx segwit size
     copy()
         creates a copy of the object (classmethod)
     get_transaction_digest(txin_index, script, sighash)
@@ -544,23 +549,66 @@ class Transaction:
 
 
     def get_txid(self):
-        """Hashes the serialized tx to get a unique id"""
+        """Hashes the serialized (bytes) tx to get a unique id"""
 
         data = self.stream(False)
         hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode('utf-8')
 
-    def getwtxid(self):
+
+    def get_wtxid(self):
+        """Hashes the serialized (bytes) tx including segwit marker and witnesses"""
+
         return get_hash()
 
+
     def get_hash(self):
-        """Hashes the serialized tx to get a unique id"""
+        """Hashes the serialized (bytes) tx including segwit marker and witnesses"""
 
         data = self.stream(self.has_segwit)
         hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode('utf-8')
+
+
+    def get_size(self):
+        """Gets the size of the transaction"""
+
+        return len(self.stream(self.has_segwit))
+
+
+    def get_vsize(self):
+        """Gets the virtual size of the transaction.
+
+        For non-segwit txs this is identical to get_size(). For segwit txs the
+        marker and witnesses length needs to be reduced to 1/4 of its original
+        length. Thus it is substructed from size and then it is divided by 4
+        before added back to size to produce vsize (always rounded up).
+        """
+        # return size if non segwit
+        if not self.has_segwit:
+            return self.get_size()
+
+        marker_size = 2
+
+        wit_size = 0
+        data = b''
+
+        # count witnesses data
+        for witness in self.witnesses:
+            # add witnesses script Count
+            witnesses_count_bytes = chr(len(witness.script)).encode()
+            data = witnesses_count_bytes
+            data += witness.to_bytes(True)
+        wit_size = len(data)
+        # TODO when TxInputWitness is created it will contain it's own len or
+        # size method
+
+        size = self.get_size() - (marker_size + wit_size)
+        vsize = size + (marker_size + wit_size) / 4
+
+        return int( math.ceil(vsize) )
 
 
     def serialize(self):

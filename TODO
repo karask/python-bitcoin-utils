@@ -1,10 +1,11 @@
 SEGWIT-related
-- create TxInputWitness class that includes the witness script and knows how to serialize itself
+- create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
 - segwit txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation
   . this is because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
   . https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
 - tx serialization with no signed inputs produces a serialization which includes the 0001 segwit marker and thus is not identical to bitcoin core (the signed transaction is fine though) 
 - witnesses=[] is initialized in Transaction class but still needed in the segwit testcases! -- check why and clean
+  . redo testcases from scratch?!?!
 - serialization of witnesses supports only script of size 252 and lower; that is because a simple len() is used instead of a compactSize/VarInt which allows up to 8 bytes of integers!
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !
