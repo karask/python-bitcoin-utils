@@ -787,10 +787,6 @@ class Address(ABC):
         if data_hash[0:4] != checksum:
             return False
 
-        # check correct network
-        if NETWORK_P2PKH_PREFIXES[get_network()] != network_prefix:
-            return False
-
         return True
 
 

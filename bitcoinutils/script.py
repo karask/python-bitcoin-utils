@@ -185,6 +185,10 @@ class Script:
         Also note that according to standarardness rules (BIP-62) the minimum
         possible PUSHDATA operator must be used!
         """
+
+        # expects data in hexadecimal characters and converts appropriately
+        # TODO maybe, for convenience, also accept objects for public keys,
+        # addresses, etc. and use isinstance and convert manually
         data_bytes = unhexlify(data)
 
         if len(data_bytes) < 0x4c:
@@ -200,6 +204,9 @@ class Script:
 
 
     def _segwit_op_push_data(self, data):
+        # expects data in hexadecimal characters and converts appropriately
+        # TODO maybe, for convenience, also accept objects for public keys,
+        # addresses, etc. and use isinstance and convert manually
         data_bytes = unhexlify(data)
         return chr(len(data_bytes)).encode() + data_bytes
 

@@ -585,6 +585,8 @@ class Transaction:
         marker and witnesses length needs to be reduced to 1/4 of its original
         length. Thus it is substructed from size and then it is divided by 4
         before added back to size to produce vsize (always rounded up).
+
+        https://en.bitcoin.it/wiki/Weight_units
         """
         # return size if non segwit
         if not self.has_segwit:
