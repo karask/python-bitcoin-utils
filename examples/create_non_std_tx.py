@@ -31,8 +31,6 @@ def main():
     # create transaction input from tx id of UTXO (contained 0.4 tBTC)
     txin = TxInput('e2d08a63a540000222d6a92440436375d8b1bc89a2638dc5366833804287c83f', 1)
 
-    # create transaction output using P2PKH scriptPubKey (locking script)
-    addr = P2pkhAddress('msXP94TBncQ9usP6oZNpGweE24biWjJs2d')
     # locking script expects 2 numbers that when added equal 5 (silly example)
     txout = TxOutput( 0.9, Script(['OP_ADD', 'OP_5', 'OP_EQUAL']) )
 

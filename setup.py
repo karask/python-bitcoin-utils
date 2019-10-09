@@ -19,7 +19,7 @@ setup(name='bitcoin-utils',
       url='https://github.com/karask/python-bitcoin-utils',
       license='AGPLv3',
       keywords='bitcoin library utilities tools',
-      install_requires=['base58check==1.0.2', 'ecdsa==0.13', 'sympy==1.3',
+      install_requires=['base58check==1.0.2', 'ecdsa==0.13.3', 'sympy==1.3',
                         'python-bitcoinrpc==1.0'],
       packages=['bitcoinutils'],
       #package_data={
