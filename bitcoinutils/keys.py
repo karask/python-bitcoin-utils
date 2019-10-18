@@ -23,7 +23,7 @@ from sympy.ntheory import sqrt_mod
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
-        NETWORK_SEGWIT_PREFIXES, SEGWIT_VERSION
+        NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
 import bitcoinutils.bech32
 import bitcoinutils.script
@@ -926,6 +926,8 @@ class SegwitAddress(ABC):
         """
 
         self.version = version
+        if self.version == P2WPKH_ADDRESS_V0 or self.version == P2WSH_ADDRESS_V0:
+            segwit_num_version = 0
 
         if witness_hash:
             self.witness_hash = witness_hash
@@ -975,7 +977,7 @@ class SegwitAddress(ABC):
         witness_version, witness_int_array = bitcoinutils.bech32.decode(NETWORK_SEGWIT_PREFIXES[get_network()], address)
         if witness_version == None:
             raise ValueError("Invalid value for parameter address.")
-        if witness_version != SEGWIT_VERSION:
+        if witness_version != segwit_num_version:
             raise TypeError("Invalid segwit version.")
 
         return hexlify( bytes(witness_int_array) ).decode('utf-8')
@@ -990,11 +992,6 @@ class SegwitAddress(ABC):
         script_bytes = script.to_bytes()
         hashsha256 = hashlib.sha256(script_bytes).digest()
         return hexlify(hashsha256).decode('utf-8')
-
-        # TODO TODELETE !?
-        #script_bytes = script.to_bytes()
-        #hash_bytes = script_bytes[2:]
-        #return hexlify(hash_bytes).decode('utf-8')
 
 
     def to_hash(self):
@@ -1013,7 +1010,8 @@ class SegwitAddress(ABC):
         hash_bytes = unhexlify( self.witness_hash.encode('utf-8') )
         witness_int_array = memoryview(hash_bytes).tolist()
 
-        return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()], SEGWIT_VERSION, witness_int_array)
+        return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()],
+                                          segwit_num_version, witness_int_array)
 
 
 
