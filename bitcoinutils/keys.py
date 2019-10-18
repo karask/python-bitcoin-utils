@@ -927,7 +927,7 @@ class SegwitAddress(ABC):
 
         self.version = version
         if self.version == P2WPKH_ADDRESS_V0 or self.version == P2WSH_ADDRESS_V0:
-            segwit_num_version = 0
+            self.segwit_num_version = 0
 
         if witness_hash:
             self.witness_hash = witness_hash
@@ -977,7 +977,7 @@ class SegwitAddress(ABC):
         witness_version, witness_int_array = bitcoinutils.bech32.decode(NETWORK_SEGWIT_PREFIXES[get_network()], address)
         if witness_version == None:
             raise ValueError("Invalid value for parameter address.")
-        if witness_version != segwit_num_version:
+        if witness_version != self.segwit_num_version:
             raise TypeError("Invalid segwit version.")
 
         return hexlify( bytes(witness_int_array) ).decode('utf-8')
@@ -1011,7 +1011,7 @@ class SegwitAddress(ABC):
         witness_int_array = memoryview(hash_bytes).tolist()
 
         return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()],
-                                          segwit_num_version, witness_int_array)
+                                          self.segwit_num_version, witness_int_array)
 
 
 
