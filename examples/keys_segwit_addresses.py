@@ -37,6 +37,7 @@ def main():
     print("Native Address:", address.to_string())
     segwit_hash = address.to_hash()
     print("Segwit Hash:", segwit_hash)
+    print("Segwit Version:", address.get_type())
 
     # test to_string
     addr2 = P2wpkhAddress.from_hash(segwit_hash)

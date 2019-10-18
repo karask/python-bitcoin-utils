@@ -903,7 +903,8 @@ class SegwitAddress(ABC):
         If an invalid address or hash is provided.
     """
     @abstractmethod
-    def __init__(self, address=None, witness_hash=None, script=None):
+    def __init__(self, address=None, witness_hash=None, script=None,
+                 version=P2WPKH_ADDRESS_V0):
         """
         Parameters
         ----------
@@ -913,6 +914,8 @@ class SegwitAddress(ABC):
             the hash hex string representation
         script : Script object
             instantiates an Address object from a witness script
+        version : str
+            specifies the default segwit version
 
         Raises
         ------
@@ -921,6 +924,8 @@ class SegwitAddress(ABC):
         ValueError
             If an invalid address or hash is provided.
         """
+
+        self.version = version
 
         if witness_hash:
             self.witness_hash = witness_hash
@@ -1026,10 +1031,12 @@ class P2wpkhAddress(SegwitAddress):
     """
 
     # TODO allow creation directly from Bech32 address !!!!!!
-    def __init__(self, address=None, witness_hash=None):
+    def __init__(self, address=None, witness_hash=None,
+                 version=P2WPKH_ADDRESS_V0):
         """Allow creation only from hash160 of public key"""
 
-        super().__init__(address=address, witness_hash=witness_hash)
+        super().__init__(address=address, witness_hash=witness_hash,
+                         version=version)
 
 
     def to_script_pub_key(self):
@@ -1039,7 +1046,7 @@ class P2wpkhAddress(SegwitAddress):
 
     def get_type(self):
         """Returns the type of address"""
-        return P2WPKH_ADDRESS_V0
+        return self.version
 
 
 class P2wshAddress(SegwitAddress):
@@ -1055,10 +1062,12 @@ class P2wshAddress(SegwitAddress):
         returns the type of address
     """
 
-    def __init__(self, address=None, witness_hash=None, script=None):
+    def __init__(self, address=None, witness_hash=None, script=None,
+                 version=P2WSH_ADDRESS_V0):
         """Allow creation only from hash160 of public key"""
 
-        super().__init__(address=None, witness_hash=None, script=script)
+        super().__init__(address=None, witness_hash=None, script=script,
+                         version=version)
 
 
     def to_script_pub_key(self):
@@ -1068,7 +1077,7 @@ class P2wshAddress(SegwitAddress):
 
     def get_type(self):
         """Returns the type of address"""
-        return P2WSH_ADDRESS_V0
+        return self.version
 
 
 
