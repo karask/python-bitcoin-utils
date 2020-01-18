@@ -15,7 +15,7 @@ import struct
 from binascii import unhexlify, hexlify
 
 from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
-                    DEFAULT_TX_VERSION, SATOSHIS_PER_BITCOIN, NEGATIVE_SATOSHI, \
+                    DEFAULT_TX_VERSION, NEGATIVE_SATOSHI, \
                     EMPTY_TX_SEQUENCE, SIGHASH_ALL, SIGHASH_NONE, \
                     SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, \
                     ABSOLUTE_TIMELOCK_SEQUENCE, REPLACE_BY_FEE_SEQUENCE, \
@@ -101,8 +101,8 @@ class TxOutput:
 
     Attributes
     ----------
-    amount : float
-        the value we want to send to this output (in BTC)
+    amount : int
+        the value we want to send to this output (in satoshi BTC)
     script_pubkey : list (string)
         the script that will lock this amount
 
@@ -128,10 +128,7 @@ class TxOutput:
         # internally all little-endian except hashes
         # note struct uses little-endian by default
 
-        # 0.29*100000000 results in 28999999.999999996 so we round to the
-        # closest integer -- this is because the result is represented as
-        # fractions
-        amount_bytes = struct.pack('<q', round(self.amount * SATOSHIS_PER_BITCOIN))
+        amount_bytes = struct.pack('<q', self.amount)
         script_bytes = self.script_pubkey.to_bytes()
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
         return data
@@ -435,9 +432,9 @@ class Transaction:
                     The index of the input that we wish to sign
                 script : list (string)
                     The scriptPubKey of the UTXO that we want to spend
-                amount : float
+                amount : int
                     The amount of the UTXO to spend is included in the
-                    signature for segwit
+                    signature for segwit (in satoshi BTC)
                 sighash : int
                     The type of the signature hash to be created
                 """
@@ -475,14 +472,14 @@ class Transaction:
             # Hash all output
             hash_outputs = b''
             for txout in tmp_tx.outputs:
-                amount_bytes = struct.pack('<q', round(txout.amount * SATOSHIS_PER_BITCOIN))
+                amount_bytes = struct.pack('<q', amount)
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
         elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(tmp_tx.outputs):
             # Hash one output
             txout = tmp_tx.outputs[txin_index]
-            amount_bytes = struct.pack('<q', round(txout.amount * SATOSHIS_PER_BITCOIN))
+            amount_bytes = struct.pack('<q', amount)
             script_bytes = txout.script_pubkey.to_bytes()
             hash_outputs = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
@@ -503,7 +500,7 @@ class Transaction:
         tx_for_signing += script.to_bytes()
 
         # add txin amount
-        tx_for_signing += struct.pack('<q', round(amount * SATOSHIS_PER_BITCOIN))
+        tx_for_signing += struct.pack('<q', amount)
 
         # add tx sequence
         tx_for_signing += txin.sequence

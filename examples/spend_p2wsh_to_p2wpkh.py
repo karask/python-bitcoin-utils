@@ -13,7 +13,7 @@ from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey, P2wshAddress, P2wpkhAddress
 from bitcoinutils.script import Script
-from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
+from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK, COIN
 
 
 def main():
@@ -33,13 +33,13 @@ def main():
     # set values
     txid = '2042195c40a92353f2ffe30cd0df8d177698560e81807e8bf9174a9c0e98e6c2'
     vout = 0
-    amount = 0.01
+    amount = int(0.01 * COIN)
 
     # create transaction input from tx id of UTXO
     txin = TxInput(txid, vout)
 
-    txOut1 = TxOutput(0.0001, toAddress.to_script_pub_key())
-    txOut2 = TxOutput(0.0098, fromAddress.to_script_pub_key())
+    txOut1 = TxOutput(int(0.0001 * COIN), toAddress.to_script_pub_key())
+    txOut2 = TxOutput(int(0.0098 * COIN), fromAddress.to_script_pub_key())
 
     tx = Transaction([txin], [txOut1, txOut2], has_segwit=True)
 

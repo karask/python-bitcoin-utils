@@ -13,7 +13,7 @@ from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress, PrivateKey
 from bitcoinutils.script import Script
-from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
+from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, COIN
 
 def main():
     # always remember to setup the network
@@ -27,12 +27,12 @@ def main():
 
     # create transaction output using P2PKH scriptPubKey (locking script)
     addr = P2pkhAddress('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
-    txout = TxOutput( 0.3, Script(['OP_DUP', 'OP_HASH160', addr.to_hash160(),
+    txout = TxOutput( int(0.3 * COIN), Script(['OP_DUP', 'OP_HASH160', addr.to_hash160(),
                                     'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
 
     # create another output to get the change - remaining 0.01 is tx fees
     change_addr = P2pkhAddress('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
-    change_txout = TxOutput( 0.08, Script(['OP_DUP', 'OP_HASH160',
+    change_txout = TxOutput( int(0.08 * COIN), Script(['OP_DUP', 'OP_HASH160',
                                            change_addr.to_hash160(),
                                            'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
 

@@ -14,6 +14,7 @@ from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress, PrivateKey
 from bitcoinutils.script import Script
+from bitcoinutils.constants import COIN
 
 #
 # Note that a non-standard transaction can only be included in a block if a
@@ -26,19 +27,19 @@ from bitcoinutils.script import Script
 #
 def main():
     # always remember to setup the network
-    setup('regtest') 
+    setup('regtest')
 
     # create transaction input from tx id of UTXO (contained 0.4 tBTC)
     txin = TxInput('e2d08a63a540000222d6a92440436375d8b1bc89a2638dc5366833804287c83f', 1)
 
     # locking script expects 2 numbers that when added equal 5 (silly example)
-    txout = TxOutput( 0.9, Script(['OP_ADD', 'OP_5', 'OP_EQUAL']) )
+    txout = TxOutput(int(0.9 * COIN), Script(['OP_ADD', 'OP_5', 'OP_EQUAL']) )
 
     # create another output to get the change - remaining 0.01 is tx fees
     # note that this time we used to_script_pub_key() to create the P2PKH
     # script
     change_addr = P2pkhAddress('mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r')
-    change_txout = TxOutput( 2, change_addr.to_script_pub_key())
+    change_txout = TxOutput(2 * COIN, change_addr.to_script_pub_key())
 
     # create transaction from inputs/outputs -- default locktime is used
     tx = Transaction([txin], [txout, change_txout])
