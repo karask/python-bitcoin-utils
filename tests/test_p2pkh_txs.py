@@ -14,12 +14,12 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
         # sighash none
         self.txin = TxInput('fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c', 0)
         self.addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-        self.txout = TxOutput(int(COIN * 0.1), Script(['OP_DUP', 'OP_HASH160', self.addr.to_hash160(),
+        self.txout = TxOutput(Decimal(COIN * 0.1), Script(['OP_DUP', 'OP_HASH160', self.addr.to_hash160(),
                                            'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
         self.change_addr = P2pkhAddress('mytmhndz4UbEMeoSZorXXrLpPfeoFUDzEp')
-        self.change_txout = TxOutput(int(COIN * 0.29), self.change_addr.to_script_pub_key())
+        self.change_txout = TxOutput(Decimal(COIN * 0.29), self.change_addr.to_script_pub_key())
         self.change_low_s_addr = P2pkhAddress('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
-        self.change_low_s_txout = TxOutput(int(COIN * 0.29), self.change_low_s_addr.to_script_pub_key())
+        self.change_low_s_txout = TxOutput(Decimal(COIN * 0.29), self.change_low_s_addr.to_script_pub_key())
         self.sk = PrivateKey('cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9')
         self.from_addr = P2pkhAddress('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
 
@@ -38,12 +38,12 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
         self.sig_sk1 = PrivateKey('cTALNpTpRbbxTCJ2A5Vq88UxT44w1PE2cYqiB3n4hRvzyCev1Wwo')
         self.sig_sk2 = PrivateKey('cVf3kGh6552jU2rLaKwXTKq5APHPoZqCP4GQzQirWGHFoHQ9rEVt')
         self.sig_to_addr1 = P2pkhAddress('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
-        self.sig_txout1 = TxOutput(int(COIN * 0.09), Script(['OP_DUP', 'OP_HASH160',
+        self.sig_txout1 = TxOutput(Decimal(COIN * 0.09), Script(['OP_DUP', 'OP_HASH160',
                                                  self.sig_to_addr1.to_hash160(),
                                                  'OP_EQUALVERIFY',
                                                  'OP_CHECKSIG']) )
         self.sig_to_addr2 = P2pkhAddress('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
-        self.sig_txout2 = TxOutput(int(COIN * 0.009), Script(['OP_DUP', 'OP_HASH160',
+        self.sig_txout2 = TxOutput(Decimal(COIN * 0.009), Script(['OP_DUP', 'OP_HASH160',
                                                    self.sig_to_addr2.to_hash160(),
                                                    'OP_EQUALVERIFY',
                                                    'OP_CHECKSIG']) )

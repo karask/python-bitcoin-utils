@@ -51,7 +51,7 @@ def main():
 
     # send/spend to any random address
     to_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-    txout = TxOutput( 11 * COIN, to_addr.to_script_pub_key() )
+    txout = TxOutput(11 * COIN, to_addr.to_script_pub_key() )
 
     # no change address - the remaining 0.1 tBTC will go to miners)
 

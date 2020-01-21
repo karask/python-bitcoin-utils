@@ -9,6 +9,7 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
+from decimal import Decimal
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey, P2wshAddress, P2wpkhAddress
@@ -35,7 +36,7 @@ def main():
     # set values
     txid = 'd222d91e2da368ac38e84aa615c557e4caeacce02aa5dbca10d840fd460fc938'
     vout = 0
-    amount = int(0.01764912 * COIN)
+    amount = Decimal(0.01764912 * COIN)
 
     # create transaction input from tx id of UTXO
     txin = TxInput(txid, vout)
@@ -43,8 +44,8 @@ def main():
         ['OP_DUP', 'OP_HASH160', priv0.get_public_key().to_hash160(), 'OP_EQUALVERIFY', 'OP_CHECKSIG'])
 
     # create transaction output
-    txOut1 = TxOutput(int(0.0001 * COIN), toAddress.to_script_pub_key())
-    txOut2 = TxOutput(int(0.01744912 * COIN), fromAddress.to_script_pub_key())
+    txOut1 = TxOutput(Decimal(0.0001 * COIN), toAddress.to_script_pub_key())
+    txOut2 = TxOutput(Decimal(0.01744912 * COIN), fromAddress.to_script_pub_key())
 
     # create transaction
     tx = Transaction([txin], [txOut1, txOut2], has_segwit=True)

@@ -128,7 +128,7 @@ class TxOutput:
         # internally all little-endian except hashes
         # note struct uses little-endian by default
 
-        amount_bytes = struct.pack('<q', self.amount)
+        amount_bytes = struct.pack('<q', int(self.amount))
         script_bytes = self.script_pubkey.to_bytes()
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
         return data
@@ -472,14 +472,14 @@ class Transaction:
             # Hash all output
             hash_outputs = b''
             for txout in tmp_tx.outputs:
-                amount_bytes = struct.pack('<q', amount)
+                amount_bytes = struct.pack('<q', int(amount))
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
         elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(tmp_tx.outputs):
             # Hash one output
             txout = tmp_tx.outputs[txin_index]
-            amount_bytes = struct.pack('<q', amount)
+            amount_bytes = struct.pack('<q', int(amount))
             script_bytes = txout.script_pubkey.to_bytes()
             hash_outputs = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
@@ -500,7 +500,7 @@ class Transaction:
         tx_for_signing += script.to_bytes()
 
         # add txin amount
-        tx_for_signing += struct.pack('<q', amount)
+        tx_for_signing += struct.pack('<q', int(amount))
 
         # add tx sequence
         tx_for_signing += txin.sequence

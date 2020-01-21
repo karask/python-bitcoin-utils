@@ -10,6 +10,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
+from decimal import Decimal
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey
@@ -37,7 +38,7 @@ def main():
     #txin_script_pub_key = redeem_script.to_p2sh_script_pub_key()
 
     to_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-    txout = TxOutput(int(0.08 * COIN), to_addr.to_script_pub_key() )
+    txout = TxOutput(Decimal(0.08 * COIN), to_addr.to_script_pub_key() )
 
     # no change address - the remaining 0.01 tBTC will go to miners)
 
