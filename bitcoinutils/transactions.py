@@ -472,14 +472,14 @@ class Transaction:
             # Hash all output
             hash_outputs = b''
             for txout in tmp_tx.outputs:
-                amount_bytes = struct.pack('<q', int(amount))
+                amount_bytes = struct.pack('<q', int(txout.amount))
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
         elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(tmp_tx.outputs):
             # Hash one output
             txout = tmp_tx.outputs[txin_index]
-            amount_bytes = struct.pack('<q', int(amount))
+            amount_bytes = struct.pack('<q', int(txout.amount))
             script_bytes = txout.script_pubkey.to_bytes()
             hash_outputs = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()

@@ -4,7 +4,7 @@ from context import bitcoinutils
 from bitcoinutils.setup import setup
 from bitcoinutils.keys import PrivateKey, P2pkhAddress, P2shAddress
 #from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
-from bitcooinutils.constants import COIN
+from bitcoinutils.constants import COIN
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction
 from bitcoinutils.script import Script
 
