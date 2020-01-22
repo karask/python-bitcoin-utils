@@ -1,6 +1,7 @@
 import hashlib
 import unittest
 from binascii import hexlify, unhexlify
+from decimal import Decimal
 
 from context import bitcoinutils
 from bitcoinutils.setup import setup
@@ -23,64 +24,64 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # P2PKH to P2WPKH
         self.txin1 = TxInput("5a7b3aaa66d6b7b7abcdc9f1d05db4eee94a700297a319e19454e143875e1078", 0)
-        self.txout1 = TxOutput(0.0099, self.p2wpkh_addr.to_script_pub_key())
+        self.txout1 = TxOutput(Decimal('0.0099'), self.p2wpkh_addr.to_script_pub_key())
 
         # P2WPKH to P2PKH
         self.txin_spend = TxInput("b3ca1c4cc778380d1e5376a5517445104e46e97176e40741508a3b07a6483ad3", 0)
-        self.txin_spend_amount = 0.0099
-        self.txout2 = TxOutput(0.0098, self.p2pkh_addr.to_script_pub_key())
+        self.txin_spend_amount = Decimal('0.0099')
+        self.txout2 = TxOutput(Decimal('0.0098'), self.p2pkh_addr.to_script_pub_key())
         self.p2pkh_redeem_script = Script(['OP_DUP', 'OP_HASH160', self.p2pkh_addr.to_hash160(), 'OP_EQUALVERIFY',
                                            'OP_CHECKSIG'])
 
         # P2WPKH P2PKH to P2PKH
         self.txin_spend_p2pkh = TxInput("1e2a5279c868d61fb2ff0b1c2b04aa3eff02cd74952a8b4e799532635a9132cc", 0)
-        self.txin_spend_p2pkh_amount = 0.01
+        self.txin_spend_p2pkh_amount = Decimal('0.01')
 
         self.txin_spend_p2wpkh = TxInput("fff39047310fbf04bdd0e0bc75dde4267ae4d25219d8ad95e0ca1cee907a60da", 0)
-        self.txin_spend_p2wpkh_amount = 0.0095
+        self.txin_spend_p2wpkh_amount = Decimal('0.0095')
 
-        self.txout3 = TxOutput(0.0194, self.p2pkh_addr.to_script_pub_key())
+        self.txout3 = TxOutput(Decimal('0.0194'), self.p2pkh_addr.to_script_pub_key())
 
         # SIGHASH NONE type send
         self.txin1_signone = TxInput("fb4c338a00a75d73f9a6bd203ed4bd8884edeb111fac25a7946d5df6562f1942", 0)
-        self.txin1_signone_amount = 0.01
+        self.txin1_signone_amount = Decimal('0.01')
 
-        self.txout1_signone = TxOutput(0.0080, self.p2pkh_addr.to_script_pub_key())
-        self.txout2_signone = TxOutput(0.0019, self.p2pkh_addr.to_script_pub_key())
+        self.txout1_signone = TxOutput(Decimal('0.0080'), self.p2pkh_addr.to_script_pub_key())
+        self.txout2_signone = TxOutput(Decimal('0.0019'), self.p2pkh_addr.to_script_pub_key())
 
         # SIGHASH SINGLE type send
         self.txin1_sigsingle = TxInput("b04909d4b5239a56d676c1d9d722f325a86878c9aa535915aa0df97df47cedeb", 0)
-        self.txin1_sigsingle_amount = 0.0193
+        self.txin1_sigsingle_amount = Decimal('0.0193')
 
-        self.txout1_sigsingle = TxOutput(0.01, self.p2pkh_addr.to_script_pub_key())
-        self.txout2_sigsingle = TxOutput(0.0092, self.p2pkh_addr.to_script_pub_key())
+        self.txout1_sigsingle = TxOutput(Decimal('0.01'), self.p2pkh_addr.to_script_pub_key())
+        self.txout2_sigsingle = TxOutput(Decimal('0.0092'), self.p2pkh_addr.to_script_pub_key())
 
         # SIGHASH_ALL | SIGHASH_ANYONECANPAY type send
         self.txin1_siganyonecanpay_all = TxInput("f67e97a2564dceed405e214843e3c954b47dd4f8b26ea48f82382f51f7626036", 0)
-        self.txin1_siganyonecanpay_all_amount = 0.0018
+        self.txin1_siganyonecanpay_all_amount = Decimal('0.0018')
 
         self.txin2_siganyonecanpay_all = TxInput("f4afddb77cd11a79bed059463085382c50d60c7f9e4075d8469cfe60040f68eb", 0)
-        self.txin2_siganyonecanpay_all_amount = 0.0018
+        self.txin2_siganyonecanpay_all_amount = Decimal('0.0018')
 
-        self.txout1_siganyonecanpay_all = TxOutput(0.0018, self.p2pkh_addr.to_script_pub_key())
-        self.txout2_siganyonecanpay_all = TxOutput(0.0017, self.p2pkh_addr.to_script_pub_key())
+        self.txout1_siganyonecanpay_all = TxOutput(Decimal('0.0018'), self.p2pkh_addr.to_script_pub_key())
+        self.txout2_siganyonecanpay_all = TxOutput(Decimal('0.0017'), self.p2pkh_addr.to_script_pub_key())
 
         # SIGHASH_NONE | SIGHASH_ANYONECANPAY type send
         self.txin1_siganyonecanpay_none = TxInput("d2ae5d4a3f390f108769139c9b5757846be6693b785c4e21eab777eec7289095", 0)
-        self.txin1_siganyonecanpay_none_amount = 0.009
+        self.txin1_siganyonecanpay_none_amount = Decimal('0.009')
 
         self.txin2_siganyonecanpay_none = TxInput("ee5062d426677372e6de96e2eb47d572af5deaaef3ef225f3179dfa1ece3f4f5", 0)
-        self.txin2_siganyonecanpay_none_amount = 0.007
+        self.txin2_siganyonecanpay_none_amount = Decimal('0.007')
 
-        self.txout1_siganyonecanpay_none = TxOutput(0.008, self.p2pkh_addr.to_script_pub_key())
-        self.txout2_siganyonecanpay_none = TxOutput(0.007, self.p2pkh_addr.to_script_pub_key())
+        self.txout1_siganyonecanpay_none = TxOutput(Decimal('0.008'), self.p2pkh_addr.to_script_pub_key())
+        self.txout2_siganyonecanpay_none = TxOutput(Decimal('0.007'), self.p2pkh_addr.to_script_pub_key())
 
         # SIGHASH_SINGLE | SIGHASH_ANYONECANPAY type send
         self.txin1_siganyonecanpay_single = TxInput("c7bb5672266c8a5b64fe91e953a9e23e3206e3b1a2ddc8e5999b607b82485042", 0)
-        self.txin1_siganyonecanpay_single_amount = 0.01
+        self.txin1_siganyonecanpay_single_amount = Decimal('0.01')
 
-        self.txout1_siganyonecanpay_single = TxOutput(0.005, self.p2pkh_addr.to_script_pub_key())
-        self.txout2_siganyonecanpay_single = TxOutput(0.0049, self.p2pkh_addr.to_script_pub_key())
+        self.txout1_siganyonecanpay_single = TxOutput(Decimal('0.005'), self.p2pkh_addr.to_script_pub_key())
+        self.txout2_siganyonecanpay_single = TxOutput(Decimal('0.0049'), self.p2pkh_addr.to_script_pub_key())
 
         # result
         self.create_send_to_p2wpkh_result = "020000000178105e8743e15494e119a39702704ae9eeb45dd0f1c9cdabb7b7d666aa3a7b5a000000006b4830450221009ad68e1ecdd38d6abe515a52582a441a56f0fedb21816eb2f583183685da2eb502203c4fc7522ad7ab0c1854180cfd337e484ad3ba70d23bcf4380c6e2ff4e6e7985012102d82c9860e36f15d7b72aa59e29347f951277c21cd4d34822acdeeadbcff8a546ffffffff01301b0f0000000000160014fd337ad3bf81e086d96a68e1f8d6a0a510f8c24a00000000"

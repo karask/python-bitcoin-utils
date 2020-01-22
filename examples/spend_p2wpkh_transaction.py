@@ -9,11 +9,11 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
+from decimal import Decimal
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey, P2wshAddress, P2wpkhAddress
 from bitcoinutils.script import Script
-
 
 def main():
     # always remember to setup the network
@@ -27,7 +27,7 @@ def main():
     print(fromAddress.to_string())
 
     # amount is needed to sign the segwit input
-    fromAddressAmount = 0.01
+    fromAddressAmount = Decimal('0.01')
 
     # UTXO of fromAddress
     txid = '13d2d30eca974e8fa5da11b9608fa36905a22215e8df895e767fc903889367ff'
@@ -43,7 +43,7 @@ def main():
                             'OP_EQUALVERIFY', 'OP_CHECKSIG'])
 
     # create transaction output
-    txOut = TxOutput(0.009, toAddress.to_script_pub_key())
+    txOut = TxOutput(Decimal('0.009'), toAddress.to_script_pub_key())
 
     # create transaction without change output
     tx = Transaction([txin], [txOut], has_segwit=True)

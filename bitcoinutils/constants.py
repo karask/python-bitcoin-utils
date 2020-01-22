@@ -9,6 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
+from decimal import Decimal
 
 # TODO organise constants in sections
 
@@ -60,4 +61,4 @@ REPLACE_BY_FEE_SEQUENCE = b'\x01\x00\x00\x00'
 DEFAULT_TX_VERSION  = b'\x02\x00\x00\x00'
 
 SATOSHIS_PER_BITCOIN = 100000000
-NEGATIVE_SATOSHI = -0.00000001
+NEGATIVE_SATOSHI = Decimal('-0.00000001')

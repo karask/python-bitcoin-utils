@@ -9,6 +9,7 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
+from decimal import Decimal
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey, P2wshAddress, P2wpkhAddress
@@ -22,7 +23,7 @@ def main():
 
     priv1 = PrivateKey("cN1XE3ESGgdvr4fWsB7L3BcqXncUauF8Fo8zzv4Sm6WrkiGrsxrG")
     priv2 = PrivateKey("cR8AkcbL2pgBswrHp28AftEznHPPLA86HiTog8MpNCibxwrsUcZ4")
-    
+
     p2sh_redeem_script = Script(
         ['OP_1', priv1.get_public_key().to_hex(), priv2.get_public_key().to_hex(),'OP_2', 'OP_CHECKMULTISIG'])
 
@@ -33,13 +34,13 @@ def main():
     # set values
     txid = '2042195c40a92353f2ffe30cd0df8d177698560e81807e8bf9174a9c0e98e6c2'
     vout = 0
-    amount = 0.01
+    amount = Decimal('0.01')
 
     # create transaction input from tx id of UTXO
     txin = TxInput(txid, vout)
 
-    txOut1 = TxOutput(0.0001, toAddress.to_script_pub_key())
-    txOut2 = TxOutput(0.0098, fromAddress.to_script_pub_key())
+    txOut1 = TxOutput(Decimal('0.0001'), toAddress.to_script_pub_key())
+    txOut2 = TxOutput(Decimal('0.0098'), fromAddress.to_script_pub_key())
 
     tx = Transaction([txin], [txOut1, txOut2], has_segwit=True)
 

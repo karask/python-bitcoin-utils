@@ -9,6 +9,8 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
+from decimal import Decimal
+
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey
@@ -51,7 +53,7 @@ def main():
 
     # send/spend to any random address
     to_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-    txout = TxOutput( 11, to_addr.to_script_pub_key() )
+    txout = TxOutput(Decimal('11'), to_addr.to_script_pub_key() )
 
     # no change address - the remaining 0.1 tBTC will go to miners)
 

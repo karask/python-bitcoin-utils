@@ -9,6 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
+from decimal import Decimal
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress, PrivateKey
@@ -27,12 +28,12 @@ def main():
 
     # create transaction output using P2PKH scriptPubKey (locking script)
     addr = P2pkhAddress('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
-    txout = TxOutput( 0.3, Script(['OP_DUP', 'OP_HASH160', addr.to_hash160(),
+    txout = TxOutput(Decimal('0.3'), Script(['OP_DUP', 'OP_HASH160', addr.to_hash160(),
                                     'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
 
     # create another output to get the change - remaining 0.01 is tx fees
     change_addr = P2pkhAddress('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
-    change_txout = TxOutput( 0.08, Script(['OP_DUP', 'OP_HASH160',
+    change_txout = TxOutput(Decimal('0.08'), Script(['OP_DUP', 'OP_HASH160',
                                            change_addr.to_hash160(),
                                            'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
 
