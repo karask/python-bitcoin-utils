@@ -15,7 +15,6 @@ from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey
 from bitcoinutils.script import Script
-from bitcoinutils.constants import COIN
 
 def main():
     # always remember to setup the network
@@ -38,7 +37,7 @@ def main():
     #txin_script_pub_key = redeem_script.to_p2sh_script_pub_key()
 
     to_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-    txout = TxOutput(Decimal(0.08 * COIN), to_addr.to_script_pub_key() )
+    txout = TxOutput(Decimal('0.08'), to_addr.to_script_pub_key() )
 
     # no change address - the remaining 0.01 tBTC will go to miners)
 

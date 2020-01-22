@@ -1,12 +1,13 @@
 import hashlib
 import unittest
 from binascii import hexlify, unhexlify
+from decimal import Decimal
 
 from context import bitcoinutils
 from bitcoinutils.setup import setup
 from bitcoinutils.keys import PrivateKey, P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
 from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, \
-    SIGHASH_ANYONECANPAY, TYPE_RELATIVE_TIMELOCK, COIN
+    SIGHASH_ANYONECANPAY, TYPE_RELATIVE_TIMELOCK
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence
 from bitcoinutils.script import Script
 
@@ -29,28 +30,28 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # P2PKH to P2WSH
         self.txin1 = TxInput("6e9a0692ed4b3328909d66d41531854988dc39edba5df186affaefda91824e69", 0)
-        self.txout1 = TxOutput(Decimal(COIN * 0.0097), self.p2wsh_addr.to_script_pub_key())
+        self.txout1 = TxOutput(Decimal('0.0097'), self.p2wsh_addr.to_script_pub_key())
 
         # P2WSH to P2PKH
         self.txin_spend = TxInput("6233aca9f2d6165da2d7b4e35d73b039a22b53f58ce5af87dddee7682be937ea", 0)
-        self.txin_spend_amount = Decimal(COIN * 0.0097)
-        self.txout2 = TxOutput(Decimal(COIN * 0.0096), self.p2pkh_addr.to_script_pub_key())
+        self.txin_spend_amount = Decimal('0.0097')
+        self.txout2 = TxOutput(Decimal('0.0096'), self.p2pkh_addr.to_script_pub_key())
         self.p2wsh_redeem_script = self.p2wsh_script
 
         # Multiple input multiple output
         # P2PKH UTXO
         self.txin1_multiple = TxInput("24d949f8c77d7fc0cd09c8d5fccf7a0249178c16170c738da19f6c4b176c9f4b", 0)
-        self.txin1_multiple_amount = Decimal(COIN * 0.005)
+        self.txin1_multiple_amount = Decimal('0.005')
         # P2WSH UTXO
         self.txin2_multiple = TxInput("65f4d69c91a8de54dc11096eaa315e84ef91a389d1d1c17a691b72095100a3a4", 0)
-        self.txin2_multiple_amount = Decimal(COIN * 0.0069)
+        self.txin2_multiple_amount = Decimal('0.0069')
         # P2WPKH UTXO
         self.txin3_multiple = TxInput("6c8fc6453a2a3039c2b5b55dcc59587e8b0afa52f92607385b5f4c7e84f38aa2", 0)
-        self.txin3_multiple_amount = Decimal(COIN * 0.0079)
+        self.txin3_multiple_amount = Decimal('0.0079')
 
-        self.output1_multiple = TxOutput(Decimal(COIN * 0.001), self.p2wsh_addr.to_script_pub_key())
-        self.output2_multiple = TxOutput(Decimal(COIN * 0.001), self.sk1.get_public_key().get_segwit_address().to_script_pub_key())
-        self.output3_multiple = TxOutput(Decimal(COIN * 0.0177), self.p2pkh_addr.to_script_pub_key())
+        self.output1_multiple = TxOutput(Decimal('0.001'), self.p2wsh_addr.to_script_pub_key())
+        self.output2_multiple = TxOutput(Decimal('0.001'), self.sk1.get_public_key().get_segwit_address().to_script_pub_key())
+        self.output3_multiple = TxOutput(Decimal('0.0177'), self.p2pkh_addr.to_script_pub_key())
 
         # result
         self.create_send_to_p2pkh_result = "0200000001694e8291daeffaaf86f15dbaed39dc8849853115d4669d9028334bed92069a6e000000006a473044022038516db4e67c9217b871c690c09f60a57235084f888e23b8ac77ba01d0cba7ae022027a811be50cf54718fc6b88ea900bfa9c8d3e218208fef0e185163e3a47d9a08012102d82c9860e36f15d7b72aa59e29347f951277c21cd4d34822acdeeadbcff8a546ffffffff0110cd0e00000000002200203956f9730cf7275000f4e3faf5db0505b216222c1f7ca1bdfb81a877003fcb9300000000"
