@@ -23,7 +23,7 @@ def main():
 
     #
     # This script creates a P2SH address containing a CHECKSEQUENCEVERIFY plus
-    # a P2PKH locking funds with a key as well as for 200 blocks
+    # a P2PKH locking funds with a key as well as for 20 blocks
     #
 
     # set values
