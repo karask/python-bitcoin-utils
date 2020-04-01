@@ -23,6 +23,9 @@ DOC-related
 CODE-related
 - make all code < 80 chars !?
 
+WINDOWS
+- it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy
+
 OTHERLIBS-related
 - add to bitcoin-rpc lib option to ignore invalid ssl cert
   . needed to access remotely withut cert (for other validators from clients)
