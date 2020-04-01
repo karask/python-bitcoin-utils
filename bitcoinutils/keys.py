@@ -33,7 +33,7 @@ import bitcoinutils.script
 # This is done modulo p which (secp256k1) is:
 # p is the finite field prime number and is equal to:
 # 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
-# Note that we could alse get that from ecdsa lib from the curve, e.g.:
+# Note that we could also get that from ecdsa lib from the curve, e.g.:
 # SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
 _p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 # Curve's a and b are (y**2 = x**3 + a*x + b)
