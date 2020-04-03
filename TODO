@@ -19,12 +19,16 @@ DOC-related
 - commit docs/usage/proxy.rst
 - add segwit examples in README !
 - segwit in documentation !?
+- add more modules to documantation
 
 CODE-related
 - make all code < 80 chars !?
 
 WINDOWS
 - it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy
+
+DECIMAL
+- make all examples and test use .utils function 'decimal8'
 
 OTHERLIBS-related
 - add to bitcoin-rpc lib option to ignore invalid ssl cert
@@ -33,4 +37,6 @@ OTHERLIBS-related
   . but not in a lib release yet
   . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
 
+OTHER
+- update copyright in all files 2018-2020
 
