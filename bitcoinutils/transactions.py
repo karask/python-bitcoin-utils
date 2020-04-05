@@ -156,7 +156,7 @@ class Sequence:
         Specifies the type of sequence (TYPE_RELATIVE_TIMELOCK |
         TYPE_ABSOLUTE_TIMELOCK | TYPE_REPLACE_BY_FEE
     is_type_block : bool
-        If type is TYPE_RELATIVE_TIMELOCK then this specifies its type 
+        If type is TYPE_RELATIVE_TIMELOCK then this specifies its type
         (block height or 512 secs increments)
 
     Methods
@@ -180,7 +180,7 @@ class Sequence:
         self.is_type_block = is_type_block
 
     def for_input_sequence(self):
-        """Creates a relative timelock sequence value as expected from 
+        """Creates a relative timelock sequence value as expected from
         TxInput sequence attribute"""
         if self.seq_type == TYPE_ABSOLUTE_TIMELOCK:
             return ABSOLUTE_TIMELOCK_SEQUENCE
@@ -221,7 +221,8 @@ class Locktime:
     Attributes
     ----------
     value : int
-        The value of the block height or the 512 seconds increments
+        The value of the block height or the Unix epoch (seconds from 1 Jan
+        1970 UTC)
 
     Methods
     -------
