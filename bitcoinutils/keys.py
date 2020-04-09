@@ -372,6 +372,9 @@ class PublicKey:
     verify_message(address, signature, message)
         Class method that constructs the public key, confirms the address and
         verifies the signature
+    verify(signature, message)
+        returns true if the message was signed with this public key's
+        corresponding private key.
     to_hex(compressed=True)
         returns the key as hex string (in SEC format - compressed by default)
     to_bytes()
@@ -565,7 +568,7 @@ class PublicKey:
 
 
     def verify(self, signature, message):
-        """Verifies a that the message was signed with this public key's
+        """Verifies that the message was signed with this public key's
         corresponding private key."""
 
         # All bitcoin signatures include the magic prefix. It is just a string
