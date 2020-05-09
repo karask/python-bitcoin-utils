@@ -38,5 +38,6 @@ OTHERLIBS-related
   . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
 
 OTHER
-- update copyright in all files 2018-2020
+- add copyright to test cases
+- reminder: update copyright in all files 2018-2021?
 
