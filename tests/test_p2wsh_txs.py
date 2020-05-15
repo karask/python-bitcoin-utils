@@ -85,7 +85,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         pk = self.p2wsh_redeem_script.to_hex()
         tx.witnesses.append(Script(['OP_0', sig1, sig2, pk]))
-        print(tx.serialize())
+        #print(tx.serialize())
         self.assertEqual(tx.serialize(), self.spend_p2pkh_result)
 
     def test_multiple_input_multiple_ouput(self):
@@ -107,7 +107,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         pk3 = self.sk1.get_public_key().to_hex()
         tx.witnesses.append(Script([sig3, pk3]))
 
-        print(tx.serialize())
+        #print(tx.serialize())
         self.assertEqual(tx.serialize(), self.multiple_input_multiple_ouput_result)
 
 

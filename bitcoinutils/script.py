@@ -12,6 +12,7 @@
 import struct
 import copy
 import hashlib
+from utils import prepend_compact_size
 from binascii import unhexlify, hexlify
 
 import bitcoinutils.keys
@@ -204,11 +205,18 @@ class Script:
 
 
     def _segwit_op_push_data(self, data):
-        # expects data in hexadecimal characters and converts appropriately
+        # expects data in hexadecimal characters and converts to bytes with
+        # compact_size (or var_int) length prefix.
+        #
         # TODO maybe, for convenience, also accept objects for public keys,
         # addresses, etc. and use isinstance and convert manually
         data_bytes = unhexlify(data)
-        return chr(len(data_bytes)).encode() + data_bytes
+
+        # prepend compact size lenth to data bytes
+        compact_size_data = prepend_compact_size(data_bytes)
+
+        return compact_size_data
+
 
 
     def _push_integer(self, integer):
@@ -256,10 +264,7 @@ class Script:
                     script_bytes += self._push_integer(token)
                 else:
                     if segwit:
-                        # TODO this should be temporariy and replaced by
-                        # a method that calculates compactSize/VarInt for
-                        # each script element - probably add TxInputWitness
-                        # which will know how to serialize
+                        # probably add TxInputWitness which will know how to serialize
                         script_bytes += self._segwit_op_push_data(token)
                     else:
                         script_bytes += self._op_push_data(token)
