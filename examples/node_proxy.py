@@ -6,9 +6,9 @@
 # directory of this distribution.
 #
 # No part of python-bitcoin-utils, including this file, may be copied,
-# modified,
-# propagated, or distributed except according to the terms contained in the
-# LICENSE file.
+# modified, propagated, or distributed except according to the terms contained
+# in the LICENSE file.
+
 
 from bitcoinutils.setup import setup
 from bitcoinutils.proxy import NodeProxy
