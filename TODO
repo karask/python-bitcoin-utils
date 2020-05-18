@@ -39,4 +39,4 @@ OTHERLIBS-related
 
 OTHER
 - reminder: update copyright in all files 2018-2021?
-
+- add example with bech32 address / tx
