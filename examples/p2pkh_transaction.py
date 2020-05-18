@@ -57,9 +57,7 @@ def main():
     #print(sig)
 
     # get public key as hex
-    pk = sk.get_public_key()
-    pk = pk.to_hex()
-    #print (pk)
+    pk = sk.get_public_key().to_hex()
 
     # set the scriptSig (unlocking script)
     txin.script_sig = Script([sig, pk])
