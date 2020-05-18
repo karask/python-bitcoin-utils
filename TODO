@@ -24,6 +24,9 @@ DOC-related
 CODE-related
 - make all code < 80 chars !?
 
+Efficiency
+- make all internal variables bytes for processing and convert when input (hex usually) or output (displaying hex usually)
+
 WINDOWS
 - it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy
 
@@ -39,4 +42,3 @@ OTHERLIBS-related
 
 OTHER
 - reminder: update copyright in all files 2018-2021?
-- add example with bech32 address / tx

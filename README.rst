@@ -23,7 +23,7 @@ Keys and Addresses
 Segwit Addresses
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/keys_segwit_addresses.py - creates P2WPKH, P2SH-P2WPKH, P2WSH and P2SH-P2WSH addresses.
 
-Create a P2PKH Transaction
+Transaction with P2PKH input and outputs
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/p2pkh_transaction.py - creates a simple transaction with one input and two outputs.
 
 Create a P2PKH Transaction with different SIGHASHes
@@ -40,6 +40,9 @@ Create a non-standard tx
 
 Spend a non-standard tx
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_non_std_tx.py - spends funds from script OP_ADD OP_5 OP_EQUAL 
+
+Transaction to pay to a P2WPKH
+  http://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2wpkh_transaction.py - send coins from two P2PKH UTXOs to a native segwit address (P2WPKH)
 
 Create a P2SH address with a relative timelock
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/create_p2sh_csv_p2pkh_address.py - creates a P2SH address that locks funds (sent to it) with a private key (P2PKH) and a relative locktime of 200 blocks in the future.
