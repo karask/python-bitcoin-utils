@@ -279,6 +279,11 @@ class Script:
         return hexlify(b).decode('utf-8')
 
 
+    def get_script(self):
+        """Returns script as array of strings"""
+        return self.script
+
+
     def to_p2sh_script_pub_key(self):
         """Converts script to p2sh scriptPubKey (locking script)
 
