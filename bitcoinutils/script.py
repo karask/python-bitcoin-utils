@@ -156,6 +156,9 @@ class Script:
     to_bytes()
         returns a serialized byte version of the script
 
+    get_script()
+        returns the list of strings that makes up this script
+
     Raises
     ------
     ValueError
