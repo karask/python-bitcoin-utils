@@ -4,7 +4,6 @@ SEGWIT-related
   . this is because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
   . https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
   . Apparently this could happen to non-segwit transactions as well... need to fix the signature construction
-- tx serialization with no signed inputs produces a serialization which includes the 0001 segwit marker and thus is not identical to bitcoin core (the signed transaction is fine though) 
 - witnesses=[] is initialized in Transaction class but still needed in the segwit testcases! -- check why and clean
   . redo testcases from scratch?!?!
 - explain get_transaction_segwit_digest() better and test further
@@ -43,3 +42,8 @@ OTHERLIBS-related
 OTHER
 - reminder: update copyright in all files 2018-2021?
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
+- make test of send to P2WPKH transaction example
+- bitcoin inputs/outputs number is compact size/var int... not a single byte -- fix
+  . currently we allow only 256 I/Os
+  . actually there are others!
+  . https://en.bitcoin.it/wiki/File:TxBinaryMap.png

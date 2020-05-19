@@ -527,7 +527,7 @@ class Transaction:
         """Converts to bytes"""
 
         data = self.version
-        if has_segwit:
+        if has_segwit and self.witnesses:
             # marker
             data += b'\x00'
             # flag
