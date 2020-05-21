@@ -9,18 +9,16 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from decimal import Decimal
 from binascii import unhexlify
+from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
+
 
 
 '''
-Converts from any number (int/float) to Decimal with precision 8
+Converts from any number type (int/float/Decimal) to satoshis (int)
 '''
-def decimal8(num):
-    # TODO note that it rounds up to decimal 8 automatically, e.g. for "1.2-1"
-    # TODO check if there are cases where rounding a long before converting to
-    # decimal would be better
-    return Decimal(num).quantize(Decimal('0.00000000'))
+def to_satoshis(num):
+    return int(num * SATOSHIS_PER_BITCOIN)
 
 
 '''

@@ -10,8 +10,8 @@
 # in the LICENSE file.
 
 
-from decimal import Decimal
 from bitcoinutils.setup import setup
+from bitcoinutils.utils import to_satoshis
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress
 from bitcoinutils.script import Script
@@ -38,7 +38,7 @@ def main():
     # create transaction output using P2PKH scriptPubKey (locking script)
     addr = P2pkhAddress('mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r')
     # locking script expects 2 numbers that when added equal 5 (silly example)
-    txout = TxOutput(Decimal('0.8'), addr.to_script_pub_key() )
+    txout = TxOutput(to_satoshis(0.8), addr.to_script_pub_key() )
 
     # create transaction from inputs/outputs -- default locktime is used
     tx = Transaction([txin], [txout])

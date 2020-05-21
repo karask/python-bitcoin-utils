@@ -13,7 +13,6 @@ import math
 import hashlib
 import struct
 from binascii import unhexlify, hexlify
-from decimal import Decimal
 
 from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     DEFAULT_TX_VERSION, NEGATIVE_SATOSHI, \
@@ -23,7 +22,6 @@ from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     TYPE_ABSOLUTE_TIMELOCK, TYPE_RELATIVE_TIMELOCK, \
                     TYPE_REPLACE_BY_FEE, SATOSHIS_PER_BITCOIN
 from bitcoinutils.script import Script
-
 
 
 class TxInput:
@@ -102,8 +100,8 @@ class TxOutput:
 
     Attributes
     ----------
-    amount : Decimal
-        the value we want to send to this output
+    amount : int/float/Decimal
+        the value we want to send to this output in satoshis
     script_pubkey : list (string)
         the script that will lock this amount
 
@@ -119,8 +117,9 @@ class TxOutput:
     def __init__(self, amount, script_pubkey):
         """See TxOutput description"""
 
-        if not isinstance(amount, Decimal):
-            raise TypeError("Amount needs to be a Python Decimal object")
+        if not isinstance(amount, int):
+            raise TypeError("Amount needs to be in satoshis as an integer")
+
         self.amount = amount
         self.script_pubkey = script_pubkey
 
@@ -131,7 +130,7 @@ class TxOutput:
         # internally all little-endian except hashes
         # note struct uses little-endian by default
 
-        amount_bytes = struct.pack('<q', int(self.amount * SATOSHIS_PER_BITCOIN))
+        amount_bytes = struct.pack('<q', self.amount)
         script_bytes = self.script_pubkey.to_bytes()
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
         return data
@@ -436,9 +435,9 @@ class Transaction:
                     The index of the input that we wish to sign
                 script : list (string)
                     The scriptPubKey of the UTXO that we want to spend
-                amount : Decimal
+                amount : int/float/Decimal
                     The amount of the UTXO to spend is included in the
-                    signature for segwit
+                    signature for segwit (in satoshis)
                 sighash : int
                     The type of the signature hash to be created
                 """
@@ -476,16 +475,14 @@ class Transaction:
             # Hash all output
             hash_outputs = b''
             for txout in tmp_tx.outputs:
-                amount_bytes = struct.pack('<q', int(txout.amount *
-                                                     SATOSHIS_PER_BITCOIN))
+                amount_bytes = struct.pack('<q', txout.amount)
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
         elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(tmp_tx.outputs):
             # Hash one output
             txout = tmp_tx.outputs[txin_index]
-            amount_bytes = struct.pack('<q', int(txout.amount *
-                                                 SATOSHIS_PER_BITCOIN))
+            amount_bytes = struct.pack('<q', txout.amount)
             script_bytes = txout.script_pubkey.to_bytes()
             hash_outputs = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
@@ -506,7 +503,7 @@ class Transaction:
         tx_for_signing += script.to_bytes()
 
         # add txin amount
-        tx_for_signing += struct.pack('<q', int(amount * SATOSHIS_PER_BITCOIN))
+        tx_for_signing += struct.pack('<q', amount)
 
         # add tx sequence
         tx_for_signing += txin.sequence

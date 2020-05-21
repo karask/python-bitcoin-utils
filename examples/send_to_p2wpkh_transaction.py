@@ -10,8 +10,8 @@
 # in the LICENSE file.
 
 
-from decimal import Decimal
 from bitcoinutils.setup import setup
+from bitcoinutils.utils import to_satoshis
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2wpkhAddress, P2pkhAddress, PrivateKey
 from bitcoinutils.script import Script
@@ -28,8 +28,8 @@ def main():
 
     # create transaction output using P2WPKH scriptPubKey (locking script)
     addr = P2wpkhAddress('tb1qlffsz7cgzmyzhklleu97afru7vwjytux4z4zsl')
-    txout = TxOutput(Decimal('0.0019'), addr.to_script_pub_key())
-    #txout = TxOutput(Decimal('0.0019'), Script([0, addr.to_hash()]) )
+    txout = TxOutput(to_satoshis(0.0019), addr.to_script_pub_key())
+    #txout = TxOutput(to_satoshis(0.0019), Script([0, addr.to_hash()]) )
 
     # create transaction from inputs/outputs -- default locktime is used
     # note that this is not a segwit transaction since we don't spend segwit
