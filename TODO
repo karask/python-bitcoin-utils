@@ -4,8 +4,6 @@ SEGWIT-related
   . this is because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
   . https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
   . Apparently this could happen to non-segwit transactions as well... need to fix the signature construction
-- witnesses=[] is initialized in Transaction class but still needed in the segwit testcases! -- check why and clean
-  . redo testcases from scratch?!?!
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !
   . test some more segwit txs including nested ones
@@ -25,12 +23,10 @@ CODE-related
 
 Efficiency
 - make all internal variables bytes for processing and convert when input (hex usually) or output (displaying hex usually)
+  . hmm, only applies fot Addresses' classes
 
 WINDOWS
 - it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy
-
-DECIMAL
-- make all examples and test use .utils function 'decimal8'
 
 OTHERLIBS-related
 - add to bitcoin-rpc lib option to ignore invalid ssl cert

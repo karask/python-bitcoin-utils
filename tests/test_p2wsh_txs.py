@@ -72,31 +72,31 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
     def test_signed_send_to_p2wsh(self):
         # Non-segregated witness transaction
-        tx = Transaction([self.txin1], [self.txout1],witnesses = [])
+        tx = Transaction([self.txin1], [self.txout1])
         sig = self.sk1.sign_input(tx, 0, self.p2pkh_addr.to_script_pub_key())
         pk = self.sk1.get_public_key().to_hex()
         self.txin1.script_sig = Script([sig, pk])
         self.assertEqual(tx.serialize(), self.create_send_to_p2pkh_result)
 
     def test_spend_p2wsh(self):
-        tx = Transaction([self.txin_spend], [self.txout2], has_segwit=True,witnesses = [])
+        tx = Transaction([self.txin_spend], [self.txout2], has_segwit=True)
         sig1 = self.sk1.sign_segwit_input(tx, 0, self.p2wsh_redeem_script, self.txin_spend_amount)
         sig2 = self.sk2.sign_segwit_input(tx, 0, self.p2wsh_redeem_script, self.txin_spend_amount)
 
         pk = self.p2wsh_redeem_script.to_hex()
-        tx.witnesses.append(Script(['OP_0', sig1, sig2, pk]))
+        tx.witnesses = [ Script(['OP_0', sig1, sig2, pk]) ]
         #print(tx.serialize())
         self.assertEqual(tx.serialize(), self.spend_p2pkh_result)
 
     def test_multiple_input_multiple_ouput(self):
         tx = Transaction([self.txin1_multiple, self.txin2_multiple, self.txin3_multiple],
                          [self.output1_multiple, self.output2_multiple, self.output3_multiple],
-                         has_segwit=True,witnesses = [])
+                         has_segwit=True)
 
         sig1 = self.sk1.sign_input(tx, 0, self.p2pkh_addr.to_script_pub_key())
         pk1 = self.sk1.get_public_key().to_hex()
         self.txin1_multiple.script_sig = Script([sig1, pk1])
-        tx.witnesses.append(Script([]))
+        tx.witnesses = [ Script([]) ]
 
         sig_p2sh1 = self.sk1.sign_segwit_input(tx, 1, self.p2wsh_redeem_script, self.txin2_multiple_amount)
         sig_p2sh2 = self.sk2.sign_segwit_input(tx, 1, self.p2wsh_redeem_script, self.txin2_multiple_amount)
