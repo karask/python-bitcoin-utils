@@ -9,7 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
 
 
@@ -18,7 +18,9 @@ from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
 Converts from any number type (int/float/Decimal) to satoshis (int)
 '''
 def to_satoshis(num):
-    return int(num * SATOSHIS_PER_BITCOIN)
+    # we need to round because of how floats are stored insternally:
+    # e.g. 0.29 * 100000000 = 28999999.999999996
+    return int( round(num * SATOSHIS_PER_BITCOIN) )
 
 
 '''
@@ -43,4 +45,30 @@ def prepend_compact_size(data):
         raise ValueError("Data size not between 0 and 0xffffffffffffffff")
 
     return prefix + data
+
+
+'''
+Takes raw transaction (serialized hex) and deconstructs it to display which
+hex correspond to which part of a transaction's structure
+TODO maybe use pack/unpack instead? ..also fix varints first? ..also check
+markers if is is segwit first?
+'''
+#def deconstruct_raw_tx(rawtx):
+#    temp = unhexlify(rawtx)
+#    # works directly on hex thus all lengths are doubled
+#    version = rawtx[0:8]
+#    temp = temp[8:]
+#    # not varint
+#    txin_num = rawtx[0:2]
+#    temp = temp[2:]
+#    txins = []
+#    for i in range(0, int(txin_num, 16)):
+#        txins = [ temp[0:64] ]
+#        tx
+#    print(version)
+#
+#    return True
+#
+
+
 

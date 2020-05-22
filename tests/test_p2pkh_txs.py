@@ -21,6 +21,9 @@ from bitcoinutils.transactions import TxInput, TxOutput, Transaction
 from bitcoinutils.script import Script
 
 class TestCreateP2pkhTransaction(unittest.TestCase):
+
+    #maxDiff = None
+
     def setUp(self):
         setup('testnet')
         # values for testing unsigned tx, signed tx all, signed tx with low s,
