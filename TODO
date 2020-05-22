@@ -41,7 +41,6 @@ OTHERLIBS-related
 
 OTHER
 - reminder: update copyright in all files 2018-2021?
-- create utils method that deconstructs raw_txs for debugging purposes!
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
 - make test of send to P2WPKH transaction example
 - bitcoin inputs/outputs number is compact size/var int... not a single byte -- fix

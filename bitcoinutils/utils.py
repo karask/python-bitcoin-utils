@@ -47,28 +47,3 @@ def prepend_compact_size(data):
     return prefix + data
 
 
-'''
-Takes raw transaction (serialized hex) and deconstructs it to display which
-hex correspond to which part of a transaction's structure
-TODO maybe use pack/unpack instead? ..also fix varints first? ..also check
-markers if is is segwit first?
-'''
-#def deconstruct_raw_tx(rawtx):
-#    temp = unhexlify(rawtx)
-#    # works directly on hex thus all lengths are doubled
-#    version = rawtx[0:8]
-#    temp = temp[8:]
-#    # not varint
-#    txin_num = rawtx[0:2]
-#    temp = temp[2:]
-#    txins = []
-#    for i in range(0, int(txin_num, 16)):
-#        txins = [ temp[0:64] ]
-#        tx
-#    print(version)
-#
-#    return True
-#
-
-
-
