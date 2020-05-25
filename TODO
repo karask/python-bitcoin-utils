@@ -20,6 +20,7 @@ DOC-related
 
 CODE-related
 - make all code < 80 chars !?
+- improve test structure - look at python-bitcoinlib or its derived python-bitcointx for example
 
 Efficiency
 - make all internal variables bytes for processing and convert when input (hex usually) or output (displaying hex usually)
@@ -38,6 +39,8 @@ OTHERLIBS-related
 OTHER
 - reminder: update copyright in all files 2018-2021?
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
+- create test with 260 outputs (inputs too much trouble) - file: test_extreme_txs.py
+- create test with script of 260 and another with 66000 commands
 - make test of send to P2WPKH transaction example
 - bitcoin inputs/outputs number is compact size/var int... not a single byte -- fix
   . currently we allow only 256 I/Os
