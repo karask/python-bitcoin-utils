@@ -9,7 +9,6 @@
 # modified, propagated, or distributed except according to the terms
 # contained in the LICENSE file.
 
-import binascii
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
 from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey
