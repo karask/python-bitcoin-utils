@@ -33,11 +33,8 @@ def main():
     # create the redeem script - needed to sign the transaction
     redeem_script = Script([p2pk_pk, 'OP_CHECKSIG'])
 
-    #TODELETE
-    #txin_script_pub_key = redeem_script.to_p2sh_script_pub_key()
-
     to_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-    txout = TxOutput(to_satoshis(0.08), to_addr.to_script_pub_key() )
+    txout = TxOutput(to_satoshis(0.09), to_addr.to_script_pub_key() )
 
     # no change address - the remaining 0.01 tBTC will go to miners)
 
