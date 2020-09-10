@@ -37,10 +37,11 @@ def main():
 
     # create transaction input from tx id of UTXO
     txin = TxInput(txid, vout)
-    # the redeem script for p2wpkh is the same as p2pkh
-    redeem_script = Script(['OP_DUP', 'OP_HASH160',
-                            priv.get_public_key().to_hash160(),
-                            'OP_EQUALVERIFY', 'OP_CHECKSIG'])
+
+    # the script code required for signing for p2wpkh is the same as p2pkh
+    script_code = Script(['OP_DUP', 'OP_HASH160',
+                           priv.get_public_key().to_hash160(),
+                           'OP_EQUALVERIFY', 'OP_CHECKSIG'])
 
     # create transaction output
     txOut = TxOutput(to_satoshis(0.009), toAddress.to_script_pub_key())
@@ -50,7 +51,7 @@ def main():
 
     print("\nRaw transaction:\n" + tx.serialize())
 
-    sig = priv.sign_segwit_input(tx, 0, redeem_script, fromAddressAmount)
+    sig = priv.sign_segwit_input(tx, 0, script_code, fromAddressAmount)
     tx.witnesses.append( Script([sig, pub.to_hex()]) )
 
     # print raw signed transaction ready to be broadcasted
