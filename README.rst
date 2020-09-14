@@ -44,6 +44,9 @@ Spend a non-standard tx
 Transaction to pay to a P2WPKH
   http://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2wpkh_transaction.py - send coins from two P2PKH UTXOs to a native segwit address (P2WPKH)
 
+Spend from a P2SH(P2WPKH) nested segwit address
+   http://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2sh_p2wpkh_address.py - spend a P2WPKH that is nested into a P2SH for old client compatibility
+
 Create a P2SH address with a relative timelock
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/create_p2sh_csv_p2pkh_address.py - creates a P2SH address that locks funds (sent to it) with a private key (P2PKH) and a relative locktime of 200 blocks in the future.
 

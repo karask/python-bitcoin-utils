@@ -11,8 +11,8 @@
 
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
-from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey, P2wshAddress, P2wpkhAddress
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.keys import P2pkhAddress, PrivateKey
 from bitcoinutils.script import Script
 
 def main():
@@ -40,7 +40,7 @@ def main():
     txin = TxInput(txid, vout)
 
     # the script code required for signing for p2wpkh is the same as p2pkh
-    script_code = Script(['OP_DUP', 'OP_HASH160', pub.to_hash160(), 
+    script_code = Script(['OP_DUP', 'OP_HASH160', pub.to_hash160(),
                           'OP_EQUALVERIFY', 'OP_CHECKSIG'])
 
     # create transaction output
