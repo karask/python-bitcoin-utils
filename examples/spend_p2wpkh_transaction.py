@@ -19,6 +19,7 @@ def main():
     # always remember to setup the network
     setup('testnet')
 
+    # the key that corresponds to the P2WPKH address
     priv = PrivateKey("cVdte9ei2xsVjmZSPtyucG43YZgNkmKTqhwiUA8M4Fc3LdPJxPmZ")
 
     pub = priv.get_public_key()
@@ -39,14 +40,14 @@ def main():
     txin = TxInput(txid, vout)
 
     # the script code required for signing for p2wpkh is the same as p2pkh
-    script_code = Script(['OP_DUP', 'OP_HASH160',
-                           priv.get_public_key().to_hash160(),
-                           'OP_EQUALVERIFY', 'OP_CHECKSIG'])
+    script_code = Script(['OP_DUP', 'OP_HASH160', pub.to_hash160(), 
+                          'OP_EQUALVERIFY', 'OP_CHECKSIG'])
 
     # create transaction output
     txOut = TxOutput(to_satoshis(0.009), toAddress.to_script_pub_key())
 
-    # create transaction without change output
+    # create transaction without change output - if at least a single input is
+    # segwit we need to set has_segwit=True
     tx = Transaction([txin], [txOut], has_segwit=True)
 
     print("\nRaw transaction:\n" + tx.serialize())
