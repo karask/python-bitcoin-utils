@@ -987,10 +987,7 @@ class SegwitAddress(ABC):
 
 
     def _script_to_hash(self, script):
-        """Converts a script to it's hash equivalent
-
-        Uses a segwit's python reference implementation for now. (TODO)
-	"""
+        """Converts a script to it's hash equivalent"""
 
         script_bytes = script.to_bytes()
         hashsha256 = hashlib.sha256(script_bytes).digest()

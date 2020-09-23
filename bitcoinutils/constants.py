@@ -9,8 +9,6 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from decimal import Decimal
-
 # TODO organise constants in sections
 
 NETWORK_DEFAULT_PORTS = { 'mainnet': 8332,

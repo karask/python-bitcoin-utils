@@ -11,10 +11,9 @@
 
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
-from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey, P2wshAddress, P2wpkhAddress
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.keys import PrivateKey, P2wshAddress, P2wpkhAddress
 from bitcoinutils.script import Script
-from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 
 
 def main():
