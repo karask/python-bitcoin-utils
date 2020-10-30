@@ -289,9 +289,18 @@ class Transaction:
         according to sighash
     """
 
-    def __init__(self, inputs=[], outputs=[], locktime=DEFAULT_TX_LOCKTIME,
-                 version=DEFAULT_TX_VERSION, has_segwit=False, witnesses=[]):
+    def __init__(self, inputs=None, outputs=None, locktime=DEFAULT_TX_LOCKTIME,
+                 version=DEFAULT_TX_VERSION, has_segwit=False, witnesses=None):
         """See Transaction description"""
+
+        # make sure default argument for inputs, outputs and witnesses is an empty list
+        if inputs is None:
+            inputs = []
+        if outputs is None:
+            outputs = []
+        if witnesses is None:
+            witnesses = []
+
         self.inputs = inputs
         self.outputs = outputs
         self.has_segwit = has_segwit
