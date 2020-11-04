@@ -8,14 +8,14 @@ SEGWIT-related
 - clean and comment the segwit examples !
   . test some more segwit txs including nested ones
 
-TX-related
-- should we use copy.deepcopy instead of the tx-related copy methods?
+PSBT
+- add!
 
 DOC-related
 - add explicit documentation for each module before members...
 - commit docs/usage/proxy.rst
-- add segwit examples in README !
-- segwit in documentation !?
+- add segwit examples in README 
+- segwit in documentation
 - add more modules to documantation
 
 CODE-related
@@ -44,5 +44,5 @@ OTHER
 - make test of send to P2WPKH transaction example
 - bitcoin inputs/outputs number is compact size/var int... not a single byte -- fix
   . currently we allow only 256 I/Os
-  . actually there are others!
-  . https://en.bitcoin.it/wiki/File:TxBinaryMap.png
+  . make sure to update all varints - https://en.bitcoin.it/wiki/File:TxBinaryMap.png
+

@@ -86,8 +86,12 @@ class PrivateKey:
         returns the key's raw bytes
     sign_message(message, compressed=True)
         signs the message's digest and returns the signature
-    sign_transaction(tx, compressed=True)
-        signs the transaction's digest and returns the signature
+    sign_input(tx, txin_index, script, sighash=SIGHASH_ALL)
+        signs the transaction's digest for a particular index and returns the
+        signature.
+    sign_segwit_input(tx, txin_index, script, amount, sighash=SIGHASH_ALL)
+        signs the transaction's digest for a particular index and amount and 
+        returns the signature.
     get_public_key()
         returns the corresponding PublicKey object
     """
