@@ -698,21 +698,21 @@ class Address(ABC):
 
     @classmethod
     def from_address(cls, address):
-        """Creates and address object from an address string"""
+        """Creates an address object from an address string"""
 
         return cls(address=address)
 
 
     @classmethod
     def from_hash160(cls, hash160):
-        """Creates and address object from a hash160 string"""
+        """Creates an address object from a hash160 string"""
 
         return cls(hash160=hash160)
 
 
     @classmethod
     def from_script(cls, script):
-        """Creates and address object from a Script object"""
+        """Creates an address object from a Script object"""
 
         return cls(script=script)
 
@@ -952,21 +952,21 @@ class SegwitAddress(ABC):
 
     @classmethod
     def from_address(cls, address):
-        """Creates and address object from an address string"""
+        """Creates an address object from an address string"""
 
         return cls(address=address)
 
 
     @classmethod
     def from_hash(cls, witness_hash):
-        """Creates and address object from a hash string"""
+        """Creates an address object from a hash string"""
 
         return cls(witness_hash=witness_hash)
 
 
     @classmethod
     def from_script(cls, script):
-        """Creates and address object from a Script object"""
+        """Creates an address object from a Script object"""
 
         return cls(script=script)
 
