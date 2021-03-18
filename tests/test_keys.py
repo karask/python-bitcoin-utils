@@ -57,7 +57,11 @@ class TestPublicKeys(unittest.TestCase):
         self.assertEqual(pub2.to_bytes(), self.public_key_bytes)
 
     def test_pubkey_uncompressed(self):
-        pub = PublicKey(self.public_key_hexc)
+        pub = PublicKey(self.public_key_hex)
+        self.assertEqual(pub.to_hex(compressed = False), self.public_key_hex)
+
+    def test_pubkey_uncompressed_from_hex(self):
+        pub = PublicKey.from_hex(self.public_key_hex)
         self.assertEqual(pub.to_hex(compressed = False), self.public_key_hex)
 
     def test_get_uncompressed_address(self):
