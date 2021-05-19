@@ -59,3 +59,38 @@ def is_address_bech32(address):
     return False
 
 
+def vi_to_int(byteint):
+    if not isinstance(byteint, (bytes)):
+        raise Exception("Byteint must be a list or defined as bytes")
+    ni = byteint[0]
+    if ni < 253:
+        return ni, 1
+    if ni == 253:  # integer of 2 bytes
+        size = 2
+    elif ni == 254:  # integer of 4 bytes
+        size = 4
+    else:  # integer of 8 bytes
+        size = 8
+    return int.from_bytes(byteint[1:1+size][::-1], 'big'), size + 1
+
+
+def to_bytes(string, unhexlify=True):
+    '''
+	Converts a hex string to bytes
+    '''
+    if not string:
+        return b''
+    if unhexlify:
+        try:
+            if isinstance(string, bytes):
+                string = string.decode()
+            s = bytes.fromhex(string)
+            return s
+        except (TypeError, ValueError):
+            pass
+    if isinstance(string, bytes):
+        return string
+    else:
+        return bytes(string, 'utf8')
+
+

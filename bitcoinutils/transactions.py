@@ -85,6 +85,45 @@ class TxInput:
                 script_sig_bytes + self.sequence
         return data
 
+    def __str__(self):
+        return str({
+            "txid": self.txid,
+            "txout_index": self.txout_index,
+            "script_sig": self.script_sig
+        })
+    
+    def __repr__(self):
+        return self.__str__()
+
+    @staticmethod
+    def import_from_raw(txinputraw, cursor=0, has_segwit=False):
+	"""
+	Imports a TxInput from a Transaction's hexadecimal data
+ 		Attributes
+                ----------
+                txinputraw : string (hex)
+                    The hexadecimal raw string of the Transaction
+                cursor : int
+                    The cursor of which the algorithm will start to read the data
+                has_segwit : boolean
+                    Is the Tx Input segwit or not
+	"""
+        txinputraw = to_bytes(txinputraw)
+	#read the 32 bytes of TxInput ID
+        inp_hash = txinputraw[cursor:cursor + 32][::-1]
+        if not len(inp_hash):
+            raise Exception("Input transaction hash not found. Probably malformed raw transaction")
+        output_n = txinputraw[cursor + 32:cursor + 36][::-1]
+        cursor += 36
+	#read the size (bytes length) of the integer representing the size of the Script's raw data and the size of the Script's raw data
+        unlocking_script_size, size = vi_to_int(txinputraw[cursor:cursor + 9])
+        cursor += size
+        unlocking_script = txinputraw[cursor:cursor + unlocking_script_size]
+        cursor += unlocking_script_size
+        sequence_number = txinputraw[cursor:cursor + 4]
+        cursor += 4
+        return TxInput(txid = inp_hash.hex(), txout_index=int(output_n.hex(), 16), script_sig=Script.import_from_raw(unlocking_script,has_segwit=has_segwit), sequence=sequence_number),cursor
+
 
     @classmethod
     def copy(cls, txin):
@@ -135,6 +174,41 @@ class TxOutput:
         data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
         return data
 
+
+    @staticmethod
+    def import_from_raw(txoutputraw,cursor=0,has_segwit=False):
+	"""
+	Imports a TxOutput from a Transaction's hexadecimal data
+ 		Attributes
+                ----------
+                txinputraw : string (hex)
+                    The hexadecimal raw string of the Transaction
+                cursor : int
+                    The cursor of which the algorithm will start to read the data
+                has_segwit : boolean
+                    Is the Tx Output segwit or not
+	"""
+        txoutputraw = to_bytes(txoutputraw)
+	#read the amount of the TxOutput
+        value = int.from_bytes(txoutputraw[cursor:cursor + 8][::-1], 'big')
+        cursor += 8
+	#read the size (bytes length) of the integer representing the size of the locking Script's raw data and the size of the locking Script's raw data
+        lock_script_size, size = vi_to_int(txoutputraw[cursor:cursor + 9])
+        cursor += size
+        lock_script = txoutputraw[cursor:cursor + lock_script_size]
+        cursor += lock_script_size
+        return TxOutput(amount=value, script_pubkey=Script.import_from_raw(lock_script, has_segwit=has_segwit)),cursor
+
+
+
+    def __str__(self):
+        return str({
+            "amount": self.amount,
+            "script_pubkey": self.script_pubkey
+        })
+
+    def __repr__(self):
+        return self.__str__()
 
     @classmethod
     def copy(cls, txout):
@@ -314,6 +388,83 @@ class Transaction:
 
         self.version = version
 
+
+    @staticmethod
+    def import_from_raw(txraw):
+	"""
+	Imports a Transaction from hexadecimal data
+ 		Attributes
+                ----------
+                txinputraw : string (hex)
+                    The hexadecimal raw string of the Transaction
+                cursor : int
+                    The cursor of which the algorithm will start to read the data
+                has_segwit : boolean
+                    Is the Tx Input segwit or not
+	"""
+        rawtx = to_bytes(txraw)
+	#read version
+        version = rawtx[0:4][::-1]
+        flag = None
+        has_segwit = False
+        cursor = 4
+        if rawtx[4:5] == b'\0':
+            flag = rawtx[5:6]
+            if flag == b'\1':
+                has_segwit = True
+            cursor += 2
+	#read the size (bytes length) of the integer representing the size of the inputs number and the the inputs number
+        n_inputs, size = vi_to_int(rawtx[cursor:cursor + 9])
+        cursor += size
+        inputs = []
+	#iterate n_inputs times to read the inputs from raw
+        for index in range(0,n_inputs):
+            inp, cursor = TxInput.import_from_raw(rawtx, cursor=cursor, has_segwit=has_segwit)
+            inputs.append(inp)
+        
+        outputs = []
+	#read the size (bytes length) of the integer representing the size of the outputs number and the the outputs number
+        n_outputs, size = vi_to_int(rawtx[cursor:cursor + 9])
+        cursor += size
+        output_total = 0
+	#iterate n_outputs times to read the inputs from raw
+        for index in range(0,n_outputs):
+            output, cursor = TxOutput.import_from_raw(rawtx, cursor=cursor, has_segwit=has_segwit)
+            outputs.append(output)
+
+        witnesses = []
+        if has_segwit == True:
+	#iterate to read the witnesses for every input
+            for n in range(0, len(inputs)):
+                n_items, size = vi_to_int(rawtx[cursor:cursor + 9])
+                cursor += size
+                witnesses_tmp = []
+                for m in range(0, n_items):
+                    witness = b'\0'
+                    item_size, size = vi_to_int(rawtx[cursor:cursor + 9])
+                    if item_size:
+                        witness = rawtx[cursor + size:cursor + item_size + size]
+                    cursor += item_size + size
+                    witnesses_tmp.append(witness.hex())
+                witnesses.append(witnesses_tmp)
+
+        return Transaction(inputs = inputs, outputs = outputs, has_segwit = has_segwit, witnesses = witnesses)
+
+
+
+
+    def __str__(self):
+        return str({
+                "inputs": self.inputs,
+                "outputs": self.outputs,
+                "has_segwit": self.has_segwit,
+                "witnesses": self.witnesses,
+                "locktime": self.locktime.hex(),
+                "version": self.version.hex()
+                })
+
+    def __repr__(self):
+        return self.__str__()
 
     @classmethod
     def copy(cls, tx):
