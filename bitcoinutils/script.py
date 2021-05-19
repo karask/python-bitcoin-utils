@@ -12,7 +12,7 @@
 import struct
 import copy
 import hashlib
-from bitcoinutils.utils import prepend_compact_size
+from bitcoinutils.utils import prepend_compact_size, to_bytes, vi_to_int
 from binascii import unhexlify, hexlify
 
 import bitcoinutils.keys
@@ -381,15 +381,15 @@ class Script:
 
     @staticmethod
     def import_from_raw(scriptraw, has_segwit=False):
-	"""
-	Imports a Script commands list from raw hexadecimal data
- 		Attributes
-                ----------
-                txinputraw : string (hex)
-                    The hexadecimal raw string representing the Script commands
-                has_segwit : boolean
-                    Is the Tx Input segwit or not
-	"""
+        """
+        Imports a Script commands list from raw hexadecimal data
+            Attributes
+            ----------
+            txinputraw : string (hex)
+                The hexadecimal raw string representing the Script commands
+            has_segwit : boolean
+                Is the Tx Input segwit or not
+        """
         scriptraw = to_bytes(scriptraw)
         commands = []
         index = 0
@@ -398,7 +398,7 @@ class Script:
             if bytes([byte]) in CODE_OPS:
                 commands.append(CODE_OPS[bytes([byte])])
                 index = index + 1
-	    #handle the 3 special bytes 0x4c,0x4d,0x4e if the transaction is not segwit type
+                #handle the 3 special bytes 0x4c,0x4d,0x4e if the transaction is not segwit type
             elif has_segwit == False and bytes([byte]) == b'\x4c':
                 bytes_to_read = int.from_bytes(scriptraw[index + 1], "little")
                 index = index + 1
