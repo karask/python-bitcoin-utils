@@ -380,7 +380,7 @@ class Script:
         return script_bytes
 
     @staticmethod
-    def import_from_raw(scriptraw, has_segwit=False):
+    def from_raw(scriptraw, has_segwit=False):
         """
         Imports a Script commands list from raw hexadecimal data
             Attributes
