@@ -12,7 +12,7 @@
 import struct
 import copy
 import hashlib
-from bitcoinutils.utils import prepend_compact_size
+from bitcoinutils.utils import prepend_compact_size, to_bytes, vi_to_int
 from binascii import unhexlify, hexlify
 
 import bitcoinutils.keys
@@ -136,8 +136,108 @@ OP_CODES = {
     'OP_CHECKLOCKTIMEVERIFY': b'\xb1',
     'OP_NOP3'               : b'\xb2',
     'OP_CHECKSEQUENCEVERIFY': b'\xb2'
+}
 
+CODE_OPS = {
+    # constants
+    b'\x00':    'OP_0'                  , 
+    b'\x4c':    'OP_PUSHDATA1'          , 
+    b'\x4d':    'OP_PUSHDATA2'          , 
+    b'\x4e':    'OP_PUSHDATA4'          , 
+    b'\x4f':    'OP_1NEGATE'            , 
+    b'\x51':    'OP_1'                  , 
+    b'\x52':    'OP_2'                  , 
+    b'\x53':    'OP_3'                  , 
+    b'\x54':    'OP_4'                  , 
+    b'\x55':    'OP_5'                  , 
+    b'\x56':    'OP_6'                  , 
+    b'\x57':    'OP_7'                  , 
+    b'\x58':    'OP_8'                  , 
+    b'\x59':    'OP_9'                  , 
+    b'\x5a':    'OP_10'                 , 
+    b'\x5b':    'OP_11'                 , 
+    b'\x5c':    'OP_12'                 , 
+    b'\x5d':    'OP_13'                 , 
+    b'\x5e':    'OP_14'                 , 
+    b'\x5f':    'OP_15'                 , 
+    b'\x60':    'OP_16'                 , 
 
+    # flow control
+    b'\x61':    'OP_NOP'                , 
+    b'\x63':    'OP_IF'                 , 
+    b'\x64':    'OP_NOTIF'              , 
+    b'\x67':    'OP_ELSE'               , 
+    b'\x68':    'OP_ENDIF'              , 
+    b'\x69':    'OP_VERIFY'             , 
+    b'\x6a':    'OP_RETURN'             , 
+
+    # stack
+    b'\x6b':    'OP_TOALTSTACK'         , 
+    b'\x6c':    'OP_FROMALTSTACK'       , 
+    b'\x73':    'OP_IFDUP'              , 
+    b'\x74':    'OP_DEPTH'              , 
+    b'\x75':    'OP_DROP'               , 
+    b'\x76':    'OP_DUP'                , 
+    b'\x77':    'OP_NIP'                , 
+    b'\x78':    'OP_OVER'               , 
+    b'\x79':    'OP_PICK'               , 
+    b'\x7a':    'OP_ROLL'               , 
+    b'\x7b':    'OP_ROT'                , 
+    b'\x7c':    'OP_SWAP'               , 
+    b'\x7d':    'OP_TUCK'               , 
+    b'\x6d':    'OP_2DROP'              , 
+    b'\x6e':    'OP_2DUP'               , 
+    b'\x6f':    'OP_3DUP'               , 
+    b'\x70':    'OP_2OVER'              , 
+    b'\x71':    'OP_2ROT'               , 
+    b'\x72':    'OP_2SWAP'              , 
+
+    # splice
+    b'\x82':    'OP_SIZE'               , 
+
+    # bitwise logic
+    b'\x87':    'OP_EQUAL'              , 
+    b'\x88':    'OP_EQUALVERIFY'        , 
+
+    # arithmetic
+    b'\x8b':    'OP_1ADD'               , 
+    b'\x8c':    'OP_1SUB'               , 
+    b'\x8f':    'OP_NEGATE'             , 
+    b'\x90':    'OP_ABS'                , 
+    b'\x91':    'OP_NOT'                , 
+    b'\x92':    'OP_0NOTEQUAL'          , 
+    b'\x93':    'OP_ADD'                , 
+    b'\x94':    'OP_SUB'                , 
+    b'\x9a':    'OP_BOOLAND'            , 
+    b'\x9b':    'OP_BOOLOR'             , 
+    b'\x9c':    'OP_NUMEQUAL'           , 
+    b'\x9d':    'OP_NUMEQUALVERIFY'     , 
+    b'\x9e':    'OP_NUMNOTEQUAL'        , 
+    b'\x9f':    'OP_LESSTHAN'           , 
+    b'\xa0':    'OP_GREATERTHAN'        , 
+    b'\xa1':    'OP_LESSTHANOREQUAL'    , 
+    b'\xa2':    'OP_GREATERTHANOREQUAL' , 
+    b'\xa3':    'OP_MIN'                , 
+    b'\xa4':    'OP_MAX'                , 
+    b'\xa5':    'OP_WITHIN'             , 
+
+    # crypto
+    b'\xa6':    'OP_RIPEMD160'          , 
+    b'\xa7':    'OP_SHA1'               , 
+    b'\xa8':    'OP_SHA256'             , 
+    b'\xa9':    'OP_HASH160'            , 
+    b'\xaa':    'OP_HASH256'            , 
+    b'\xab':    'OP_CODESEPARATOR'      , 
+    b'\xac':    'OP_CHECKSIG'           , 
+    b'\xad':    'OP_CHECKSIGVERIFY'     , 
+    b'\xae':    'OP_CHECKMULTISIG'      , 
+    b'\xaf':    'OP_CHECKMULTISIGVERIFY', 
+
+    # locktime
+    b'\xb1':    'OP_NOP2'               , 
+    b'\xb1':    'OP_CHECKLOCKTIMEVERIFY', 
+    b'\xb2':    'OP_NOP3'               , 
+    b'\xb2':    'OP_CHECKSEQUENCEVERIFY' 
 }
 
 class Script:
@@ -177,6 +277,11 @@ class Script:
         scripts = copy.deepcopy(script.script)
         return cls(scripts)
 
+    def __str__(self):
+        return str(self.script)
+
+    def __repr__(self):
+        return self.__str__()
 
     def _op_push_data(self, data):
         """Converts data to appropriate OP_PUSHDATA OP code including length
@@ -274,6 +379,48 @@ class Script:
 
         return script_bytes
 
+    @staticmethod
+    def from_raw(scriptraw, has_segwit=False):
+        """
+        Imports a Script commands list from raw hexadecimal data
+            Attributes
+            ----------
+            txinputraw : string (hex)
+                The hexadecimal raw string representing the Script commands
+            has_segwit : boolean
+                Is the Tx Input segwit or not
+        """
+        scriptraw = to_bytes(scriptraw)
+        commands = []
+        index = 0
+        while index < len(scriptraw):
+            byte = scriptraw[index]
+            if bytes([byte]) in CODE_OPS:
+                commands.append(CODE_OPS[bytes([byte])])
+                index = index + 1
+                #handle the 3 special bytes 0x4c,0x4d,0x4e if the transaction is not segwit type
+            elif has_segwit == False and bytes([byte]) == b'\x4c':
+                bytes_to_read = int.from_bytes(scriptraw[index + 1], "little")
+                index = index + 1
+                commands.append(scriptraw[index: index + bytes_to_read].hex())
+                index = index + bytes_to_read
+            elif has_segwit == False and bytes([byte]) == b'\x4d':
+                bytes_to_read = int.from_bytes(scriptraw[index:index + 2], "little")
+                index = index + 2
+                commands.append(scriptraw[index: index + bytes_to_read].hex())
+                index = index + bytes_to_read
+            elif has_segwit == False and bytes([byte]) == b'\x4e':
+                bytes_to_read = int.from_bytes(scriptraw[index:index + 4], "little")
+                index = index + 4
+                commands.append(scriptraw[index: index + bytes_to_read].hex())
+                index = index + bytes_to_read
+            else:
+                data_size, size = vi_to_int(scriptraw[index:index + 9])
+                commands.append(scriptraw[index + size:index + size + data_size].hex())
+                index = index + data_size + size
+
+
+        return Script(script=commands)
 
     def to_hex(self):
         """Converts the script to hexadecimal"""
