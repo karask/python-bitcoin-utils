@@ -24,27 +24,31 @@ def to_satoshis(num):
 
 
 '''
-Counts bytes and returns them with their compact size (or varint) prepended.
-Accepts bytes and returns bytes. The length should be specified in
-little-endian (which is why we reverse the array bytes).
+Counts bytes and returns them with their varint (or compact size) prepended.
+Accepts bytes and returns bytes.
+'''
+def prepend_varint(data):
+    varint_bytes = encode_varint( len(data) )
+    return varint_bytes + data
+
+
+'''
+Encode a potentially very large integer into varint bytes. The length should be
+specified in little-endian.
 
 https://bitcoin.org/en/developer-reference#compactsize-unsigned-integers
 '''
-def prepend_compact_size(data):
-    prefix = b''
-    size = len(data)
-    if size >= 0 and size <= 252:
-        prefix = unhexlify(format(size, '02x').encode())
-    elif size >= 253 and size <= 0xffff:
-        prefix = b'\xfd' + unhexlify(format(size, '04x'))[::-1]
-    elif size >= 0x10000 and size <= 0xffffffff:
-        prefix = b'\xfe' + unhexlify(format(size, '08x'))[::-1]
-    elif size >= 0x100000000 and size <= 0xffffffffffffffff:
-        prefix = b'\xff' + unhexlify(format(size, '016x'))[::-1]
+def encode_varint(i):
+    if i < 253:
+        return bytes([i])
+    elif i < 0x10000:
+        return b'\xfd' +  i.to_bytes(2, 'little')
+    elif i < 0x100000000:
+        return b'\xfe' +  i.to_bytes(4, 'little')
+    elif i < 0x10000000000000000:
+        return b'\xff' +  i.to_bytes(8, 'little')
     else:
-        raise ValueError("Data size not between 0 and 0xffffffffffffffff")
-
-    return prefix + data
+        raise ValueError("Integer is too large: %d" % i)
 
 
 '''
