@@ -22,7 +22,7 @@ from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     TYPE_ABSOLUTE_TIMELOCK, TYPE_RELATIVE_TIMELOCK, \
                     TYPE_REPLACE_BY_FEE, SATOSHIS_PER_BITCOIN
 from bitcoinutils.script import Script
-from bitcoinutils.utils import to_bytes, vi_to_int
+from bitcoinutils.utils import to_bytes, vi_to_int, encode_varint
 
 class TxInput:
     """Represents a transaction input.
@@ -81,7 +81,7 @@ class TxInput:
         txout_bytes = struct.pack('<L', self.txout_index)
         script_sig_bytes = self.script_sig.to_bytes()
         data = txid_bytes + txout_bytes + \
-                struct.pack('B', len(script_sig_bytes)) + \
+                encode_varint(len(script_sig_bytes)) + \
                 script_sig_bytes + self.sequence
         return data
 
@@ -180,7 +180,7 @@ class TxOutput:
 
         amount_bytes = struct.pack('<q', self.amount)
         script_bytes = self.script_pubkey.to_bytes()
-        data = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
+        data = amount_bytes + encode_varint(len(script_bytes)) + script_bytes
         return data
 
 
@@ -716,8 +716,8 @@ class Transaction:
             # flag
             data += b'\x01'
 
-        txin_count_bytes = chr(len(self.inputs)).encode()
-        txout_count_bytes = chr(len(self.outputs)).encode()
+        txin_count_bytes = encode_varint(len(self.inputs))
+        txout_count_bytes = encode_varint(len(self.outputs))
         data += txin_count_bytes
         for txin in self.inputs:
             data += txin.stream()

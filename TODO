@@ -42,7 +42,4 @@ OTHER
 - create test with 260 outputs (inputs too much trouble) - file: test_extreme_txs.py
 - create test with script of 260 and another with 66000 commands
 - make test of send to P2WPKH transaction example
-- bitcoin inputs/outputs number is compact size/var int... not a single byte -- fix
-  . currently we allow only 256 I/Os
-  . make sure to update all varints - https://en.bitcoin.it/wiki/File:TxBinaryMap.png
 
