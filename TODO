@@ -10,6 +10,7 @@ SEGWIT-related
 
 PSBT
 - add!
+- https://bip174.org/
 
 DOC-related
 - add explicit documentation for each module before members...

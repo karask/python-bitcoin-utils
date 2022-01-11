@@ -20,10 +20,10 @@ setup(name='bitcoin-utils',
       license='AGPLv3',
       keywords='bitcoin library utilities tools',
       install_requires=[
-          'base58check==1.0.2',
+          'base58check>=1.0.2,<2.0',
           'ecdsa==0.17.0',
-          'sympy==1.3',
-          'python-bitcoinrpc==1.0'
+          'sympy>=1.2,<2.0',
+          'python-bitcoinrpc>=1.0,<2.0'
       ],
       packages=['bitcoinutils'],
       #package_data={
