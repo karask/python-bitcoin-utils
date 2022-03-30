@@ -7,7 +7,7 @@ This is an early version of the library (v0.5.5) and currently, it supports priv
 
 The API documentation can be build with Sphinx but is also available as a PDF for convenience. One can currently use the library for experimenting and learning the inner workings of Bitcoin. It is not meant for production yet and parts of the API might be updated with new versions.
 
-Complementary to this library is a CC BY-SA 4.0 licensed [Bitcoin programming book](https://github.com/karask/bitcoin-textbook).
+Complementary to this library is a CC BY-SA 4.0 licensed `Bitcoin programming book <https://github.com/karask/bitcoin-textbook>`_.
 
 
 Installation
