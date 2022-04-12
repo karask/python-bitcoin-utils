@@ -127,6 +127,13 @@ class TestP2shAddresses(unittest.TestCase):
         script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
         addr = P2shAddress.from_script(script)
         self.assertTrue(addr.to_string(), self.p2sh_address)
+    
+    def test_p2shaddress_to_script_pub_key(self):
+        script = Script([self.pub.to_hex(), 'OP_CHECKSIG'])
+        fromScript = Script.to_p2sh_script_pub_key(script).to_hex()
+        addr = P2shAddress.from_script(script)
+        fromP2shAddress = addr.to_script_pub_key().to_hex()
+        self.assertTrue(fromScript, fromP2shAddress)
 
 
 class TestP2WPKHAddresses(unittest.TestCase):
