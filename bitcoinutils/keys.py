@@ -869,6 +869,11 @@ class P2shAddress(Address):
     def __init__(self, address=None, hash160=None, script=None):
         super().__init__(address=address, hash160=hash160, script=script)
 
+    def to_script_pub_key(self):
+        """Returns the scriptPubKey (P2SH) that corresponds to this address"""
+        return bitcoinutils.script.Script(['OP_HASH160',
+                                           self.to_hash160(), 'OP_EQUAL'])
+
     def get_type(self):
         """Returns the type of address"""
         return P2SH_ADDRESS
