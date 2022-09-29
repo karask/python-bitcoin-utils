@@ -312,6 +312,7 @@ class PrivateKey:
         S = signature[5 + length_r + 1:]
         S_as_bigint = int( hexlify(S).decode('utf-8'), 16 )
 
+        ################
         # update R, S if necessary -- in Bitcoin DER signatures' R should have a
         # prefix of 0x00 only if it starts with 0x80 or higher -- this was
         # implemented in Bitcoin Core of v0.17 to always be the case (however,
@@ -320,8 +321,11 @@ class PrivateKey:
         # found by trying different nonces (RFC6979 - deterministic nonce
         # generation).
         # TODO to be 100% compliant with Bitcoin Core (still valid without it)
+        # https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-
+        # signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
+        ################
 
-        # update S if necessary -- Low S standardness rule
+        # update S -- Low S standardness rule
         half_order = _order // 2
         # if S is larger than half the order then substruct from order and
         # use that as S since it is equivalent.
@@ -339,6 +343,9 @@ class PrivateKey:
             length_total -= 1
         else:
             new_S = S
+
+        # update R -- Low R value
+        # TODO requires trying different nonces -- aka signature grinding
 
         # reconstruct signature
         signature = struct.pack('BBBB', der_prefix, length_total, der_type_int, length_r) + R + \

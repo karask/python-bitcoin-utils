@@ -1,6 +1,6 @@
 SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
-- segwit txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation
+- txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation (not related to segwit)
   . this is because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
   . https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
   . Apparently this could happen to non-segwit transactions as well... need to fix the signature construction
