@@ -317,13 +317,13 @@ class PrivateKey:
         # implemented in Bitcoin Core of v0.17 to always be the case (however,
         # signatures are still valid even without a Low R value. Because R is
         # not mutable in the same way that S is, a low R value can only be
-        # found by trying different nonves (RFC6979 - deterministic nonce
+        # found by trying different nonces (RFC6979 - deterministic nonce
         # generation).
         # TODO to be 100% compliant with Bitcoin Core (still valid without it)
 
         # update S if necessary -- Low S standardness rule
         half_order = _order // 2
-        # if S is larger than half the order then substructed from order and
+        # if S is larger than half the order then substruct from order and
         # use that as S since it is equivalent.
         if S_as_bigint > half_order:
             # make sure length is 33 bytes (it should be)
