@@ -12,22 +12,27 @@
 # TODO organise constants in sections
 
 NETWORK_DEFAULT_PORTS = { 'mainnet': 8332,
+                          'signet' : 38332,
                           'testnet': 18332,
                           'regtest': 18443 }
 
 NETWORK_WIF_PREFIXES = { 'mainnet': b'\x80',
+                         'signet' : b'\xef',
                          'testnet': b'\xef',
                          'regtest': b'\xef' }
 
 NETWORK_P2PKH_PREFIXES = { 'mainnet': b'\x00',
+                           'signet' : b'\x6f',
                            'testnet': b'\x6f',
                            'regtest': b'\x6f' }
 
 NETWORK_P2SH_PREFIXES = { 'mainnet': b'\x05',
+                          'signet' : b'\xc4',
                           'testnet': b'\xc4',
                           'regtest': b'\xc4' }
 
 NETWORK_SEGWIT_PREFIXES = { 'mainnet' : 'bc',
+                            'signet'  : 'tb',
                             'testnet' : 'tb',
                             'regtest' : 'bcrt' }
 
