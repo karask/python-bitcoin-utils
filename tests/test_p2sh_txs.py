@@ -31,7 +31,7 @@ class TestCreateP2shTransaction(unittest.TestCase):
         self.p2pk_redeem_script = Script([self.p2pk_sk.get_public_key().to_hex(),
                                           'OP_CHECKSIG'])
         self.txout = TxOutput(to_satoshis(0.09), self.p2pk_redeem_script.to_p2sh_script_pub_key() )
-        self.create_p2sh_and_send_result = '02000000010f798b60b145361aebb95cfcdedd29e6773b4b96778af33ed6f42a9e2b4c4676000000006b483045022100fd3a3fd4aeec5db0f3f9c5c5ef7f60f37920be7464a80edacbc3b6b9d0624173022031ce309330e60b19d39cec8c5597460c840adcdd66f7dbbf896eef3ec42b472f012102d82c9860e36f15d7b72aa59e29347f951277c21cd4d34822acdeeadbcff8a546ffffffff01405489000000000017a9142910fc0b1b7ab6c9789c5a67c22c5bcde5b903908700000000'
+        self.create_p2sh_and_send_result = '02000000010f798b60b145361aebb95cfcdedd29e6773b4b96778af33ed6f42a9e2b4c4676000000006a47304402206f4027d0a1720ea4cc68e1aa3cc2e0ca5996806971c0cd7d40d3aa4309d4761802206c5d9c0c26dec8edab91c1c3d64e46e4dd80d8da1787a9965ade2299b41c3803012102d82c9860e36f15d7b72aa59e29347f951277c21cd4d34822acdeeadbcff8a546ffffffff01405489000000000017a9142910fc0b1b7ab6c9789c5a67c22c5bcde5b903908700000000'
 
         self.txin_spend = TxInput('7db363d5a7fabb64ccce154e906588f1936f34481223ea8c1f2c935b0a0c945b', 0)
         # self.p2pk_sk , self.p2pk_redeem_script from above
@@ -44,7 +44,7 @@ class TestCreateP2shTransaction(unittest.TestCase):
         self.seq = Sequence(TYPE_RELATIVE_TIMELOCK, 200)
         self.txin_seq = TxInput('f557c623e55f0affc696b742630770df2342c4aac395e0ed470923247bc51b95', 0, sequence=self.seq.for_input_sequence())
         self.another_addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-        self.spend_p2sh_csv_p2pkh_result = '0200000001951bc57b24230947ede095c3aac44223df70076342b796c6ff0a5fe523c657f5000000008a483045022100c123775e69ec27094f7940facb9ad769c09f48a7fc88250a2fce67bd92c9b4cf02204ebdbed84af46e584fe6db9a23c420b7370879e883b555e119465f84bf34d82f012103a2fef1829e0742b89c218c51898d9e7cb9d51201ba2bf9d9e9214ebb6af327081e02c800b27576a914c3f8e5b0f8455a2b02c29c4488a550278209b66988acc80000000100ab9041000000001976a914fd337ad3bf81e086d96a68e1f8d6a0a510f8c24a88ac00000000'
+        self.spend_p2sh_csv_p2pkh_result = '0200000001951bc57b24230947ede095c3aac44223df70076342b796c6ff0a5fe523c657f5000000008947304402205c2e23d8ad7825cf44b998045cb19b49cf6447cbc1cb76a254cda43f7939982002202d8f88ab6afd2e8e1d03f70e5edc2a277c713018225d5b18889c5ad8fd6677b4012103a2fef1829e0742b89c218c51898d9e7cb9d51201ba2bf9d9e9214ebb6af327081e02c800b27576a914c3f8e5b0f8455a2b02c29c4488a550278209b66988acc80000000100ab9041000000001976a914fd337ad3bf81e086d96a68e1f8d6a0a510f8c24a88ac00000000'
 
     def test_signed_send_to_p2sh(self):
         tx = Transaction([self.txin], [self.txout])

@@ -1,12 +1,11 @@
 SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
-- txs are valid but they are not identical to those that bitcoin core creates; there seems to be a difference in the signature calculation (not related to segwit)
-  . this is because from bitcoin core v0.17 all signatures need to have low R (in addition to low S)
-  . https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
-  . Apparently this could happen to non-segwit transactions as well... need to fix the signature construction
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !
   . test some more segwit txs including nested ones
+
+- unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
+
 
 PSBT
 - add!
@@ -25,7 +24,7 @@ CODE-related
 
 Efficiency
 - make all internal variables bytes for processing and convert when input (hex usually) or output (displaying hex usually)
-  . hmm, only applies fot Addresses' classes
+  . hmm, only applies for Addresses' classes
 
 WINDOWS
 - it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy
@@ -38,7 +37,7 @@ OTHERLIBS-related
   . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
 
 OTHER
-- reminder: update copyright in all files 2018-2021?
+- reminder: update copyright in all files 2018-2022?
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
 - create test with 260 outputs (inputs too much trouble) - file: test_extreme_txs.py
 - create test with script of 260 and another with 66000 commands

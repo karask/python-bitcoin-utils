@@ -103,3 +103,18 @@ def to_bytes(string, unhexlify=True):
         return bytes(string, 'utf8')
 
 
+def bytes_from_int(x: int) -> bytes:
+    '''
+    Converts bytes to int
+    '''
+    return x.to_bytes(32, byteorder="big")
+
+
+def int_from_bytes(b: bytes) -> int:
+    '''
+    Converts int to bytes
+    '''
+    return int.from_bytes(b, byteorder="big")
+
+
+

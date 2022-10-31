@@ -25,6 +25,7 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
         NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
+from bitcoinutils.utils import bytes_from_int
 import bitcoinutils.bech32
 import bitcoinutils.script
 
@@ -274,16 +275,42 @@ class PrivateKey:
         Returns a signature for that input
         """
 
-        # note that deterministic signing is used
+        # Both R ans S cannot start with 0x00 (be signed as negative) unless
+        # they are higher than 2^128 or start with 0x80.
+        #
+        # From Bitcoin core v0.17 a Low R value is required. This way
+        # signatures are always 71 bytes. Because R is not mutable in the same
+        # way that S is, a low R value can only be found by trying different
+        # nonces (RFC6979 - deterministic nonce generation).
+        #
+        # https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-
+        # signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
+        #
+        # For this reason we test if we get a Low R value (should be <0x80 and
+        # thus not have the 0x00 prefix that specifies a negative signed
+        # number) we need to change the entropy by using extra_entropy and resign
+        # until we get a Low R value.
+
+        # sign - note that deterministic signing is used
         signature = self.key.sign_digest_deterministic(tx_digest,
                                                        sigencode=sigencode_der,
                                                        hashfunc=hashlib.sha256)
 
+        # if high R re-sign until we get a low R value
+        # if high R then its size will be 33 bytes to include the sign
+        attempt = 1
+        length_r = signature[3]
+        while(length_r == 33):
+            signature = self.key.sign_digest_deterministic(tx_digest,
+                                                           extra_entropy=bytes_from_int(attempt),
+                                                           sigencode=sigencode_der,
+                                                           hashfunc=hashlib.sha256)
+            attempt += 1
+            length_r = signature[3]
+        
+        
         # make sure that signature complies with Low S standardness rule of
         # BIP62: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki
-        #
-        # Both R ans S cannot start with 0x00 (be signed as negative) unless
-        # they are higher than 2^128 or start with 0x80.
         #
         # The S part of the signature is equivalent to (order-S). This allows
         # for txid malleability attacks where S is modified with (order-S) and
@@ -312,28 +339,11 @@ class PrivateKey:
         S = signature[5 + length_r + 1:]
         S_as_bigint = int( hexlify(S).decode('utf-8'), 16 )
 
-        ################
-        # update R, S if necessary -- in Bitcoin DER signatures' R should have a
-        # prefix of 0x00 only if it starts with 0x80 or higher -- this was
-        # implemented in Bitcoin Core of v0.17 to always be the case (however,
-        # signatures are still valid even without a Low R value. Because R is
-        # not mutable in the same way that S is, a low R value can only be
-        # found by trying different nonces (RFC6979 - deterministic nonce
-        # generation).
-        # TODO to be 100% compliant with Bitcoin Core (still valid without it)
-        # https://bitcoin.stackexchange.com/questions/88702/why-is-a-librarys-
-        # signature-of-a-segwit-tx-different-from-bitcoin-core-signatur
-        ################
-
         # update S -- Low S standardness rule
-        half_order = _order // 2
-        # if S is larger than half the order then substruct from order and
-        # use that as S since it is equivalent.
-        if S_as_bigint > half_order:
-            # make sure length is 33 bytes (it should be)
-            assert length_s == 0x21
 
-            new_S_as_bigint = _order - S_as_bigint
+        # if length is 33 bytes then it contains a sign and thus is high S
+        if(length_s == 33):
+            new_S_as_bigint = _order - S_as_bigint 
             # convert bigint to bytes
             new_S = unhexlify( format(new_S_as_bigint, 'x').zfill(64) )
             # new value should be 32 bytes
@@ -344,8 +354,25 @@ class PrivateKey:
         else:
             new_S = S
 
-        # update R -- Low R value
-        # TODO requires trying different nonces -- aka signature grinding
+
+        #half_order = _order // 2
+        # if S is larger than half the order then substruct from order and
+        # use that as S since it is equivalent.
+        #if S_as_bigint > half_order:
+        #    # make sure length is 33 bytes (it should be)
+        #    assert length_s == 0x21
+
+        #    new_S_as_bigint = _order - S_as_bigint
+        #    # convert bigint to bytes
+        #    new_S = unhexlify( format(new_S_as_bigint, 'x').zfill(64) )
+        #    # new value should be 32 bytes
+        #    assert len(new_S) == 0x20
+        #    # reduce appropriate lengths
+        #    length_s -= 1
+        #    length_total -= 1
+        #else:
+        #    new_S = S
+
 
         # reconstruct signature
         signature = struct.pack('BBBB', der_prefix, length_total, der_type_int, length_r) + R + \

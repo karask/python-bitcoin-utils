@@ -128,12 +128,12 @@ def test_segwit():
     # segwit we need to set has_segwit=True
     tx = Transaction([txin], [txOut], has_segwit=True)
 
-    print("\nUnsigned transaction:",tx)
+    print("\nUnsigned transaction:", tx)
     # print raw transaction
     print("\nRaw unsigned transaction:\n" + tx.serialize())
     tx_from_raw = Transaction.from_raw(tx.serialize())
-    print("\nUnsigned from raw transaction:",tx_from_raw)
-    print("\nUnsigned from raw transaction raw:",tx_from_raw.serialize())
+    print("\nUnsigned from raw transaction:", tx_from_raw)
+    print("\nUnsigned from raw transaction raw:", tx_from_raw.serialize())
 
     if tx_from_raw.serialize() == tx.serialize():
         print("SUCCESS from_raw Serialization OK")
@@ -152,12 +152,12 @@ def test_segwit():
     tx.witnesses.append( Script([sig, pub.to_hex()]) )
 
     # print raw signed transaction ready to be broadcasted
-    print("\nSigned transaction:",tx)
+    print("\nSigned transaction:", tx)
     # print raw signed transaction ready to be broadcasted
-    print("\nRaw signed transaction:",tx)
+    print("\nRaw signed transaction:", tx.serialize())
     tx_from_raw = Transaction.from_raw(tx.serialize())
-    print("\nSigned from raw transaction:",tx_from_raw)
-    print("\nSigned from raw transaction raw:",tx_from_raw.serialize())
+    print("\nSigned from raw transaction:", tx_from_raw)
+    print("\nSigned from raw transaction raw:", tx_from_raw.serialize())
 
     if tx_from_raw.serialize() == tx.serialize():
         print("SUCCESS signed from_raw Serialization OK")
