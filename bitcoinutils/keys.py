@@ -26,8 +26,9 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes_from_int
-import bitcoinutils.bech32
+from bitcoinutils.ripemd160 import ripemd160
 import bitcoinutils.script
+import bitcoinutils.bech32
 
 
 # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
@@ -629,9 +630,7 @@ class PublicKey:
 
         pubkey = unhexlify( self.to_hex(compressed) )
         hashsha256 = hashlib.sha256(pubkey).digest()
-        hashripemd160 = hashlib.new('ripemd160')
-        hashripemd160.update(hashsha256)
-        hash160 = hashripemd160.digest()
+        hash160 = ripemd160(hashsha256)
         return hash160
 
     def to_hash160(self, compressed=True):
@@ -773,9 +772,7 @@ class Address(ABC):
 
         script_bytes = script.to_bytes()
         hashsha256 = hashlib.sha256(script_bytes).digest()
-        hashripemd160 = hashlib.new('ripemd160')
-        hashripemd160.update(hashsha256)
-        hash160 = hashripemd160.digest()
+        hash160 = ripemd160(hashsha256)
         return hexlify(hash160).decode('utf-8')
 
 
