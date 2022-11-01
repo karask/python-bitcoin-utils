@@ -6,6 +6,11 @@ SEGWIT-related
 
 - unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
 
+Taproot-related
+- add schnorr
+- add default taproot spending
+- add single alt spending
+- add tree alt spendin
 
 PSBT
 - add!
