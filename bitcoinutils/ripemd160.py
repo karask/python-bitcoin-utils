@@ -3,10 +3,10 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test-only pure Python RIPEMD160 implementation."""
 
-# This is required because new verions of openssl do not allow for using ripemd
-# unless you manually configure openssl accordinly. To solve we use a pure
-# python ripemd implementation that was added to Bitcoin Core to deal with the
-# same issue.
+# This is required because new verions of openssl do not allow for using
+# ripemd160 unless you manually configure openssl accordinly. To solve we
+# use a pure python ripemd implementation that was added to Bitcoin Core
+# to deal with the same issue.
 
 
 #import unittest
