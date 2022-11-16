@@ -66,6 +66,9 @@ def main():
     # print raw signed transaction ready to be broadcasted
     print("\nRaw signed transaction:\n" + signed_tx)
 
+    # print the size of the final transaction
+    print("\nSigned transaction size (in bytes):\n" + str(tx.get_size()))
+
 
 if __name__ == "__main__":
     main()
