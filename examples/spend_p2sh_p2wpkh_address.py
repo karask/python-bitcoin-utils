@@ -42,9 +42,9 @@ def main():
     # create a tx with at least one segwit input
     tx = Transaction([inp], [out], has_segwit=True)
 
-    # script code is the script that is evaluated for a witness program type; each
-    # witness program type has a specific template for the script code
-    # script code that corresponds to P2WPKH (it is the classic P2PKH)
+    # script code is the script that is evaluated for a witness program type;
+    # each witness program type has a specific template for the script code;
+    # the script code that corresponds to P2WPKH is the same as P2PKH
     script_code = pub.get_address().to_script_pub_key()
 
     # calculate signature using the appropriate script code
