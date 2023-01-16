@@ -23,7 +23,7 @@ from sympy.ntheory import sqrt_mod
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
-        NETWORK_SEGWIT_PREFIXES
+        P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes_from_int
 from bitcoinutils.ripemd160 import ripemd160
@@ -492,18 +492,21 @@ class PublicKey:
         return self.key.to_string()
 
 
-    def to_hex(self, compressed=True):
+    def to_hex(self, compressed=True, taproot=False):
         """Returns public key as a hex string (SEC format - compressed by
         default)"""
 
         key_hex = hexlify(self.key.to_string())
 
         if compressed:
-            # check if y is even or odd (02 even, 03 odd)
-            if int(key_hex[-2:], 16) % 2 == 0:
-                key_str = b'02' + key_hex[:64]
+            if not taproot:
+                # check if y is even or odd (02 even, 03 odd)
+                if int(key_hex[-2:], 16) % 2 == 0:
+                    key_str = b'02' + key_hex[:64]
+                else:
+                    key_str = b'03' + key_hex[:64]
             else:
-                key_str = b'03' + key_hex[:64]
+                key_str = key_hex[:64]
         else:
             # uncompressed starts with 04
             key_str = b'04' + key_hex
@@ -656,6 +659,19 @@ class PublicKey:
         hash160 = self._to_hash160(True)
         addr_string_hex = hexlify(hash160).decode('utf-8')
         return P2wpkhAddress(witness_hash=addr_string_hex)
+
+
+    def get_taproot_address(self):
+        """Returns the corresponding P2TR address
+
+        Only compressed is allowed. Taproot does not hash the public key
+        so we store it directly.
+        """
+
+        # Note that in taproot it is not really the hash.. just the compressed
+        # public key without a prefix!
+        pubkey = self.to_hex(compressed=True, taproot=True) 
+        return P2trAddress(witness_hash=pubkey)
 
 
 
@@ -916,7 +932,7 @@ class P2shAddress(Address):
 class SegwitAddress(ABC):
     """Represents a Bitcoin segwit address
 
-    Note that currently the python bech32 reference implementation is used (by
+    Note that currently the python bech32[m] reference implementation is used (by
     Pieter Wuille).
 
     Attributes
@@ -971,6 +987,10 @@ class SegwitAddress(ABC):
         self.version = version
         if self.version == P2WPKH_ADDRESS_V0 or self.version == P2WSH_ADDRESS_V0:
             self.segwit_num_version = 0
+        elif self.version == P2TR_ADDRESS_V1:
+            self.segwit_num_version = 1
+        else:
+            raise TypeError("A valid segwit version is required.")
 
         if witness_hash:
             self.witness_hash = witness_hash
@@ -1011,7 +1031,7 @@ class SegwitAddress(ABC):
         """Converts an address to it's hash equivalent
 
 	The size of the address determines between P2WPKH and P2WSH.
-        Then Bech32 decodes the address removing network prefix, checksum,
+        Then Bech32[m] decodes the address removing network prefix, checksum,
         witness version.
 
         Uses a segwit's python reference implementation for now. (TODO)
@@ -1046,7 +1066,7 @@ class SegwitAddress(ABC):
         Uses a segwit's python reference implementation for now. (TODO)
         """
 
-        # convert hex string hash to int array (required by bech32 lib)
+        # convert hex string hash to int array (required by bech32[m] lib)
         hash_bytes = unhexlify( self.witness_hash.encode('utf-8') )
         witness_int_array = memoryview(hash_bytes).tolist()
 
@@ -1068,13 +1088,13 @@ class P2wpkhAddress(SegwitAddress):
         returns the type of address
     """
 
-    # TODO allow creation directly from Bech32 address !!!!!!
+    # TODO allow creation directly from Bech32 address !!
     def __init__(self, address=None, witness_hash=None,
                  version=P2WPKH_ADDRESS_V0):
         """Allow creation only from hash160 of public key"""
 
         super().__init__(address=address, witness_hash=witness_hash,
-                         version=version)
+                         version=P2WPKH_ADDRESS_V0) # non-variable version
 
 
     def to_script_pub_key(self):
@@ -1105,7 +1125,7 @@ class P2wshAddress(SegwitAddress):
         """Allow creation only from hash160 of public key"""
 
         super().__init__(address=None, witness_hash=None, script=script,
-                         version=version)
+                         version=P2WSH_ADDRESS_V0) # non-variable version
 
 
     def to_script_pub_key(self):
@@ -1116,6 +1136,41 @@ class P2wshAddress(SegwitAddress):
     def get_type(self):
         """Returns the type of address"""
         return self.version
+
+
+class P2trAddress(SegwitAddress):
+    """Encapsulates a P2TR (Taproot) address.
+
+    Check Address class for details
+
+    Methods
+    -------
+    to_script_pub_key()
+        returns the scriptPubKey of a P2WPKH witness script
+    get_type()
+        returns the type of address
+    """
+
+    # TODO  DOES SegwitAddress's init from_script make sense for Taproot??
+
+    def __init__(self, address=None, witness_hash=None,
+                 version=P2TR_ADDRESS_V1):
+        """Allow creation only from address and public key (witness_hash is not
+           a hash in taproot, just the compress public key hex)"""
+
+        super().__init__(address=address, witness_hash=witness_hash,
+                         version=P2TR_ADDRESS_V1)
+
+
+    def to_script_pub_key(self):
+        """Returns the scriptPubKey of a P2TR witness script"""
+        return bitcoinutils.script.Script(['OP_1', self.to_hash()])
+
+
+    def get_type(self):
+        """Returns the type of address"""
+        return self.version
+
 
 
 

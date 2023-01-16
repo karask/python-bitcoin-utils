@@ -7,12 +7,16 @@ SEGWIT-related
 - unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
 
 Taproot-related
-- bech32m
+- bech32m (done)
+- add P2trAddress and test with new example (done)
+
 - add tests for bech32m
+- refactor Private Key (make class, that ECDSA and Schnorr inherit from!?)
 - add schnorr
 - add default taproot spending
 - add single alt spending
 - add tree alt spendin
+
 
 PSBT
 - add!
