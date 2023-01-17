@@ -1,0 +1,5 @@
+Update version:
+- __init__
+- README.rst
+- docs/conf.py
+- update_version.sh
