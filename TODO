@@ -11,6 +11,7 @@ Taproot-related
 - add P2trAddress and test with new example (done)
 
 - add tests for bech32m
+- refactor P2trAddress (and PublicKey?) - taproot requires just the compressed public key as a witness program (rather than witness hash 20/32bytes as segwit v0) -- thus the code talks about witness_hash but the compressed public key is there instead !!?!
 - refactor Private Key (make class, that ECDSA and Schnorr inherit from!?)
 - add schnorr
 - add default taproot spending
