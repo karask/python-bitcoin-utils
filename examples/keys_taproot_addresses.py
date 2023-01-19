@@ -19,7 +19,7 @@ def main():
     setup('testnet')
 
     # could also instantiate from existing WIF key
-    priv = PrivateKey.from_wif('cVdte9ei2xsVjmZSPtyucG43YZgNkmKTqhwiUA8M4Fc3LdPJxPmZ')
+    priv = PrivateKey.from_wif('cVHcBHKydbbdqQtKWm2AdgF7LGrQdHzxa3yaABPa16wb5ZTqc3Np')
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif())
