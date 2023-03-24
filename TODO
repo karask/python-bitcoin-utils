@@ -18,6 +18,11 @@ Taproot-related
 - add single alt spending
 - add tree alt spendin
 
+PRIVATE KEYS compressed
+- should accept keys with 01 at the end or otherwise specify 'compressed' for the public key
+- use it when generating the public key
+- and when generating the address
+
 
 PSBT
 - add!
