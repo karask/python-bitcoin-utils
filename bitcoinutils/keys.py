@@ -25,7 +25,7 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
         P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
-from bitcoinutils.utils import bytes_from_int, encode_varint
+from bitcoinutils.utils import bytes_from_int, encode_varint, add_magic_prefix
 from bitcoinutils.ripemd160 import ripemd160
 import bitcoinutils.script
 import bitcoinutils.bech32
@@ -57,19 +57,6 @@ _curve = ellipticcurve.CurveFp( _p, _a, _b )
 # SECP256k1.__dict__['generator']
 _G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
 
-
-
-
-# method used by both PrivateKey and PublicKey - TODO clean - add in another module?
-def add_magic_prefix(message):
-    magic_prefix = b'\x18Bitcoin Signed Message:\n'
-    # need to use varint for big messages
-    # note that previously big-endian was used but varint uses little-endian
-    # successfully tested with signatures from bitcoin core but keep this in mind
-    message_size = encode_varint(len(message))
-    message_encoded = message.encode('utf-8')
-    message_magic = magic_prefix + message_size + message_encoded
-    return message_magic
 
 
 

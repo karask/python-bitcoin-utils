@@ -117,4 +117,17 @@ def int_from_bytes(b: bytes) -> int:
     return int.from_bytes(b, byteorder="big")
 
 
+def add_magic_prefix(message):
+    '''
+    Required prefix when signing a message
+    '''
+    magic_prefix = b'\x18Bitcoin Signed Message:\n'
+    # need to use varint for big messages
+    # note that previously big-endian was used but varint uses little-endian
+    # successfully tested with signatures from bitcoin core but keep this in mind
+    message_size = encode_varint(len(message))
+    message_encoded = message.encode('utf-8')
+    message_magic = magic_prefix + message_size + message_encoded
+    return message_magic
+
 
