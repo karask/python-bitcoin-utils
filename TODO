@@ -1,3 +1,6 @@
+IMPROVE
+- why does bitcoinlib.services.service worked for connecting and proxy didn't for some students? (services probably has some redundancy code)
+
 SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
 - explain get_transaction_segwit_digest() better and test further
