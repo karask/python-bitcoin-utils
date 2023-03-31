@@ -1,3 +1,11 @@
+******
+0.5.10 is current working copy -- HAVEN'T TAGGED IT YET, will refactor PrivateKey first
+
+- refactor ECDSA stuff -- currently global in keys.py
+  . make an ECDSA class that private key will use with proper interface (will use Schnorr later!)
+  . decide if a single PrivateKey is good/clean enough for both ecdsa and schnorr
+******
+
 IMPROVE
 - why does bitcoinlib.services.service worked for connecting and proxy didn't for some students? (services probably has some redundancy code)
 
@@ -14,9 +22,6 @@ Taproot-related
 - bech32m (done)
 - add P2trAddress and test with new example (done) ??!?
 
-- refactor ECDSA stuff -- currently global in keys.py
-  . make an ECDSA class that private key will use with proper interface (will use Schnorr later!)
-  . decide if a single PrivateKey is good/clean enough for both ecdsa and schnorr
 
 - add tests for bech32m
 - refactor P2trAddress (and PublicKey?) - taproot requires just the compressed public key as a witness program (rather than witness hash 20/32bytes as segwit v0) -- thus the code talks about witness_hash but the compressed public key is there instead !!?!
