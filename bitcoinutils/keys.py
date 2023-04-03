@@ -31,32 +31,32 @@ import bitcoinutils.script
 import bitcoinutils.bech32
 
 
-# ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
-# This is done modulo p which (secp256k1) is:
-# p is the finite field prime number and is equal to:
-# 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
-# Note that we could also get that from ecdsa lib from the curve, e.g.:
-# SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
-_p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-# Curve's a and b are (y**2 = x**3 + a*x + b)
-_a = 0x0000000000000000000000000000000000000000000000000000000000000000
-_b = 0x0000000000000000000000000000000000000000000000000000000000000007
-# Curve's generator point is:
-_Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
-_Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-# prime number of points in the group (the order)
-_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-
-# The ECDSA curve (secp256k1) is:
-# Note that we could get that from ecdsa lib, e.g.:
-# SECP256k1.__dict__['curve']
-_curve = ellipticcurve.CurveFp( _p, _a, _b )
-
-# The generator base point is:
-# Note that we could get that from ecdsa lib, e.g.:
-# SECP256k1.__dict__['generator']
-_G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
-
+class EcdsaParams:
+    # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
+    # This is done modulo p which (secp256k1) is:
+    # p is the finite field prime number and is equal to:
+    # 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+    # Note that we could also get that from ecdsa lib from the curve, e.g.:
+    # SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
+    _p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+    # Curve's a and b are (y**2 = x**3 + a*x + b)
+    _a = 0x0000000000000000000000000000000000000000000000000000000000000000
+    _b = 0x0000000000000000000000000000000000000000000000000000000000000007
+    # Curve's generator point is:
+    _Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+    _Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+    # prime number of points in the group (the order)
+    _order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+    
+    # The ECDSA curve (secp256k1) is:
+    # Note that we could get that from ecdsa lib, e.g.:
+    # SECP256k1.__dict__['curve']
+    _curve = ellipticcurve.CurveFp( _p, _a, _b )
+    
+    # The generator base point is:
+    # Note that we could get that from ecdsa lib, e.g.:
+    # SECP256k1.__dict__['generator']
+    _G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
 
 
 
@@ -254,6 +254,14 @@ class PrivateKey:
         return self._sign_input(tx_digest, sighash)
 
 
+    # TODO AAAAAAAAAAAA
+    def sign_taproot_input(self, tx, txin_index, script, amount, sighash=SIGHASH_ALL):
+        # the tx knows how to calculate the digest for the corresponding
+        # sighash)
+        tx_digest = tx.get_transaction_segwit_digest(txin_index, script, amount, sighash)
+        return self._sign_taproot_input(tx_digest, sighash)
+
+
     def _sign_input(self, tx_digest, sighash=SIGHASH_ALL):
         """Signs a transaction input with the private key
 
@@ -334,7 +342,7 @@ class PrivateKey:
 
         # if length is 33 bytes then it contains a sign and thus is high S
         if(length_s == 33):
-            new_S_as_bigint = _order - S_as_bigint 
+            new_S_as_bigint = EcdsaParams._order - S_as_bigint 
             # convert bigint to bytes
             new_S = unhexlify( format(new_S_as_bigint, 'x').zfill(64) )
             # new value should be 32 bytes
@@ -344,26 +352,6 @@ class PrivateKey:
             length_total -= 1
         else:
             new_S = S
-
-
-# TODO CLEAN old low std rules
-        #half_order = _order // 2
-        # if S is larger than half the order then substruct from order and
-        # use that as S since it is equivalent.
-        #if S_as_bigint > half_order:
-        #    # make sure length is 33 bytes (it should be)
-        #    assert length_s == 0x21
-
-        #    new_S_as_bigint = _order - S_as_bigint
-        #    # convert bigint to bytes
-        #    new_S = unhexlify( format(new_S_as_bigint, 'x').zfill(64) )
-        #    # new value should be 32 bytes
-        #    assert len(new_S) == 0x20
-        #    # reduce appropriate lengths
-        #    length_s -= 1
-        #    length_total -= 1
-        #else:
-        #    new_S = S
 
 
         # reconstruct signature
@@ -377,6 +365,11 @@ class PrivateKey:
         # script_sig (i.e. the DER signature plus the sighash)
         return hexlify(signature).decode('utf-8')
 
+    # TODO AAAAAAAAAAAAA
+    def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL):
+        pass
+
+    # TODO AAAAA IS PUBLIC KEY size is 32!!!! -- get_public_key needs to be modified appr.
 
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
@@ -447,7 +440,7 @@ class PublicKey:
             x_coord = int( hex_str[2:], 16 )
 
             # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
-            y_values = sqrt_mod( (x_coord**3 + 7) % _p, _p, True )
+            y_values = sqrt_mod( (x_coord**3 + 7) % EcdsaParams._p, EcdsaParams._p, True )
 
             # check SEC format's first byte to determine which of the 2 values to use
             if first_byte_in_hex == '02':
@@ -483,6 +476,7 @@ class PublicKey:
         return self.key.to_string()
 
 
+    # TODO AAAAA if taproot just return key_hex[:64] -- DONE BELOW but commented out !!!!
     def to_hex(self, compressed=True, taproot=False):
         """Returns public key as a hex string (SEC format - compressed by
         default)"""
@@ -572,20 +566,20 @@ class PublicKey:
         #
 
         # get signature's r and s
-        r,s = sigdecode_string(sig[1:], _order)
+        r,s = sigdecode_string(sig[1:], EcdsaParams._order)
 
         # ger R's x coordinate
-        x = r + (recid // 2) * _order
+        x = r + (recid // 2) * EcdsaParams._order
 
         # get R's y coordinate (y**2 = x**3 + 7)
-        y_values = sqrt_mod( (x**3 + 7) % _p, _p, True )
+        y_values = sqrt_mod( (x**3 + 7) % EcdsaParams._p, EcdsaParams._p, True )
         if (y_values[0] - recid) % 2 == 0:
             y = y_values[0]
         else:
             y = y_values[1]
 
         # get R (recovered ephemeral key) from x,y
-        R = ellipticcurve.Point(_curve, x, y, _order)
+        R = ellipticcurve.Point(EcdsaParams._curve, x, y, EcdsaParams._order)
 
         # get e (hash of message encoded as big integer)
         e = int(hexlify(message_digest), 16)
@@ -593,9 +587,9 @@ class PublicKey:
         # compute public key Q = r^-1 (sR - eG)
         # because Point substraction is not defined we will instead use:
         # Q = r^-1 (sR + (-eG) )
-        minus_e = -e % _order
-        inv_r = numbertheory.inverse_mod(r, _order)
-        Q = inv_r * ( s*R + minus_e*_G )
+        minus_e = -e % EcdsaParams._order
+        inv_r = numbertheory.inverse_mod(r, EcdsaParams._order)
+        Q = inv_r * ( s*R + minus_e*EcdsaParams._G )
 
         # instantiate the public key and verify message
         public_key = VerifyingKey.from_public_point( Q, curve = SECP256k1 )
@@ -660,20 +654,20 @@ class PublicKey:
         """
         hash160 = self._to_hash160(True)
         addr_string_hex = hexlify(hash160).decode('utf-8')
-        return P2wpkhAddress(witness_hash=addr_string_hex)
+        return P2wpkhAddress(witness_program=addr_string_hex)
 
-# TODO cleam tmp taproot stuff!	
-#    def get_taproot_address(self):
-#        """Returns the corresponding P2TR address
-#
-#        Only compressed is allowed. Taproot does not hash the public key
-#        so we store it directly.
-#        """
-#
-#        # Note that in taproot it is not really the hash.. just the compressed
-#        # public key without a prefix!
-#        pubkey = self.to_hex(compressed=True, taproot=True) 
-#        return P2trAddress(witness_hash=pubkey)
+
+    def get_taproot_address(self):
+        """Returns the corresponding P2TR address
+
+        Only compressed is allowed. Taproot does not hash the public key
+        so we store it directly.
+        """
+
+        # Note that in taproot it is not really the hash.. just the compressed
+        # public key without a prefix!
+        pubkey = self.to_hex(compressed=True, taproot=True) 
+        return P2trAddress(witness_program=pubkey)
 
 
 class Address(ABC):
@@ -938,16 +932,18 @@ class SegwitAddress(ABC):
 
     Attributes
     ----------
-    witness_hash : str
-        the hash string representation of either the address; it can be either
-        a public key hash (P2WPKH) or the hash of the script (P2WSH)
+    witness_program : str
+        for segwit v0 this is the hash string representation of either the address;
+        it can be either a public key hash (P2WPKH) or the hash of the script (P2WSH)
+
+        for segwit v1 (aka taproot) this is the public key
 
     Methods
     -------
     from_address(address)
         instantiates an object from address string encoding
-    from_hash(hash_str)
-        instantiates an object from a hash hex string
+    from_program(hash_str)
+        instantiates an object from a witness program hex string
     from_script(witness_script)
         instantiates an object from a witness_script
     to_string()
@@ -963,15 +959,15 @@ class SegwitAddress(ABC):
         If an invalid address or hash is provided.
     """
     @abstractmethod
-    def __init__(self, address=None, witness_hash=None, script=None,
+    def __init__(self, address=None, witness_program=None, script=None,
                  version=P2WPKH_ADDRESS_V0):
         """
         Parameters
         ----------
         address : str
             the address as a string
-        witness_hash : str
-            the hash hex string representation
+        witness_program : str
+            the witness program hex string representation
         script : Script object
             instantiates an Address object from a witness script
         version : str
@@ -988,20 +984,20 @@ class SegwitAddress(ABC):
         self.version = version
         if self.version == P2WPKH_ADDRESS_V0 or self.version == P2WSH_ADDRESS_V0:
             self.segwit_num_version = 0
-# TODO clean tmp taprrot stuff
-#        elif self.version == P2TR_ADDRESS_V1:
-#            self.segwit_num_version = 1
-#        else:
-#            raise TypeError("A valid segwit version is required.")
+        elif self.version == P2TR_ADDRESS_V1:
+            self.segwit_num_version = 1
+        else:
+            raise TypeError("A valid segwit version is required.")
 
-        if witness_hash:
-            self.witness_hash = witness_hash
+        # witness_program covers both v0 and v1
+        if witness_program:
+            self.witness_program = witness_program
         elif address:
-            self.witness_hash = self._address_to_hash(address)
+            self.witness_program = self._address_to_hash(address)
         elif script:
             # TODO for now just check that is an instance of Script
             if isinstance(script, bitcoinutils.script.Script):
-                self.witness_hash = self._script_to_hash(script)
+                self.witness_program = self._script_to_hash(script)
             else:
                 raise TypeError("A Script class is required.")
         else:
@@ -1016,10 +1012,10 @@ class SegwitAddress(ABC):
 
 
     @classmethod
-    def from_hash(cls, witness_hash):
+    def from_witness_program(cls, witness_program):
         """Creates an address object from a hash string"""
 
-        return cls(witness_hash=witness_hash)
+        return cls(witness_program=witness_program)
 
 
     @classmethod
@@ -1056,10 +1052,10 @@ class SegwitAddress(ABC):
         return hexlify(hashsha256).decode('utf-8')
 
 
-    def to_hash(self):
-        """Returns as hash hex string"""
+    def to_witness_program(self):
+        """Returns witness program as hex string"""
 
-        return self.witness_hash
+        return self.witness_program
 
 
     def to_string(self):
@@ -1068,8 +1064,8 @@ class SegwitAddress(ABC):
         Uses a segwit's python reference implementation for now. (TODO)
         """
 
-        # convert hex string hash to int array (required by bech32 lib)
-        hash_bytes = unhexlify( self.witness_hash.encode('utf-8') )
+        # convert hex string witness program to int array (required by bech32 lib)
+        hash_bytes = unhexlify( self.witness program.encode('utf-8') )
         witness_int_array = memoryview(hash_bytes).tolist()
 
         return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()],
@@ -1091,11 +1087,11 @@ class P2wpkhAddress(SegwitAddress):
     """
 
     # TODO allow creation directly from Bech32 address !!
-    def __init__(self, address=None, witness_hash=None,
+    def __init__(self, address=None, witness program=None,       # script=None, ?
                  version=P2WPKH_ADDRESS_V0):
         """Allow creation only from hash160 of public key"""
 
-        super().__init__(address=address, witness_hash=witness_hash,
+        super().__init__(address=address, witness program=None,  # script=None, ?
                          version=P2WPKH_ADDRESS_V0) # non-variable version
 
 
@@ -1122,11 +1118,11 @@ class P2wshAddress(SegwitAddress):
         returns the type of address
     """
 
-    def __init__(self, address=None, witness_hash=None, script=None,
+    def __init__(self, address=None, witness program=None, script=None,
                  version=P2WSH_ADDRESS_V0):
         """Allow creation only from hash160 of public key"""
 
-        super().__init__(address=None, witness_hash=None, script=script,
+        super().__init__(address=None, witness program=None, script=script,
                          version=P2WSH_ADDRESS_V0) # non-variable version
 
 
@@ -1140,40 +1136,35 @@ class P2wshAddress(SegwitAddress):
         return self.version
 
 
-# TODO CLEAN UP tmp taproot stuff
-# this was added for taproot but will be refactored!
-#class P2trAddress(SegwitAddress):
-#    """Encapsulates a P2TR (Taproot) address.
-#
-#    Check Address class for details
-#
-#    Methods
-#    -------
-#    to_script_pub_key()
-#        returns the scriptPubKey of a P2WPKH witness script
-#    get_type()
-#        returns the type of address
-#    """
-#
-#    # TODO  DOES SegwitAddress's init from_script make sense for Taproot??
-#
-#    def __init__(self, address=None, witness_hash=None,
-#                 version=P2TR_ADDRESS_V1):
-#        """Allow creation only from address and public key (witness_hash is not
-#           a hash in taproot, just the compress public key hex)"""
-#
-#        super().__init__(address=address, witness_hash=witness_hash,
-#                         version=P2TR_ADDRESS_V1)
-#
-#
-#    def to_script_pub_key(self):
-#        """Returns the scriptPubKey of a P2TR witness script"""
-#        return bitcoinutils.script.Script(['OP_1', self.to_hash()])
-#
-#
-#    def get_type(self):
-#        """Returns the type of address"""
-#        return self.version
+class P2trAddress(SegwitAddress):
+    """Encapsulates a P2TR (Taproot) address.
+
+    Check Address class for details
+
+    Methods
+    -------
+    to_script_pub_key()
+        returns the scriptPubKey of a P2TR witness script
+    get_type()
+        returns the type of address
+    """
+
+    def __init__(self, address=None, witness program=None,               # script=None, ?
+                 version=P2TR_ADDRESS_V1):
+        """Allow creation only from witness program"""
+
+        super().__init__(address=None, witness_program=witness_program,  # script=None, ?
+                         version=P2TR_ADDRESS_V1)
+
+
+    def to_script_pub_key(self):
+        """Returns the scriptPubKey of a P2TR witness script"""
+        return bitcoinutils.script.Script(['OP_1', self.to_witness_program()])
+
+
+    def get_type(self):
+        """Returns the type of address"""
+        return self.version
 
 
 
