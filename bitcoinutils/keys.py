@@ -1001,7 +1001,7 @@ class SegwitAddress(ABC):
             else:
                 raise TypeError("A Script class is required.")
         else:
-            raise TypeError("A valid address or hash is required.")
+            raise TypeError("A valid address or witness program is required.")
 
 
     @classmethod
@@ -1065,7 +1065,7 @@ class SegwitAddress(ABC):
         """
 
         # convert hex string witness program to int array (required by bech32 lib)
-        hash_bytes = unhexlify( self.witness program.encode('utf-8') )
+        hash_bytes = unhexlify( self.witness_program.encode('utf-8') )
         witness_int_array = memoryview(hash_bytes).tolist()
 
         return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()],
@@ -1087,17 +1087,17 @@ class P2wpkhAddress(SegwitAddress):
     """
 
     # TODO allow creation directly from Bech32 address !!
-    def __init__(self, address=None, witness program=None,       # script=None, ?
+    def __init__(self, address=None, witness_program=None,                  # script=None, ?
                  version=P2WPKH_ADDRESS_V0):
         """Allow creation only from hash160 of public key"""
 
-        super().__init__(address=address, witness program=None,  # script=None, ?
+        super().__init__(address=address, witness_program=witness_program,  # script=None, ?
                          version=P2WPKH_ADDRESS_V0) # non-variable version
 
 
     def to_script_pub_key(self):
         """Returns the scriptPubKey of a P2WPKH witness script"""
-        return bitcoinutils.script.Script(['OP_0', self.to_hash()])
+        return bitcoinutils.script.Script(['OP_0', self.to_witness_program()])
 
 
     def get_type(self):
@@ -1118,17 +1118,17 @@ class P2wshAddress(SegwitAddress):
         returns the type of address
     """
 
-    def __init__(self, address=None, witness program=None, script=None,
+    def __init__(self, address=None, witness_program=None, script=None,
                  version=P2WSH_ADDRESS_V0):
         """Allow creation only from hash160 of public key"""
 
-        super().__init__(address=None, witness program=None, script=script,
+        super().__init__(address=None, witness_program=None, script=script,
                          version=P2WSH_ADDRESS_V0) # non-variable version
 
 
     def to_script_pub_key(self):
         """Returns the scriptPubKey of a P2WPKH witness script"""
-        return bitcoinutils.script.Script(['OP_0', self.to_hash()])
+        return bitcoinutils.script.Script(['OP_0', self.to_witness_program()])
 
 
     def get_type(self):
@@ -1149,7 +1149,7 @@ class P2trAddress(SegwitAddress):
         returns the type of address
     """
 
-    def __init__(self, address=None, witness program=None,               # script=None, ?
+    def __init__(self, address=None, witness_program=None,               # script=None, ?
                  version=P2TR_ADDRESS_V1):
         """Allow creation only from witness program"""
 

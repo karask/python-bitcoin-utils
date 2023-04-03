@@ -147,7 +147,7 @@ class TestP2WPKHAddresses(unittest.TestCase):
         self.correct_p2sh_p2wsh_address = 'tb1qy4kdfavhluvnhpwcqmqrd8x0ge2ynnsl7mv2mdmdskx4g3fc6ckq8f44jg'
 
     def test_p2wpkh_creation_pubkey(self):
-        addr = P2wpkhAddress.from_hash(self.pub.get_segwit_address().to_hash())
+        addr = P2wpkhAddress.from_witness_program(self.pub.get_segwit_address().to_witness_program())
         self.assertTrue(self.correct_p2wpkh_address, addr.to_string())
 
     def test_p2sh_p2wpkh_creation_pubkey(self):
