@@ -35,12 +35,12 @@ def main():
 
     # print the address and hash - default is compressed address
     print("Native Address:", address.to_string())
-    segwit_hash = address.to_hash()
+    segwit_hash = address.to_witness_program()
     print("Segwit Hash:", segwit_hash)
     print("Segwit Version:", address.get_type())
 
     # test to_string
-    addr2 = P2wpkhAddress.from_hash(segwit_hash)
+    addr2 = P2wpkhAddress.from_witness_program(segwit_hash)
     print("Created P2wpkhAddress from Segwit Hash and calculate address:")
     print("Native Address:", addr2.to_string())
 
