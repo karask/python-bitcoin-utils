@@ -19,13 +19,15 @@ from base58check import b58encode, b58decode
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
+from ecpy.curves import Curve, Point
 
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
         P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
-from bitcoinutils.utils import bytes_from_int, encode_varint, add_magic_prefix
+from bitcoinutils.utils import bytes_from_int, encode_varint, add_magic_prefix, \
+                               tagged_hash, hex_str_to_int
 from bitcoinutils.ripemd160 import ripemd160
 import bitcoinutils.script
 import bitcoinutils.bech32
@@ -57,6 +59,10 @@ class EcdsaParams:
     # Note that we could get that from ecdsa lib, e.g.:
     # SECP256k1.__dict__['generator']
     _G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
+
+
+class SchnorrParams:
+    pass
 
 
 
@@ -370,7 +376,6 @@ class PrivateKey:
         pass
 
     # TODO AAAAA IS PUBLIC KEY size is 32!!!! -- get_public_key needs to be modified appr.
-
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
 
@@ -483,29 +488,30 @@ class PublicKey:
 
         key_hex = hexlify(self.key.to_string())
 
-        if compressed:
-            # check if y is even or odd (02 even, 03 odd)
-            if int(key_hex[-2:], 16) % 2 == 0:
-                key_str = b'02' + key_hex[:64]
-            else:
-                key_str = b'03' + key_hex[:64]
-        else:
-            # uncompressed starts with 04
-            key_str = b'04' + key_hex
-
-	# this was added for taproot but will be refactored!
+        # OLD w/o taproot
         #if compressed:
-        #    if not taproot:
-        #        # check if y is even or odd (02 even, 03 odd)
-        #        if int(key_hex[-2:], 16) % 2 == 0:
-        #            key_str = b'02' + key_hex[:64]
-        #        else:
-        #            key_str = b'03' + key_hex[:64]
+        #    # check if y is even or odd (02 even, 03 odd)
+        #    if int(key_hex[-2:], 16) % 2 == 0:
+        #        key_str = b'02' + key_hex[:64]
         #    else:
-        #        key_str = key_hex[:64]
+        #        key_str = b'03' + key_hex[:64]
         #else:
         #    # uncompressed starts with 04
         #    key_str = b'04' + key_hex
+
+	    # this was added for taproot but will be refactored!
+        if compressed:
+            if not taproot:
+                # check if y is even or odd (02 even, 03 odd)
+                if int(key_hex[-2:], 16) % 2 == 0:
+                    key_str = b'02' + key_hex[:64]
+                else:
+                    key_str = b'03' + key_hex[:64]
+            else:
+                key_str = key_hex[:64]
+        else:
+            # uncompressed starts with 04
+            key_str = b'04' + key_hex
 
         return key_str.decode('utf-8')
 
@@ -657,16 +663,32 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
 
-    def get_taproot_address(self):
+    def get_taproot_address(self, tagged=True):
         """Returns the corresponding P2TR address
 
         Only compressed is allowed. Taproot does not hash the public key
-        so we store it directly.
+        so we store it directly. By default tagged_hashes are used.
         """
 
-        # Note that in taproot it is not really the hash.. just the compressed
-        # public key without a prefix!
-        pubkey = self.to_hex(compressed=True, taproot=True) 
+        # Tweak public key (BIP340)
+        # https://bitcoin.stackexchange.com/a/116391/31844
+        if tagged:
+            th = tagged_hash(b'TapTweak', self.key.to_string())
+            th_as_int = hex_str_to_int( th.hexdigest() )
+
+            # compute the tweaked public key Q = P + (t * G)
+            curve = Curve.get_curve('secp256k1')
+
+            # convert public key bytes to Point
+            x = hex_str_to_int( self.key.to_string()[:32].hex() )
+            y = hex_str_to_int( self.key.to_string()[32:].hex() )
+            P = Point(x, y, curve)
+            
+            Q = P + (th_as_int * curve.generator)
+            pubkey = hex(Q.x)[2:] + hex(Q.y)[2:]
+        else:
+            pubkey = self.to_hex(compressed=True, taproot=True) 
+
         return P2trAddress(witness_program=pubkey)
 
 
@@ -1065,7 +1087,11 @@ class SegwitAddress(ABC):
         """
 
         # convert hex string witness program to int array (required by bech32 lib)
-        hash_bytes = unhexlify( self.witness_program.encode('utf-8') )
+        # if taproot only the x coordinate is required
+        if self.segwit_num_version == 1:
+            hash_bytes = unhexlify( self.witness_program[:64].encode('utf-8') )
+        else:
+            hash_bytes = unhexlify( self.witness_program.encode('utf-8') )
         witness_int_array = memoryview(hash_bytes).tolist()
 
         return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()],

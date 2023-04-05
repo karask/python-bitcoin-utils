@@ -9,17 +9,18 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
-
 from bitcoinutils.setup import setup
 from bitcoinutils.script import Script
 from bitcoinutils.keys import P2trAddress, PrivateKey, PublicKey
+
 
 def main():
     # always remember to setup the network
     setup('testnet')
 
     # could also instantiate from existing WIF key
-    priv = PrivateKey.from_wif('cVHcBHKydbbdqQtKWm2AdgF7LGrQdHzxa3yaABPa16wb5ZTqc3Np')
+    #priv = PrivateKey.from_wif('cQoDmhFk8Ei8hmoyDvEnLN4wTWaYPLCvNKBwYkj8t1yaQTmyfQfg')
+    priv = PrivateKey.from_wif('cSfna7riKJdNU7skpRUx17WYANNsyHTA2FmuzLpFzpp37xpytgob')
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif())
@@ -35,15 +36,16 @@ def main():
 
     # print the address and hash - default is compressed address
     print("Native Address:", address.to_string())
-    taproot_pk = address.to_hash()
+    taproot_pk = address.to_witness_program()
     print("Taproot public key:", taproot_pk)
     print("Segwit Version:", address.get_type())
 
     # test to_string
-    addr2 = P2trAddress.from_hash(taproot_pk)
+    addr2 = P2trAddress.from_witness_program(taproot_pk)
     print("Created P2trAddress from public key and calculate address:")
     print("Native Address:", addr2.to_string())
 
+    assert(address.to_string() == 'tb1p3yfmr6sc448t2sya7f8n49y9h3gtg26fygg4jtpaem6pvptvc7jq423gxd')
 
 if __name__ == "__main__":
     main()

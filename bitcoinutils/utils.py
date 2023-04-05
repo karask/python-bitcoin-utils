@@ -9,6 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
+from hashlib import sha256
 from binascii import hexlify, unhexlify
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
 
@@ -83,6 +84,7 @@ def vi_to_int(byteint):
     return int.from_bytes(byteint[1:1+size][::-1], 'big'), size + 1
 
 
+# TODO name hex_to_bytes ??
 def to_bytes(string, unhexlify=True):
     '''
 	Converts a hex string to bytes
@@ -130,4 +132,26 @@ def add_magic_prefix(message):
     message_magic = magic_prefix + message_size + message_encoded
     return message_magic
 
+
+def tagged_hash(tag, data):
+    '''
+    Tagged hashes ensure that hashes used in one context can not be used in another.
+    It is used extensively in Taproot
+
+    A tagged hash is: SHA256( SHA256("TapTweak") || 
+                              SHA256("TapTweak") ||
+                              data
+                            )
+    Returns hashlib object (can then use .digest() or hexdigest())
+    '''
+
+    tag_digest = sha256(tag).digest()
+    return sha256( tag_digest + tag_digest + data )
+
+
+def hex_str_to_int(hex_str):
+    '''
+    Converts a string hexadecimal to a number (starting with 0x)
+    '''
+    return int(hex_str, base=16) 
 
