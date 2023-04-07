@@ -19,8 +19,7 @@ def main():
     setup('testnet')
 
     # could also instantiate from existing WIF key
-    #priv = PrivateKey.from_wif('cQoDmhFk8Ei8hmoyDvEnLN4wTWaYPLCvNKBwYkj8t1yaQTmyfQfg')
-    priv = PrivateKey.from_wif('cSfna7riKJdNU7skpRUx17WYANNsyHTA2FmuzLpFzpp37xpytgob')
+    priv = PrivateKey.from_wif('cTLeemg1bCXXuRctid7PygEn7Svxj4zehjTcoayrbEYPsHQo248w')
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif())
@@ -45,7 +44,7 @@ def main():
     print("Created P2trAddress from public key and calculate address:")
     print("Native Address:", addr2.to_string())
 
-    assert(address.to_string() == 'tb1p3yfmr6sc448t2sya7f8n49y9h3gtg26fygg4jtpaem6pvptvc7jq423gxd')
+    assert(address.to_string() == 'tb1pk426x6qvmncj5vzhtp5f2pzhdu4qxsshszswga8ea6sycj9nulmsu7syz0')
 
 if __name__ == "__main__":
     main()

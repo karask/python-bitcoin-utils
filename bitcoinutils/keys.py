@@ -673,7 +673,8 @@ class PublicKey:
         # Tweak public key (BIP340)
         # https://bitcoin.stackexchange.com/a/116391/31844
         if tagged:
-            th = tagged_hash(b'TapTweak', self.key.to_string())
+            # public key in x form only
+            th = tagged_hash('TapTweak', self.key.to_string()[:32])
             th_as_int = hex_str_to_int( th.hexdigest() )
 
             # compute the tweaked public key Q = P + (t * G)

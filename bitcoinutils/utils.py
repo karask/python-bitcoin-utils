@@ -145,7 +145,7 @@ def tagged_hash(tag, data):
     Returns hashlib object (can then use .digest() or hexdigest())
     '''
 
-    tag_digest = sha256(tag).digest()
+    tag_digest = sha256(tag.encode()).digest()
     return sha256( tag_digest + tag_digest + data )
 
 
