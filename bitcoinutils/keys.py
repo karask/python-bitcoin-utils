@@ -19,7 +19,7 @@ from base58check import b58encode, b58decode
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
-from ecpy.curves import Curve, Point
+#from ecpy.curves import Curve, Point
 
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
@@ -28,7 +28,7 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes_from_int, encode_varint, add_magic_prefix, \
                                tagged_hash, hex_str_to_int, int_to_hex_str, \
-                               is_hex_even
+                               is_hex_even, tweak_taproot_pubkey, negate_public_key
 from bitcoinutils.ripemd160 import ripemd160
 import bitcoinutils.script
 import bitcoinutils.bech32
@@ -401,28 +401,14 @@ class PrivateKey:
     #    secret_key = hexlify(self.key.to_string())
     #
     #    # if y is even then it's 02 thus ok for taproot
-    #    if self.is_hex_even(verifying_key[64:]):
+    #    if is_hex_even(verifying_key[64:]):
     #        return PublicKey( '04' + verifying_key.decode('utf-8') )
     #    # else private key x becomes -x so as we get -P = -x*G
     #    # now y will be even again
     #    else:
-    #        minus_x_bytes = unhexlify(self.negate_x(secret_key))
+    #        minus_x_bytes = unhexlify(negate_hex_coord(secret_key))
     #        minus_key = SigningKey.from_string(minus_x_bytes, curve=SECP256k1)
     #        return PublicKey( '04' + hexlify(minus_key.get_verifying_key().to_string()).decode('utf-8') )
-
-
-    # TODO DELETE? doc string above..if we keep
-    #def is_hex_even(self, h):
-    #    return int(h[-2:], 16) % 2 == 0
-
-    # TODO DELETE? doc string above..if we keep
-    #def negate_x(self, x):
-    #
-    #    int_x = int(x, 16)
-    #    minus_x = EcdsaParams._order - int_x
-    #    minus_hex_x = f'{minus_x:064x}'
-
-    #    return minus_hex_x#unhexlify(minus_hex_x)
 
    
 
@@ -449,8 +435,8 @@ class PublicKey:
         corresponding private key.
     to_hex(compressed=True)
         returns the key as hex string (in SEC format - compressed by default)
-    to_hex_x_coord()
-        returns the x coordinate only as hex string (useful for taproot)
+    to_taproot_hex()
+        returns the x coordinate only as hex string (needed for taproot)
     to_bytes()
         returns the key's raw bytes
     to_hash160()
@@ -558,44 +544,20 @@ class PublicKey:
 
 
 
-    # TODO need to go somewhere globally !!??!
-    # TODO 2 methods one in utils is_hex_even() and another to negate x in finite_fields??!
-    # KEEP until taproot finishes TODO
-    #def is_hex_even(self, h):
-    #    return int(h[-2:], 16) % 2 == 0
+    def to_taproot_hex(self, tagged=True):
+        """Returns the x coordinate of the public key as a hex string.
 
-    #def negate_pk(self):
+        Tweaks and negates, if necessary, the key first.
+        """
+        if tagged:
+            # public key in x form only
+            th = tagged_hash('TapTweak', self.key.to_string()[:32])
+            # note that taproot's even y is checked/negated during tweaking
+            pubkey = tweak_taproot_pubkey(self.key.to_string(), th)[:64]
+        else:
+            pubkey = self.to_hex(compressed=True)[2:]
 
-    #    # negate x coord
-    #    curve = Curve.get_curve('secp256k1')
-
-    #    # convert public key bytes to Point
-    #    x = hex_str_to_int( self.key.to_string()[:32].hex() )
-    #    y = hex_str_to_int( self.key.to_string()[32:].hex() )
-    #    P = Point(x, y, curve)
-            
-    #    Q = -P #AAAAAAAAAAAAA TODO negates Y, not X ..........................
-    #    return hex(Q.x)[2:] + hex(Q.y)[2:]
-
-
-
-    #def to_taproot_hex(self):
-    #    """AAAAAAAAAAAReturns the x coordinate of the public key as a hex string.
-
-    #    X only, taprooAAAAAAAAAAAAAAt-style, without any y flag.
-    #    """
-
-    #    pk_hex = hexlify( self.key.to_string() )
-    #    x_hex = hexlify( self.key.to_string()[:32] ).decode('utf-8')
-    #    y_hex = hexlify( self.key.to_string()[32:] ).decode('utf-8')
-    #    if self.is_hex_even(y_hex):
-    #        print('even, do nothing')
-    #        return x_hex
-    #    else:
-    #        # TODO maybe negate function should take and return bytes to be more generic
-    #        print('odd, so negate pk')
-    #        return self.negate_pk()
-
+        return pubkey
 
 
     @classmethod
@@ -745,31 +707,6 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
 
-    # TODO will be needed from PrivateKey as well... put somewhere better to reuse!
-    # clean up, if needed, after finishing taproot TODO
-    def _tweak_key(self, tagged_hash):
-        # TODO key should be a parameter when abstracted !!
-        th_as_int = hex_str_to_int( tagged_hash.hexdigest() )
-
-        # compute the tweaked public key Q = P + (t * G)
-        curve = Curve.get_curve('secp256k1')
-
-        # convert public key bytes to Point
-        x = hex_str_to_int( self.key.to_string()[:32].hex() )
-        y = hex_str_to_int( self.key.to_string()[32:].hex() )
-        P = Point(x, y, curve)
-
-        # if y is odd then negate y (effectively P) to make it even and equiv
-        # to a 02 compressed pk
-        if y % 2 != 0:
-            P = -P
-         
-        # tweak the pk
-        Q = P + (th_as_int * curve.generator)
-        return f'{Q.x:064x}{Q.y:064x}'
-
-
-
     def get_taproot_address(self, tagged=True):
         """Returns the corresponding P2TR address
 
@@ -783,7 +720,7 @@ class PublicKey:
             # public key in x form only
             th = tagged_hash('TapTweak', self.key.to_string()[:32])
             # note that taproot's even y is checked/negated during tweaking
-            pubkey = self._tweak_key(th)[:64]
+            pubkey = tweak_taproot_pubkey(self.key.to_string(), th)[:64]
         else:
             pubkey = self.to_hex(compressed=True)[2:]
 

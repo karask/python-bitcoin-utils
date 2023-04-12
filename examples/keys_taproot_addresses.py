@@ -27,8 +27,9 @@ def main():
     # get the public key
     pub = priv.get_public_key()
 
-    # compressed is the default
+    # public keys
     print("Public key as usual:", pub.to_hex())
+    print("Taproot tweaked public key:", pub.to_taproot_hex())
 
     # get address from public key
     address = pub.get_taproot_address()
@@ -36,7 +37,7 @@ def main():
     # print the address and hash - default is compressed address
     print("Native Address:", address.to_string())
     taproot_pk = address.to_witness_program()
-    print("Taproot tweaked public key:", taproot_pk)
+    print("Taproot witness program:", taproot_pk)
     print("Segwit Version:", address.get_type())
 
     # test to_string

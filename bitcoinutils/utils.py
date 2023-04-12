@@ -11,6 +11,7 @@
 
 from hashlib import sha256
 from binascii import hexlify, unhexlify
+from ecpy.curves import Curve, Point
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
 
 
@@ -150,6 +151,54 @@ def tagged_hash(tag: bytes, data: bytes) -> bytes:
 
 def is_hex_even(h: str) -> bool:
     return int(h[-2:], 16) % 2 == 0
+
+
+def tweak_taproot_pubkey(pubkey: bytes, tagged_hash: bytes) -> str:
+    '''
+    Tweaks the public key with the specified hash. Required to create the
+    taproot public key from the internal key.
+    '''
+    th_as_int = hex_str_to_int( tagged_hash.hexdigest() )
+
+    # compute the tweaked public key Q = P + (t * G)
+    curve = Curve.get_curve('secp256k1')
+
+    # convert public key bytes to Point
+    x = hex_str_to_int( pubkey[:32].hex() )
+    y = hex_str_to_int( pubkey[32:].hex() )
+    P = Point(x, y, curve)
+
+    # if y is odd then negate y (effectively P) to make it even and equiv
+    # to a 02 compressed pk
+    if y % 2 != 0:
+        P = -P
+
+    # tweak the pk
+    Q = P + (th_as_int * curve.generator)
+    return f'{Q.x:064x}{Q.y:064x}'
+
+
+def negate_public_key(pubkey: bytes) -> str:
+    '''
+    Negate the public key (effectively negates y coordinate. This is useful
+    in taproot where we only use even y's (02 compr.pubkey). If y is odd 
+    (03 compr.pubkey) we need to negate to make it 02.
+    '''
+    curve = Curve.get_curve('secp256k1')
+
+    # convert public key bytes to Point
+    x = hex_str_to_int( pubkey[:32].hex() )
+    y = hex_str_to_int( pubkey[32:].hex() )
+    P = Point(x, y, curve)
+
+    # if y is odd then negate y (effectively P) to make it even and equiv
+    # to a 02 compressed pk
+    if y % 2 != 0:
+        P = -P
+
+    return hex(P.x)[2:] + hex(P.y)[2:]
+
+
 
 #def negate_hex_coord(x: str) -> str:
 #    minux_x = EcdsaParams._order - int(x, 16)
