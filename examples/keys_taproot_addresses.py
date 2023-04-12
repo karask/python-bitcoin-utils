@@ -19,7 +19,7 @@ def main():
     setup('testnet')
 
     # could also instantiate from existing WIF key
-    priv = PrivateKey.from_wif('cTLeemg1bCXXuRctid7PygEn7Svxj4zehjTcoayrbEYPsHQo248w')
+    priv = PrivateKey.from_wif('cRPxBiKrJsH94FLugmiL4xnezMyoFqGcf4kdgNXGuypNERhMK6AT')
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif())
@@ -28,7 +28,7 @@ def main():
     pub = priv.get_public_key()
 
     # compressed is the default
-    print("Public key:", pub.to_hex())
+    print("Public key as usual:", pub.to_hex())
 
     # get address from public key
     address = pub.get_taproot_address()
@@ -36,7 +36,7 @@ def main():
     # print the address and hash - default is compressed address
     print("Native Address:", address.to_string())
     taproot_pk = address.to_witness_program()
-    print("Taproot public key:", taproot_pk)
+    print("Taproot tweaked public key:", taproot_pk)
     print("Segwit Version:", address.get_type())
 
     # test to_string
@@ -44,7 +44,8 @@ def main():
     print("Created P2trAddress from public key and calculate address:")
     print("Native Address:", addr2.to_string())
 
-    assert(address.to_string() == 'tb1pk426x6qvmncj5vzhtp5f2pzhdu4qxsshszswga8ea6sycj9nulmsu7syz0')
+    assert(address.to_string() == 'tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq')
+    assert(addr2.to_string() == 'tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq')
 
 if __name__ == "__main__":
     main()

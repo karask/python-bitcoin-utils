@@ -72,6 +72,9 @@ class TestPublicKeys(unittest.TestCase):
         pub = PublicKey(self.public_key_hex)
         self.assertEqual(pub.get_address().to_hash160(), pub.to_hash160())
 
+    # TODO add test_pubkey_x_only(self)
+    # TODO add test_pubkey_x_only(self)
+
 
 class TestP2pkhAddresses(unittest.TestCase):
     def setUp(self):
@@ -167,6 +170,50 @@ class TestP2WPKHAddresses(unittest.TestCase):
         p2wsh_addr = P2wshAddress.from_script(script)
         p2sh_p2wsh_addr = P2shAddress.from_script(p2wsh_addr.to_script_pub_key())
         self.assertTrue(p2sh_p2wsh_addr.to_string(), self.correct_p2sh_p2wsh_address)
+
+
+class TestP2trAddresses(unittest.TestCase):
+    def setUp(self):
+        setup('testnet')
+        self.priv_even = PrivateKey.from_wif('cTLeemg1bCXXuRctid7PygEn7Svxj4zehjTcoayrbEYPsHQo248w')
+        self.correct_even_pk = '0271fe85f75e97d22e74c2dd6425e843def8b662b928f24f724ae6a2fd0c4e0419'
+        self.correct_even_tr_addr = 'tb1pk426x6qvmncj5vzhtp5f2pzhdu4qxsshszswga8ea6sycj9nulmsu7syz0'
+        self.correct_even_tweaked_pk = 'b555a3680cdcf12a305758689504576f2a03421780a0e474f9eea04c48b3e7f7'
+
+        self.priv_odd = PrivateKey.from_wif('cRPxBiKrJsH94FLugmiL4xnezMyoFqGcf4kdgNXGuypNERhMK6AT')
+        self.correct_odd_pk = '03a957ff7ead882e4c95be2afa684ab0e84447149883aba60c067adc054472785b'
+        self.correct_odd_tr_addr = 'tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq'
+        self.correct_odd_tweaked_pk = '68ce0aaf800651f31af637e2b1996f692921cfa0621ed6bb9e0fc7d3326b09da'
+
+
+    def test_even_taproot_pubkey(self):
+        pubkey = self.priv_even.get_public_key()
+        self.assertTrue(pubkey.to_hex(), self.correct_even_pk)
+
+    def test_even_taproot_address(self):
+        pubkey = self.priv_even.get_public_key()
+        addr = pubkey.get_taproot_address()
+        self.assertTrue(addr, self.correct_even_tr_addr)
+
+    def test_even_taproot_pk_witness(self):
+        pubkey = self.priv_even.get_public_key()
+        addr = pubkey.get_taproot_address()
+        self.assertTrue(addr.to_witness_program(), self.correct_even_tweaked_pk)
+
+    def test_odd_taproot_pubkey(self):
+        pubkey = self.priv_odd.get_public_key()
+        self.assertTrue(pubkey.to_hex(), self.correct_odd_pk)
+
+    def test_odd_taproot_address(self):
+        pubkey = self.priv_odd.get_public_key()
+        addr = pubkey.get_taproot_address()
+        self.assertTrue(addr, self.correct_odd_tr_addr)
+
+    def test_odd_taproot_pk_witness(self):
+        pubkey = self.priv_odd.get_public_key()
+        addr = pubkey.get_taproot_address()
+        self.assertTrue(addr.to_witness_program(), self.correct_odd_tweaked_pk)
+
 
 
 if __name__ == '__main__':

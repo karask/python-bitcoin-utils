@@ -2,6 +2,13 @@
 ******
 0.5.10 is current working copy -- HAVEN'T TAGGED IT YET, will refactor PrivateKey first
 
+- remove hex_str_to_int and int_to_hex_str !?!?!
+- to_hex() of PublicKey should add '02' and not decode at the end !!??!?!?
+
+- get_hex_x_coord, if x results in 03 then negate x to result in 02 before returning...
+- test taproot keys and addresses
+- load public key with x-only pubkey, ensure it works for several...
+- use get_hex_x_coord and PublicKey( x-only )
 
 CLEAN UP 
 -- use sha256 rather than hashlib.sha256

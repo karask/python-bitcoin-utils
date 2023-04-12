@@ -133,7 +133,7 @@ def add_magic_prefix(message):
     return message_magic
 
 
-def tagged_hash(tag, data):
+def tagged_hash(tag: bytes, data: bytes) -> bytes:
     '''
     Tagged hashes ensure that hashes used in one context can not be used in another.
     It is used extensively in Taproot
@@ -148,10 +148,24 @@ def tagged_hash(tag, data):
     tag_digest = sha256(tag.encode()).digest()
     return sha256( tag_digest + tag_digest + data )
 
+def is_hex_even(h: str) -> bool:
+    return int(h[-2:], 16) % 2 == 0
+
+#def negate_hex_coord(x: str) -> str:
+#    minux_x = EcdsaParams._order - int(x, 16)
+#    return f'{minus_x:064x}'
 
 def hex_str_to_int(hex_str):
     '''
-    Converts a string hexadecimal to a number (starting with 0x)
+    Converts a string hexadecimal to a number
     '''
     return int(hex_str, base=16) 
+
+
+def int_to_hex_str(i):
+    '''
+    Converts an int to a string hexadecimal to a number (starting with 0x)
+    '''
+    return f'{i:064x}'
+
 

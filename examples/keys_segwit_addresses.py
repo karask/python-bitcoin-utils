@@ -36,7 +36,7 @@ def main():
     # print the address and hash - default is compressed address
     print("Native Address:", address.to_string())
     segwit_hash = address.to_witness_program()
-    print("Segwit Hash:", segwit_hash)
+    print("Segwit Hash (witness program):", segwit_hash)
     print("Segwit Version:", address.get_type())
 
     # test to_string

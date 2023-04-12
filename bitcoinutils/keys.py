@@ -27,7 +27,8 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes_from_int, encode_varint, add_magic_prefix, \
-                               tagged_hash, hex_str_to_int
+                               tagged_hash, hex_str_to_int, int_to_hex_str, \
+                               is_hex_even
 from bitcoinutils.ripemd160 import ripemd160
 import bitcoinutils.script
 import bitcoinutils.bech32
@@ -350,6 +351,7 @@ class PrivateKey:
         if(length_s == 33):
             new_S_as_bigint = EcdsaParams._order - S_as_bigint 
             # convert bigint to bytes
+            # TODO maybe use f'{new_S_as_bigint:064x}' - make sure zfill pads the same
             new_S = unhexlify( format(new_S_as_bigint, 'x').zfill(64) )
             # new value should be 32 bytes
             assert len(new_S) == 0x20
@@ -371,16 +373,58 @@ class PrivateKey:
         # script_sig (i.e. the DER signature plus the sighash)
         return hexlify(signature).decode('utf-8')
 
+
     # TODO AAAAAAAAAAAAA
     def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL):
         pass
 
-    # TODO AAAAA IS PUBLIC KEY size is 32!!!! -- get_public_key needs to be modified appr.
+
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
 
         verifying_key = hexlify(self.key.get_verifying_key().to_string())
         return PublicKey( '04' + verifying_key.decode('utf-8') )
+
+
+    # TODO DELETE? doc string above..if we keep
+    # THIS WORKS FINE -BUT- WE WANT TO USE THE PUBLIC KEY (not via the private key!!?!??!)
+    # TODO BECAUSE IT CHANGES THE PRIVATE KEY !!!!!!!!!!!!!!!!!!1
+    # KEEP until we finish taproot
+    #def get_taproot_public_key(self):
+    #    """Returns the corresponding PublicKey for taproot
+    #    
+    #    I.e. if not even negate the private key.
+    #    """
+    #
+    #    verifying_key = hexlify(self.key.get_verifying_key().to_string())
+    #
+    #    secret_key = hexlify(self.key.to_string())
+    #
+    #    # if y is even then it's 02 thus ok for taproot
+    #    if self.is_hex_even(verifying_key[64:]):
+    #        return PublicKey( '04' + verifying_key.decode('utf-8') )
+    #    # else private key x becomes -x so as we get -P = -x*G
+    #    # now y will be even again
+    #    else:
+    #        minus_x_bytes = unhexlify(self.negate_x(secret_key))
+    #        minus_key = SigningKey.from_string(minus_x_bytes, curve=SECP256k1)
+    #        return PublicKey( '04' + hexlify(minus_key.get_verifying_key().to_string()).decode('utf-8') )
+
+
+    # TODO DELETE? doc string above..if we keep
+    #def is_hex_even(self, h):
+    #    return int(h[-2:], 16) % 2 == 0
+
+    # TODO DELETE? doc string above..if we keep
+    #def negate_x(self, x):
+    #
+    #    int_x = int(x, 16)
+    #    minus_x = EcdsaParams._order - int_x
+    #    minus_hex_x = f'{minus_x:064x}'
+
+    #    return minus_hex_x#unhexlify(minus_hex_x)
+
+   
 
 
 class PublicKey:
@@ -405,6 +449,8 @@ class PublicKey:
         corresponding private key.
     to_hex(compressed=True)
         returns the key as hex string (in SEC format - compressed by default)
+    to_hex_x_coord()
+        returns the x coordinate only as hex string (useful for taproot)
     to_bytes()
         returns the key's raw bytes
     to_hash160()
@@ -413,6 +459,8 @@ class PublicKey:
         returns the corresponding P2pkhAddress object
     get_segwit_address()
         returns the corresponding P2wpkhAddress object
+    get_taproot_address()
+        returns the corresponding P2trAddress object
     """
 
 
@@ -433,13 +481,21 @@ class PublicKey:
         # expects key as hex string - SEC format
         first_byte_in_hex = hex_str[:2] # 2 since a byte is represented by 2 hex characters
         hex_bytes = unhexlify(hex_str)
+        # TODO needed?? - see flag below
+        taproot = False 
 
         # check if compressed or not
         if len(hex_bytes) > 33:
             # uncompressed - SEC format: 0x04 + x + y coordinates (x,y are 32 byte numbers)
             # remove first byte and instantiate ecdsa key
             self.key = VerifyingKey.from_string(hex_bytes[1:], curve=SECP256k1)
-        else:
+        elif len(hex_bytes) > 31:
+            # key is either compressed or in x-only taproot format
+
+            # taproot is 32 bytes and it should always be prefixed with 0x02
+            if len(hex_bytes) == 32:
+                taproot = True 
+
             # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
             # is even else y is odd. Calculate y and then instantiate the ecdsa key
             x_coord = int( hex_str[2:], 16 )
@@ -448,7 +504,7 @@ class PublicKey:
             y_values = sqrt_mod( (x_coord**3 + 7) % EcdsaParams._p, EcdsaParams._p, True )
 
             # check SEC format's first byte to determine which of the 2 values to use
-            if first_byte_in_hex == '02':
+            if first_byte_in_hex == '02' or taproot:
                 # y is the even value
                 if y_values[0] % 2 == 0:
                     y_coord = y_values[0]
@@ -463,6 +519,7 @@ class PublicKey:
             else:
                 raise TypeError("Invalid SEC compressed format")
 
+            # TODO use f'{x_coord:064x}{y_coord:064x}' instead
             uncompressed_hex = "%0.64X%0.64X" % (x_coord, y_coord)
             uncompressed_hex_bytes = unhexlify(uncompressed_hex)
             self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
@@ -481,39 +538,64 @@ class PublicKey:
         return self.key.to_string()
 
 
-    # TODO AAAAA if taproot just return key_hex[:64] -- DONE BELOW but commented out !!!!
-    def to_hex(self, compressed=True, taproot=False):
+    def to_hex(self, compressed=True):
         """Returns public key as a hex string (SEC format - compressed by
         default)"""
 
         key_hex = hexlify(self.key.to_string())
 
-        # OLD w/o taproot
-        #if compressed:
-        #    # check if y is even or odd (02 even, 03 odd)
-        #    if int(key_hex[-2:], 16) % 2 == 0:
-        #        key_str = b'02' + key_hex[:64]
-        #    else:
-        #        key_str = b'03' + key_hex[:64]
-        #else:
-        #    # uncompressed starts with 04
-        #    key_str = b'04' + key_hex
-
-	    # this was added for taproot but will be refactored!
         if compressed:
-            if not taproot:
-                # check if y is even or odd (02 even, 03 odd)
-                if int(key_hex[-2:], 16) % 2 == 0:
-                    key_str = b'02' + key_hex[:64]
-                else:
-                    key_str = b'03' + key_hex[:64]
+            # check if y is even or odd (02 even, 03 odd)
+            if int(key_hex[-2:], 16) % 2 == 0:
+                key_str = b'02' + key_hex[:64]
             else:
-                key_str = key_hex[:64]
+                key_str = b'03' + key_hex[:64]
         else:
             # uncompressed starts with 04
             key_str = b'04' + key_hex
 
         return key_str.decode('utf-8')
+
+
+
+    # TODO need to go somewhere globally !!??!
+    # TODO 2 methods one in utils is_hex_even() and another to negate x in finite_fields??!
+    # KEEP until taproot finishes TODO
+    #def is_hex_even(self, h):
+    #    return int(h[-2:], 16) % 2 == 0
+
+    #def negate_pk(self):
+
+    #    # negate x coord
+    #    curve = Curve.get_curve('secp256k1')
+
+    #    # convert public key bytes to Point
+    #    x = hex_str_to_int( self.key.to_string()[:32].hex() )
+    #    y = hex_str_to_int( self.key.to_string()[32:].hex() )
+    #    P = Point(x, y, curve)
+            
+    #    Q = -P #AAAAAAAAAAAAA TODO negates Y, not X ..........................
+    #    return hex(Q.x)[2:] + hex(Q.y)[2:]
+
+
+
+    #def to_taproot_hex(self):
+    #    """AAAAAAAAAAAReturns the x coordinate of the public key as a hex string.
+
+    #    X only, taprooAAAAAAAAAAAAAAt-style, without any y flag.
+    #    """
+
+    #    pk_hex = hexlify( self.key.to_string() )
+    #    x_hex = hexlify( self.key.to_string()[:32] ).decode('utf-8')
+    #    y_hex = hexlify( self.key.to_string()[32:] ).decode('utf-8')
+    #    if self.is_hex_even(y_hex):
+    #        print('even, do nothing')
+    #        return x_hex
+    #    else:
+    #        # TODO maybe negate function should take and return bytes to be more generic
+    #        print('odd, so negate pk')
+    #        return self.negate_pk()
+
 
 
     @classmethod
@@ -663,11 +745,36 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
 
+    # TODO will be needed from PrivateKey as well... put somewhere better to reuse!
+    # clean up, if needed, after finishing taproot TODO
+    def _tweak_key(self, tagged_hash):
+        # TODO key should be a parameter when abstracted !!
+        th_as_int = hex_str_to_int( tagged_hash.hexdigest() )
+
+        # compute the tweaked public key Q = P + (t * G)
+        curve = Curve.get_curve('secp256k1')
+
+        # convert public key bytes to Point
+        x = hex_str_to_int( self.key.to_string()[:32].hex() )
+        y = hex_str_to_int( self.key.to_string()[32:].hex() )
+        P = Point(x, y, curve)
+
+        # if y is odd then negate y (effectively P) to make it even and equiv
+        # to a 02 compressed pk
+        if y % 2 != 0:
+            P = -P
+         
+        # tweak the pk
+        Q = P + (th_as_int * curve.generator)
+        return f'{Q.x:064x}{Q.y:064x}'
+
+
+
     def get_taproot_address(self, tagged=True):
         """Returns the corresponding P2TR address
 
-        Only compressed is allowed. Taproot does not hash the public key
-        so we store it directly. By default tagged_hashes are used.
+        Only compressed is allowed. Taproot uses x-only public key with
+        even y (02 compressed keys). By default tagged_hashes are used.
         """
 
         # Tweak public key (BIP340)
@@ -675,20 +782,10 @@ class PublicKey:
         if tagged:
             # public key in x form only
             th = tagged_hash('TapTweak', self.key.to_string()[:32])
-            th_as_int = hex_str_to_int( th.hexdigest() )
-
-            # compute the tweaked public key Q = P + (t * G)
-            curve = Curve.get_curve('secp256k1')
-
-            # convert public key bytes to Point
-            x = hex_str_to_int( self.key.to_string()[:32].hex() )
-            y = hex_str_to_int( self.key.to_string()[32:].hex() )
-            P = Point(x, y, curve)
-            
-            Q = P + (th_as_int * curve.generator)
-            pubkey = hex(Q.x)[2:] + hex(Q.y)[2:]
+            # note that taproot's even y is checked/negated during tweaking
+            pubkey = self._tweak_key(th)[:64]
         else:
-            pubkey = self.to_hex(compressed=True, taproot=True) 
+            pubkey = self.to_hex(compressed=True)[2:]
 
         return P2trAddress(witness_program=pubkey)
 
@@ -1087,12 +1184,7 @@ class SegwitAddress(ABC):
         Uses a segwit's python reference implementation for now. (TODO)
         """
 
-        # convert hex string witness program to int array (required by bech32 lib)
-        # if taproot only the x coordinate is required
-        if self.segwit_num_version == 1:
-            hash_bytes = unhexlify( self.witness_program[:64].encode('utf-8') )
-        else:
-            hash_bytes = unhexlify( self.witness_program.encode('utf-8') )
+        hash_bytes = unhexlify( self.witness_program.encode('utf-8') )
         witness_int_array = memoryview(hash_bytes).tolist()
 
         return bitcoinutils.bech32.encode(NETWORK_SEGWIT_PREFIXES[get_network()],
