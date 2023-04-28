@@ -8,6 +8,8 @@
   . taproot example unsigned has txid: 25b5c96b8e0305f921e6153229f5b30515eb00e14546203754a9e01e8ac92c87
   . taproot example unsigned has txwid: 092ea577513162b941e0f5f2451a87d35ac308d4f23e133791cb978c448d00ac
 
+- maybe make RBF the default from now on (like Bitcoin Core) -- WILL NEED to change all the tests, unless I add minor hack that uses RBF by default only for taproot
+
 - remove hex_str_to_int and int_to_hex_str !?!?!
 
 - test taproot keys and addresses
