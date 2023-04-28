@@ -376,6 +376,16 @@ class PrivateKey:
 
     # TODO AAAAAAAAAAAAA
     def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL):
+        """Signs a taproot transaction input with the private key
+
+        Taproot uses Schnorr signatures. The format is just R and S so only
+        64 bytes. If SIGHASH_ALL then nothing is included (i.e. default).
+        If another sighash then it is included in the end (65 bytes).
+
+        Returns a signature for that input
+        """
+
+
         pass
 
 
