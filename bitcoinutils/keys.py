@@ -16,10 +16,13 @@ from abc import ABC, abstractmethod
 from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
+# TODO Refactor code to use ecpy for ecdsa as well and remove ecdsa lib dependency
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
-#from ecpy.curves import Curve, Point
+from ecpy.keys import ECPrivateKey
+from ecpy.ecschnorr import ECSchnorr
+from ecpy.curves import Curve#, Point
 
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
@@ -385,8 +388,36 @@ class PrivateKey:
         Returns a signature for that input
         """
 
+        # For now keep using ecdsa lib for private key. For schnorr get bytes
+        # and instantiate an ecpy ECSchnorr private key to sign instead!
+        # TODO If/when ecdsa lib is removed this step needs to be removed as well
 
-        pass
+        # get key exponent from ecdsa lib and create a ecpy private key
+        cv = Curve.get_curve('secp256k1')
+        key_secret_exponent = int(hexlify(self.key.to_string()).decode('utf-8'), 16)
+
+        # check if the corresponding public key has even y - if not then we need
+        # to negate the private key
+        pubkey = hexlify(self.key.get_verifying_key().to_string()).decode('utf-8')
+        if is_hex_even(pubkey[64:]:
+            key_secret_exponent = cv.order - key_secret_exponent
+
+        ecpy_key = ECPrivateKey(key_secret_exponent, cv)
+
+
+        # TODO (DON'T) WE NEED TO TWEAK the PRIVATE KEY BEFORE SIGNING
+
+        # sign using bitcoin's LIBSECP from ecpy -- note that we do not use the
+        # Default Signing process as defined in
+        # https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
+        signer = ECSchnorr(hashlib.sha256,"LIBSECP","ITUPLE")
+        sig = signer.sign(tx_digest, ecpy_key)
+
+        # return 64 bytes signature
+        # TODO 65 bytes with sighash if <> SIGHASH_ALL
+        r = hex(sig[0])[2:]
+        s = hex(sig[1])[2:]
+        return f'{r}{s}'
 
 
     def get_public_key(self):

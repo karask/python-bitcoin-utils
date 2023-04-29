@@ -1,6 +1,7 @@
 
 ******
 0.5.10 is current working copy -- HAVEN'T TAGGED IT YET, will refactor PrivateKey first
+0.6.0 on github - not on pypi yet...
 
 - rename VarInt to CompactSize
 
@@ -17,7 +18,7 @@
 
 CLEAN UP 
 -- use sha256 rather than hashlib.sha256
--- will use ecpy lib for ECSchorr (point mul, signing, etc) - use ecpy for ECDSA to remove ecdsa lib
+-- will use ecpy lib for ECSchorr (point mul, signing, etc) - use ecpy for ECDSA as well to remove ecdsa lib
 -- internally everything should be handled in bytes -- and converted to hex when displayed
 
 
