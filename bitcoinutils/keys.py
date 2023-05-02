@@ -30,8 +30,9 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes_from_int, encode_varint, add_magic_prefix, \
-                               tagged_hash, hex_str_to_int, int_to_hex_str, \
-                               is_hex_even, tweak_taproot_pubkey, negate_public_key
+                               hex_str_to_int, int_to_hex_str, \
+                               is_hex_even, tweak_taproot_pubkey, negate_public_key, \
+                               tweak_taproot_privkey
 from bitcoinutils.ripemd160 import ripemd160
 import bitcoinutils.script
 import bitcoinutils.bech32
@@ -392,20 +393,13 @@ class PrivateKey:
         # and instantiate an ecpy ECSchnorr private key to sign instead!
         # TODO If/when ecdsa lib is removed this step needs to be removed as well
 
-        # get key exponent from ecdsa lib and create a ecpy private key
+        # get key exponent from ecdsa lib and tweak it before signing (tweaking
+        # code takes care of negating the private key if it is necessary (i.e. if
+        # the corresponding public key's y is odd.
+        tagged_key = tweak_taproot_privkey(self.key.to_string(), 'TapTweak')
+
         cv = Curve.get_curve('secp256k1')
-        key_secret_exponent = int(hexlify(self.key.to_string()).decode('utf-8'), 16)
-
-        # check if the corresponding public key has even y - if not then we need
-        # to negate the private key
-        pubkey = hexlify(self.key.get_verifying_key().to_string()).decode('utf-8')
-        if is_hex_even(pubkey[64:]:
-            key_secret_exponent = cv.order - key_secret_exponent
-
-        ecpy_key = ECPrivateKey(key_secret_exponent, cv)
-
-
-        # TODO (DON'T) WE NEED TO TWEAK the PRIVATE KEY BEFORE SIGNING
+        ecpy_key = ECPrivateKey(hex_str_to_int(tagged_key), cv)
 
         # sign using bitcoin's LIBSECP from ecpy -- note that we do not use the
         # Default Signing process as defined in
@@ -426,32 +420,6 @@ class PrivateKey:
         verifying_key = hexlify(self.key.get_verifying_key().to_string())
         return PublicKey( '04' + verifying_key.decode('utf-8') )
 
-
-    # TODO DELETE? doc string above..if we keep
-    # THIS WORKS FINE -BUT- WE WANT TO USE THE PUBLIC KEY (not via the private key!!?!??!)
-    # TODO BECAUSE IT CHANGES THE PRIVATE KEY !!!!!!!!!!!!!!!!!!1
-    # KEEP until we finish taproot
-    #def get_taproot_public_key(self):
-    #    """Returns the corresponding PublicKey for taproot
-    #    
-    #    I.e. if not even negate the private key.
-    #    """
-    #
-    #    verifying_key = hexlify(self.key.get_verifying_key().to_string())
-    #
-    #    secret_key = hexlify(self.key.to_string())
-    #
-    #    # if y is even then it's 02 thus ok for taproot
-    #    if is_hex_even(verifying_key[64:]):
-    #        return PublicKey( '04' + verifying_key.decode('utf-8') )
-    #    # else private key x becomes -x so as we get -P = -x*G
-    #    # now y will be even again
-    #    else:
-    #        minus_x_bytes = unhexlify(negate_hex_coord(secret_key))
-    #        minus_key = SigningKey.from_string(minus_x_bytes, curve=SECP256k1)
-    #        return PublicKey( '04' + hexlify(minus_key.get_verifying_key().to_string()).decode('utf-8') )
-
-   
 
 
 class PublicKey:
@@ -584,7 +552,8 @@ class PublicKey:
         return key_str.decode('utf-8')
 
 
-
+    # TODO probably remove tagged flag in the future to always tag the public key
+    # Note that we do not optionally tag the private key when signing!!!
     def to_taproot_hex(self, tagged=True):
         """Returns the x coordinate of the public key as a hex string.
 
@@ -592,9 +561,9 @@ class PublicKey:
         """
         if tagged:
             # public key in x form only
-            th = tagged_hash('TapTweak', self.key.to_string()[:32])
+            #BBBBBBBBBth = tagged_hash('TapTweak', self.key.to_string()[:32])
             # note that taproot's even y is checked/negated during tweaking
-            pubkey = tweak_taproot_pubkey(self.key.to_string(), th)[:64]
+            pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
         else:
             pubkey = self.to_hex(compressed=True)[2:]
 
@@ -754,14 +723,14 @@ class PublicKey:
         Only compressed is allowed. Taproot uses x-only public key with
         even y (02 compressed keys). By default tagged_hashes are used.
         """
+        # TODO maybe remove option for non-tagged pubkeys since we don't
+        # have option to not tag privkeys when signing
 
         # Tweak public key (BIP340)
         # https://bitcoin.stackexchange.com/a/116391/31844
         if tagged:
-            # public key in x form only
-            th = tagged_hash('TapTweak', self.key.to_string()[:32])
             # note that taproot's even y is checked/negated during tweaking
-            pubkey = tweak_taproot_pubkey(self.key.to_string(), th)[:64]
+            pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
         else:
             pubkey = self.to_hex(compressed=True)[2:]
 

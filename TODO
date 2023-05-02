@@ -5,6 +5,10 @@
 
 - rename VarInt to CompactSize
 
+- WHEN removing ecdsa lib check if the following makes sense
+  . REPRESENT privkey as just an int internally
+  . REPRESENT pubkey as just a a tuple of ints internally
+
 - tx.get_txid() exists... also impl. tx.get_txwid
   . taproot example unsigned has txid: 25b5c96b8e0305f921e6153229f5b30515eb00e14546203754a9e01e8ac92c87
   . taproot example unsigned has txwid: 092ea577513162b941e0f5f2451a87d35ac308d4f23e133791cb978c448d00ac
@@ -20,7 +24,7 @@ CLEAN UP
 -- use sha256 rather than hashlib.sha256
 -- will use ecpy lib for ECSchorr (point mul, signing, etc) - use ecpy for ECDSA as well to remove ecdsa lib
 -- internally everything should be handled in bytes -- and converted to hex when displayed
-
+-- privkey seckey (use one of the two... currently privkey is mostly used)
 
 IMPROVE
 - why does bitcoinlib.services.service worked for connecting and proxy didn't for some students? (services probably has some redundancy code)

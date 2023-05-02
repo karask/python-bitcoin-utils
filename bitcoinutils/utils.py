@@ -12,6 +12,7 @@
 from hashlib import sha256
 from binascii import hexlify, unhexlify
 from ecpy.curves import Curve, Point
+from ecpy.keys import ECPrivateKey
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
 
 
@@ -153,12 +154,16 @@ def is_hex_even(h: str) -> bool:
     return int(h[-2:], 16) % 2 == 0
 
 
-def tweak_taproot_pubkey(pubkey: bytes, tagged_hash: bytes) -> str:
+def tweak_taproot_pubkey(pubkey: bytes, tweak: str) -> str:
     '''
-    Tweaks the public key with the specified hash. Required to create the
+    Tweaks the public key with the specified tweak. Required to create the
     taproot public key from the internal key.
     '''
-    th_as_int = hex_str_to_int( tagged_hash.hexdigest() )
+
+    # only the x coordinate is tagged_hash'ed
+    th = tagged_hash(tweak, pubkey[:32])
+    # we convert to int for later elliptic curve  arithmetics
+    th_as_int = hex_str_to_int( th.hexdigest() )
 
     # compute the tweaked public key Q = P + (t * G)
     curve = Curve.get_curve('secp256k1')
@@ -176,6 +181,35 @@ def tweak_taproot_pubkey(pubkey: bytes, tagged_hash: bytes) -> str:
     # tweak the pk
     Q = P + (th_as_int * curve.generator)
     return f'{Q.x:064x}{Q.y:064x}'
+
+
+def tweak_taproot_privkey(privkey: bytes, tweak: str) -> str:
+    '''
+    Tweaks the private key before signing with it. Check if public key's y
+    is even and negate the private key before tweaking if it is not.
+    '''
+    key_secret_exponent = int(hexlify(privkey).decode('utf-8'), 16)
+
+    # get the ecpy lib private key and from that the public key!
+    curve = Curve.get_curve('secp256k1')
+    ecpy_privkey = ECPrivateKey(key_secret_exponent, curve)
+    ecpy_pubkey = ecpy_privkey.get_public_key()
+
+    # if y coordinate is not even, negate private key
+    if ecpy_pubkey.W.y % 2 != 0:
+        key_secret_exponent = curve.order - key_secret_exponent
+
+    # convert int to bytes - TODO make utils function bytes_to_int and reverse
+    key_bytes = unhexlify(hex(key_secret_exponent)[2:])
+
+    # tag the key - needs to convert it to bytes first
+    th = tagged_hash(tweak, key_bytes)
+    th_as_int = hex_str_to_int( th.hexdigest() )
+
+    tweaked_privkey_int = (key_secret_exponent + th_as_int) % curve.order
+
+    return hex(tweaked_privkey_int)[2:]
+
 
 
 def negate_public_key(pubkey: bytes) -> str:
@@ -200,10 +234,7 @@ def negate_public_key(pubkey: bytes) -> str:
 
 
 
-#def negate_hex_coord(x: str) -> str:
-#    minux_x = EcdsaParams._order - int(x, 16)
-#    return f'{minus_x:064x}'
-
+# TODO are these required - maybe bytestoint and inttobytes are only required?!?
 def hex_str_to_int(hex_str):
     '''
     Converts a string hexadecimal to a number
