@@ -359,6 +359,8 @@ class Transaction:
         Converts Transaction to bytes
     serialize()
         Converts Transaction to hex string
+    from_raw()
+        Instantiates a Transaction from serialized raw hexadacimal data (classmethod)
     get_txid()
         Calculates txid and returns it
     get_hash()
@@ -746,7 +748,7 @@ class Transaction:
     def get_wtxid(self):
         """Hashes the serialized (bytes) tx including segwit marker and witnesses"""
 
-        return get_hash()
+        return self.get_hash()
 
 
     def get_hash(self):

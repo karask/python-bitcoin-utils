@@ -5,6 +5,9 @@
 
 - rename VarInt to CompactSize
 
+- add Taproot to Transaction.from_raw
+  . test from_raw more
+
 - WHEN removing ecdsa lib check if the following makes sense
   . REPRESENT privkey as just an int internally
   . REPRESENT pubkey as just a a tuple of ints internally
@@ -12,6 +15,7 @@
 - tx.get_txid() exists... also impl. tx.get_txwid
   . taproot example unsigned has txid: 25b5c96b8e0305f921e6153229f5b30515eb00e14546203754a9e01e8ac92c87
   . taproot example unsigned has txwid: 092ea577513162b941e0f5f2451a87d35ac308d4f23e133791cb978c448d00ac
+  . should be above - current code has identical hash... probably it ignores the segwit marker (witnesses should exist anyway in both cases)
 
 - maybe make RBF the default from now on (like Bitcoin Core) -- WILL NEED to change all the tests, unless I add minor hack that uses RBF by default only for taproot
 
