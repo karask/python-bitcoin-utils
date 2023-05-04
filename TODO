@@ -24,6 +24,8 @@
 - test taproot keys and addresses
 - load public key with x-only pubkey, ensure it works for several...
 
+- ADD NOTE or github issue that specifies that CODE_SEPERATOR is not handled appropriately, etc. when creating the message digest to sign
+
 CLEAN UP 
 -- use sha256 rather than hashlib.sha256
 -- will use ecpy lib for ECSchorr (point mul, signing, etc) - use ecpy for ECDSA as well to remove ecdsa lib
