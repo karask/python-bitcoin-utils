@@ -39,7 +39,10 @@ def main():
     # create transaction input from tx id of UTXO
     txin = TxInput(txid, vout)
 
-    # the script code required for signing for p2wpkh is the same as p2pkh
+    # in segwit the signature message should commit to the script code
+    # that corresponds to the segwit transaction output
+    # the script code (template) required for signing for p2wpkh is the 
+    # same as p2pkh
     script_code = Script(['OP_DUP', 'OP_HASH160', pub.to_hash160(),
                           'OP_EQUALVERIFY', 'OP_CHECKSIG'])
 
