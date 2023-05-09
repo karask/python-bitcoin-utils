@@ -29,7 +29,7 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
         P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES
 from bitcoinutils.setup import get_network
-from bitcoinutils.utils import bytes_from_int, encode_varint, add_magic_prefix, \
+from bitcoinutils.utils import bytes32_from_int, encode_varint, add_magic_prefix, \
                                hex_str_to_int, int_to_hex_str, \
                                is_hex_even, tweak_taproot_pubkey, negate_public_key, \
                                tweak_taproot_privkey
@@ -265,11 +265,10 @@ class PrivateKey:
         return self._sign_input(tx_digest, sighash)
 
 
-    # TODO AAAAAAAAAAAA
-    def sign_taproot_input(self, tx, txin_index, script, amount, sighash=SIGHASH_ALL):
+    def sign_taproot_input(self, tx, txin_index, utxo_scripts, amounts, sighash=SIGHASH_ALL):
         # the tx knows how to calculate the digest for the corresponding
         # sighash)
-        tx_digest = tx.get_transaction_segwit_digest(txin_index, script, amount, sighash)
+        tx_digest = tx.get_transaction_taproot_digest(txin_index, utxo_scripts, amounts, 0, sighash)
         return self._sign_taproot_input(tx_digest, sighash)
 
 
@@ -312,7 +311,7 @@ class PrivateKey:
         length_r = signature[3]
         while(length_r == 33):
             signature = self.key.sign_digest_deterministic(tx_digest,
-                                                           extra_entropy=bytes_from_int(attempt),
+                                                           extra_entropy=bytes32_from_int(attempt),
                                                            sigencode=sigencode_der,
                                                            hashfunc=hashlib.sha256)
             attempt += 1

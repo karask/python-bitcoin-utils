@@ -107,18 +107,19 @@ def to_bytes(string, unhexlify=True):
         return bytes(string, 'utf8')
 
 
-def bytes_from_int(x: int) -> bytes:
+def bytes32_from_int(x: int) -> bytes:
     '''
-    Converts bytes to int
+    Converts int to 32 big-endian bytes 
     '''
     return x.to_bytes(32, byteorder="big")
 
 
-def int_from_bytes(b: bytes) -> int:
-    '''
-    Converts int to bytes
-    '''
-    return int.from_bytes(b, byteorder="big")
+# TODO REMOVE --- NOT USED
+#def int_from_bytes(b: bytes) -> int:
+#    '''
+#    Converts int to bytes
+#    '''
+#    return int.from_bytes(b, byteorder="big")
 
 
 def add_magic_prefix(message):

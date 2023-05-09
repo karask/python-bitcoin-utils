@@ -506,6 +506,7 @@ class Transaction:
 
     def get_transaction_digest(self, txin_index, script, sighash=SIGHASH_ALL):
         """Returns the transaction's digest for signing.
+        https://en.bitcoin.it/wiki/OP_CHECKSIG
 
         |  SIGHASH types (see constants.py):
         |      SIGHASH_ALL - signs all inputs and outputs (default)
@@ -606,7 +607,8 @@ class Transaction:
 
 
     def get_transaction_segwit_digest(self, txin_index, script, amount, sighash=SIGHASH_ALL):
-        """Returns the segwit transaction's digest for signing.
+        """Returns the segwit v0 transaction's digest for signing.
+           https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
 
                 |  SIGHASH types (see constants.py):
                 |      SIGHASH_ALL - signs all inputs and outputs (default)
@@ -622,26 +624,27 @@ class Transaction:
                 txin_index : int
                     The index of the input that we wish to sign
                 script : list (string)
-                    The scriptPubKey of the UTXO that we want to spend
+                    The scriptCode (template) that corresponds to the segwit
+                    transaction output type that we want to spend
                 amount : int/float/Decimal
                     The amount of the UTXO to spend is included in the
                     signature for segwit (in satoshis)
                 sighash : int
                     The type of the signature hash to be created
-                """
+        """
 
         # clone transaction to modify without messing up the real transaction
+        # TODO tmp_tx is not really used for its stream() - we can access self directly
         tmp_tx = Transaction.copy(self)
 
-        # TODO consult ref. impl. in BIP-143 and update if needed
-        # requires cleanup and further explanations
+        # defaults for BIP143
         hash_prevouts = b'\x00' * 32
         hash_sequence = b'\x00' * 32
         hash_outputs = b'\x00' * 32
 
-        # Judging the signature type
+        # acquiring the signature type
         basic_sig_hash_type = (sighash & 0x1f)
-        anyone_can_pay = sighash& 0xf0 == SIGHASH_ANYONECANPAY
+        anyone_can_pay = sighash & 0xf0 == SIGHASH_ANYONECANPAY
         sign_all = (basic_sig_hash_type != SIGHASH_SINGLE) and (basic_sig_hash_type != SIGHASH_NONE)
 
         # Hash all input
@@ -675,18 +678,18 @@ class Transaction:
             hash_outputs = amount_bytes + struct.pack('B', len(script_bytes)) + script_bytes
             hash_outputs = hashlib.sha256(hashlib.sha256(hash_outputs).digest()).digest()
 
-        # add sighash bytes to be hashed
+        # add sighash version
         tx_for_signing = self.version
 
-        # add sighash bytes to be hashed
+        # add hash_prevouts and hash_sequence
         tx_for_signing += hash_prevouts + hash_sequence
 
-        # add tx txin
+        # add tx outpoint (utxo txid + index)
         txin = self.inputs[txin_index]
         tx_for_signing += unhexlify(txin.txid)[::-1] + \
                           struct.pack('<L', txin.txout_index)
 
-        # add tx sign
+        # add tx script code
         tx_for_signing += struct.pack('B', len(script.to_bytes()))
         tx_for_signing += script.to_bytes()
 
@@ -706,6 +709,149 @@ class Transaction:
         tx_for_signing += struct.pack('<i', sighash)
 
         return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
+
+
+
+    def get_transaction_taproot_digest(self, txin_index, scriptPubkeys, amounts, ext_flag=0, sighash=SIGHASH_ALL):
+        """Returns the segwit v1 (taproot) transaction's digest for signing.
+           https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
+
+                |  SIGHASH types (see constants.py):
+                |      SIGHASH_ALL - signs all inputs and outputs (default)
+                |      SIGHASH_NONE - signs all of the inputs
+                |      SIGHASH_SINGLE - signs all inputs but only txin_index output
+                |      SIGHASH_ANYONECANPAY (only combined with one of the above)
+                |      - with ALL - signs all outputs but only txin_index input
+                |      - with NONE - signs only the txin_index input
+                |      - with SINGLE - signs txin_index input and output
+
+                Attributes
+                ----------
+                txin_index : int
+                    The index of the input that we wish to sign
+                script : list (string)
+                    The scriptCode (template) that corresponds to the segwit
+                    transaction output type that we want to spend
+                amount : int/float/Decimal
+                    The amount of the UTXO to spend is included in the
+                    signature for segwit (in satoshis)
+                ext_flag : int
+                    Extension mechanism, default is 0; 1 is for BIP342
+                sighash : int
+                    The type of the signature hash to be created
+        """
+
+        # clone transaction to modify without messing up the real transaction
+        # tmp_tx is not really used for its stream() here
+        # TODO we could use self directly to access fields
+        tmp_tx = Transaction.copy(self)
+
+        # acquiring the signature type
+        sighash_none = sighash & 0x03 == SIGHASH_NONE
+        sighash_single = sighash & 0x03 == SIGHASH_SINGLE
+        anyone_can_pay = sighash & 0x80 == SIGHASH_ANYONECANPAY
+
+        # add sighash type
+        # TODO maybe just one byte in taproot? I think not but confirm !?!?!?!!
+        tx_for_signing = struct.pack('<i', sighash)
+
+        # add sighash version 
+        tx_for_signing += self.version
+
+        # add locktime
+        tx_for_signing += self.locktime
+
+        # defaults
+        hash_prevouts = b''
+        hash_amounts = b''
+        hash_scriptPubkeys = b''
+        hash_sequences = b''
+        hash_outputs = b''
+
+
+        # TODO 
+        # To do that we need to pass all the amounts and spend outputs' scriptPubKeys!!!
+        # Data about the transaction
+        if not anyone_can_pay:
+            # the SHA256 of the serialization of all input outpoints
+            for txin in tmp_tx.inputs:
+                hash_prevouts += unhexlify(txin.txid)[::-1] + \
+                                    struct.pack('<L', txin.txout_index)
+            hash_prevouts = hashlib.sha256(hash_prevouts).digest()
+            tx_for_signing += hash_prevouts
+
+            # the SHA256 of the serialization of all input amounts
+            for a in amounts:
+                hash_amounts += a.to_bytes(8, 'little')
+            hash_amounts = hashlib.sha256(hash_amounts).digest()
+            tx_for_signing += hash_amounts
+
+            # the SHA256 of all spent outputs' scriptPubKeys
+            for s in scriptPubkeys:
+                script_len = int( len(s) / 2 )
+                hash_scriptPubkeys += script_len.to_bytes(1, 'little') + \
+                                      unhexlify(s)
+            hash_scriptPubkeys = hashlib.sha256(hash_scriptPubkeys).digest()
+            tx_for_signing += hash_scriptPubkeys
+
+            # the SHA256 of the serialization of all input nSequence
+            for txin in tmp_tx.inputs:
+                hash_sequences += txin.sequence
+            hash_sequences = hashlib.sha256(hash_sequences).digest()
+            tx_for_signing += hash_sequences
+
+
+        if not (sighash_none or sighash_single):
+            for txout in tmp_tx.outputs:
+                amount_bytes = struct.pack('<q', txout.amount)
+                script_bytes = txout.script_pubkey.to_bytes()
+                hash_outputs += amount_bytes + \
+                                struct.pack('B', len(script_bytes)) + \
+                                script_bytes
+            hash_outputs = hashlib.sha256(hash_outputs).digest()
+            tx_for_signing += hash_outputs
+
+
+        # Data about this input
+        # TODO pass all amounts and scriptpubkeys...
+        # when the latter we might need to change the amount/scriptpubkeys vars
+        # to use the array from above!?!?!
+        spend_type = ext_flag * 2 + 0      # hard-coded annex_present
+        tx_for_signing += spend_type.to_bytes(1, 'big')
+
+        if anyone_can_pay:
+            txin = tmp_tx.inputs[txin_index]
+            # convert txid to big-endian first
+            outpoint = txin.txid[::-1]
+            tx_for_signing += unhexlify(outpoint)
+
+            tx_for_signing += struct.pack('<L', txin.txout_index)
+
+            script_pubkey = scriptPubkeys[txin_index]
+            script_len = int( len(script_pubkey) / 2 )
+            tx_for_signing += script_len.to_bytes(1, 'little') + \
+                              unhexlify(script_pubkey)
+
+            tx_for_signing += txin.sequence
+
+        if not anyone_can_pay:
+            tx_for_signing += txin_index.to_bytes(4, 'little')
+
+        # TODO if annex is present it should be added here
+
+        # Data about this output
+        if sighash_single:
+            script_pubkey = scriptPubkeys[txin_index]
+            script_len = int( len(script_pubkey) / 2 )
+            script_bytes = script_len.to_bytes(1, 'little') + \
+                           unhexlify(script_pubkey)
+            tx_for_signing += hashlib.sha256(script_bytes).digest()
+
+
+        return hashlib.sha256(tx_for_signing).digest()
+
+
+
 
 
     def stream(self, has_segwit):
