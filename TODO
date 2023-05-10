@@ -27,6 +27,7 @@
 - ADD NOTE or github issue that specifies that CODE_SEPERATOR is not handled appropriately, etc. when creating the message digest to sign
 
 CLEAN UP 
+-- rename stream() to serialize() !!! (check if serialize() exists first...)
 -- scriptPubkey to script_pubkey (but check for duplicates!)
 -- use sha256 rather than hashlib.sha256
 -- will use ecpy lib for ECSchorr (point mul, signing, etc) - use ecpy for ECDSA as well to remove ecdsa lib

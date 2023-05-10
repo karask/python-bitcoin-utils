@@ -27,7 +27,7 @@ from ecpy.curves import Curve#, Point
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
-        P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES
+        P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES, TAPROOT_SIGHASH_ALL
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes32_from_int, encode_varint, add_magic_prefix, \
                                hex_str_to_int, int_to_hex_str, \
@@ -265,7 +265,7 @@ class PrivateKey:
         return self._sign_input(tx_digest, sighash)
 
 
-    def sign_taproot_input(self, tx, txin_index, utxo_scripts, amounts, sighash=SIGHASH_ALL):
+    def sign_taproot_input(self, tx, txin_index, utxo_scripts, amounts, sighash=TAPROOT_SIGHASH_ALL):
         # the tx knows how to calculate the digest for the corresponding
         # sighash)
         tx_digest = tx.get_transaction_taproot_digest(txin_index, utxo_scripts, amounts, 0, sighash)
@@ -560,8 +560,6 @@ class PublicKey:
         """
         if tagged:
             # public key in x form only
-            #BBBBBBBBBth = tagged_hash('TapTweak', self.key.to_string()[:32])
-            # note that taproot's even y is checked/negated during tweaking
             pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
         else:
             pubkey = self.to_hex(compressed=True)[2:]

@@ -17,12 +17,12 @@ from binascii import unhexlify, hexlify
 from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     DEFAULT_TX_VERSION, NEGATIVE_SATOSHI, \
                     EMPTY_TX_SEQUENCE, SIGHASH_ALL, SIGHASH_NONE, \
-                    SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, \
+                    SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, TAPROOT_SIGHASH_ALL, \
                     ABSOLUTE_TIMELOCK_SEQUENCE, REPLACE_BY_FEE_SEQUENCE, \
                     TYPE_ABSOLUTE_TIMELOCK, TYPE_RELATIVE_TIMELOCK, \
                     TYPE_REPLACE_BY_FEE, SATOSHIS_PER_BITCOIN
 from bitcoinutils.script import Script
-from bitcoinutils.utils import to_bytes, vi_to_int, encode_varint
+from bitcoinutils.utils import to_bytes, vi_to_int, encode_varint, tagged_hash
 
 class TxInput:
     """Represents a transaction input.
@@ -651,6 +651,7 @@ class Transaction:
         if not anyone_can_pay:
             hash_prevouts = b''
             for txin in tmp_tx.inputs:
+                # TODO <L is 8 bytes, should be 4 bytes <I instead
                 hash_prevouts += unhexlify(txin.txid)[::-1] + \
                                     struct.pack('<L', txin.txout_index)
             hash_prevouts = hashlib.sha256(hashlib.sha256(hash_prevouts).digest()).digest()
@@ -685,6 +686,7 @@ class Transaction:
         tx_for_signing += hash_prevouts + hash_sequence
 
         # add tx outpoint (utxo txid + index)
+        # TODO <L is 8 bytes, should be 4 bytes <I instead
         txin = self.inputs[txin_index]
         tx_for_signing += unhexlify(txin.txid)[::-1] + \
                           struct.pack('<L', txin.txout_index)
@@ -712,7 +714,8 @@ class Transaction:
 
 
 
-    def get_transaction_taproot_digest(self, txin_index, scriptPubkeys, amounts, ext_flag=0, sighash=SIGHASH_ALL):
+    # TODO Update doc with TAPROOT_SIGHASH_ALL
+    def get_transaction_taproot_digest(self, txin_index, scriptPubkeys, amounts, ext_flag=0, sighash=TAPROOT_SIGHASH_ALL):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
            https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
 
@@ -747,13 +750,16 @@ class Transaction:
         tmp_tx = Transaction.copy(self)
 
         # acquiring the signature type
+        #sign_all = sig_hash & 0x03 == SIGHASH_ALL
         sighash_none = sighash & 0x03 == SIGHASH_NONE
         sighash_single = sighash & 0x03 == SIGHASH_SINGLE
         anyone_can_pay = sighash & 0x80 == SIGHASH_ANYONECANPAY
 
+        # add epoch
+        tx_for_signing = bytes([0])
+        
         # add sighash type
-        # TODO maybe just one byte in taproot? I think not but confirm !?!?!?!!
-        tx_for_signing = struct.pack('<i', sighash)
+        tx_for_signing += sighash.to_bytes(1, 'little')
 
         # add sighash version 
         tx_for_signing += self.version
@@ -769,14 +775,15 @@ class Transaction:
         hash_outputs = b''
 
 
-        # TODO 
+        # TODO AAAAAAAAAAA
         # To do that we need to pass all the amounts and spend outputs' scriptPubKeys!!!
         # Data about the transaction
         if not anyone_can_pay:
+            print('1')
             # the SHA256 of the serialization of all input outpoints
             for txin in tmp_tx.inputs:
                 hash_prevouts += unhexlify(txin.txid)[::-1] + \
-                                    struct.pack('<L', txin.txout_index)
+                                 struct.pack('<I', txin.txout_index)
             hash_prevouts = hashlib.sha256(hash_prevouts).digest()
             tx_for_signing += hash_prevouts
 
@@ -802,8 +809,9 @@ class Transaction:
 
 
         if not (sighash_none or sighash_single):
+            print('2')
             for txout in tmp_tx.outputs:
-                amount_bytes = struct.pack('<q', txout.amount)
+                amount_bytes = struct.pack('<Q', txout.amount)
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += amount_bytes + \
                                 struct.pack('B', len(script_bytes)) + \
@@ -820,12 +828,13 @@ class Transaction:
         tx_for_signing += spend_type.to_bytes(1, 'big')
 
         if anyone_can_pay:
+            print('3')
             txin = tmp_tx.inputs[txin_index]
             # convert txid to big-endian first
             outpoint = txin.txid[::-1]
             tx_for_signing += unhexlify(outpoint)
 
-            tx_for_signing += struct.pack('<L', txin.txout_index)
+            tx_for_signing += struct.pack('<I', txin.txout_index)
 
             script_pubkey = scriptPubkeys[txin_index]
             script_len = int( len(script_pubkey) / 2 )
@@ -835,12 +844,14 @@ class Transaction:
             tx_for_signing += txin.sequence
 
         if not anyone_can_pay:
+            print('4')
             tx_for_signing += txin_index.to_bytes(4, 'little')
 
         # TODO if annex is present it should be added here
 
         # Data about this output
         if sighash_single:
+            print('5')
             script_pubkey = scriptPubkeys[txin_index]
             script_len = int( len(script_pubkey) / 2 )
             script_bytes = script_len.to_bytes(1, 'little') + \
@@ -848,9 +859,54 @@ class Transaction:
             tx_for_signing += hashlib.sha256(script_bytes).digest()
 
 
-        return hashlib.sha256(tx_for_signing).digest()
+        #return hashlib.sha256(tx_for_signing).digest()
+        return tagged_hash("TapSighash", tx_for_signing).digest()
 
 
+    # TO DELETE, HERE JUST COMPARING WITH ABOVE DIGEST CALCULATION
+#    def TaprootSignatureHash(txTo, spent_utxos, hash_type, input_index = 0, scriptpath = False, script = CScript(), codeseparator_pos = -1, annex = None, leaf_ver = LEAF_VERSION_TAPSCRIPT):
+#        assert (len(txTo.vin) == len(spent_utxos))
+#        assert (input_index < len(txTo.vin))
+#        out_type = SIGHASH_ALL if hash_type == 0 else hash_type & 3
+#        in_type = hash_type & SIGHASH_ANYONECANPAY
+#        spk = spent_utxos[input_index].scriptPubKey
+#        ss = bytes([0, hash_type]) # epoch, hash_type
+#        ss += struct.pack("<i", txTo.nVersion)
+#        ss += struct.pack("<I", txTo.nLockTime)
+#        if in_type != SIGHASH_ANYONECANPAY:
+#            ss += sha256(b"".join(i.prevout.serialize() for i in txTo.vin))
+#            ss += sha256(b"".join(struct.pack("<q", u.nValue) for u in spent_utxos))
+#            ss += sha256(b"".join(ser_string(u.scriptPubKey) for u in spent_utxos))
+#        ss += sha256(b"".join(struct.pack("<I", i.nSequence) for i in txTo.vin))
+#        if out_type == SIGHASH_ALL:
+#            ss += sha256(b"".join(o.serialize() for o in txTo.vout))
+#        spend_type = 0
+#        if annex is not None:
+#            spend_type |= 1
+#        if (scriptpath):
+#            spend_type |= 2
+#        ss += bytes([spend_type])
+#        if in_type == SIGHASH_ANYONECANPAY:
+#            ss += txTo.vin[input_index].prevout.serialize()
+#            ss += struct.pack("<q", spent_utxos[input_index].nValue)
+#            ss += ser_string(spk)
+#            ss += struct.pack("<I", txTo.vin[input_index].nSequence)
+#        else:
+#            ss += struct.pack("<I", input_index)
+#        if (spend_type & 1):
+#            ss += sha256(ser_string(annex))
+#        if out_type == SIGHASH_SINGLE:
+#            if input_index < len(txTo.vout):
+#                ss += sha256(txTo.vout[input_index].serialize())
+#            else:
+#                ss += bytes(0 for _ in range(32))
+#        if (scriptpath):
+#            ss += tagged_hash("TapLeaf", bytes([leaf_ver]) + ser_string(script))
+#            ss += bytes([0])
+#            ss += struct.pack("<i", codeseparator_pos)
+#        assert len(ss) ==  175 - (in_type == SIGHASH_ANYONECANPAY) * 49 - (out_type != SIGHASH_ALL and out_type != SIGHASH_SINGLE) * 32 + (annex is not None) * 32 + scriptpath * 37
+#        return tagged_hash("TapSighash", ss)
+#
 
 
 
