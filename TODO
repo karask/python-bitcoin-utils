@@ -28,7 +28,7 @@
 
 CLEAN UP 
 -- in TxInput move txid+index to prevout field ?! (maybe not this one, but keep it here to re-think)
--- rename stream() to serialize() !!! (check if serialize() exists first...)
+-- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream())
 -- scriptPubkey to script_pubkey (but check for duplicates!)
 -- use sha256 rather than hashlib.sha256
 -- will use ecpy lib for ECSchorr (point mul, signing, etc) - use ecpy for ECDSA as well to remove ecdsa lib
@@ -40,6 +40,7 @@ IMPROVE
 
 SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
+- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!)
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !
   . test some more segwit txs including nested ones

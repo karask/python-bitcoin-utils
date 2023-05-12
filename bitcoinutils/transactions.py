@@ -759,7 +759,7 @@ class Transaction:
         tx_for_signing = bytes([0])
         
         # add sighash type
-        tx_for_signing += sighash.to_bytes(1, 'little')
+        tx_for_signing += bytes([sighash])
 
         # add sighash version 
         tx_for_signing += self.version
@@ -775,8 +775,6 @@ class Transaction:
         hash_outputs = b''
 
 
-        # TODO AAAAAAAAAAA
-        # To do that we need to pass all the amounts and spend outputs' scriptPubKeys!!!
         # Data about the transaction
         if not anyone_can_pay:
             print('1')
@@ -821,11 +819,8 @@ class Transaction:
 
 
         # Data about this input
-        # TODO pass all amounts and scriptpubkeys...
-        # when the latter we might need to change the amount/scriptpubkeys vars
-        # to use the array from above!?!?!
         spend_type = ext_flag * 2 + 0      # hard-coded annex_present
-        tx_for_signing += spend_type.to_bytes(1, 'big')
+        tx_for_signing += bytes([spend_type])
 
         if anyone_can_pay:
             print('3')
@@ -854,6 +849,7 @@ class Transaction:
             print('5')
             script_pubkey = scriptPubkeys[txin_index]
             script_len = int( len(script_pubkey) / 2 )
+            # TODO script length size? ..use bytes([])
             script_bytes = script_len.to_bytes(1, 'little') + \
                            unhexlify(script_pubkey)
             tx_for_signing += hashlib.sha256(script_bytes).digest()
@@ -861,52 +857,6 @@ class Transaction:
 
         #return hashlib.sha256(tx_for_signing).digest()
         return tagged_hash("TapSighash", tx_for_signing).digest()
-
-
-    # TO DELETE, HERE JUST COMPARING WITH ABOVE DIGEST CALCULATION
-#    def TaprootSignatureHash(txTo, spent_utxos, hash_type, input_index = 0, scriptpath = False, script = CScript(), codeseparator_pos = -1, annex = None, leaf_ver = LEAF_VERSION_TAPSCRIPT):
-#        assert (len(txTo.vin) == len(spent_utxos))
-#        assert (input_index < len(txTo.vin))
-#        out_type = SIGHASH_ALL if hash_type == 0 else hash_type & 3
-#        in_type = hash_type & SIGHASH_ANYONECANPAY
-#        spk = spent_utxos[input_index].scriptPubKey
-#        ss = bytes([0, hash_type]) # epoch, hash_type
-#        ss += struct.pack("<i", txTo.nVersion)
-#        ss += struct.pack("<I", txTo.nLockTime)
-#        if in_type != SIGHASH_ANYONECANPAY:
-#            ss += sha256(b"".join(i.prevout.serialize() for i in txTo.vin))
-#            ss += sha256(b"".join(struct.pack("<q", u.nValue) for u in spent_utxos))
-#            ss += sha256(b"".join(ser_string(u.scriptPubKey) for u in spent_utxos))
-#        ss += sha256(b"".join(struct.pack("<I", i.nSequence) for i in txTo.vin))
-#        if out_type == SIGHASH_ALL:
-#            ss += sha256(b"".join(o.serialize() for o in txTo.vout))
-#        spend_type = 0
-#        if annex is not None:
-#            spend_type |= 1
-#        if (scriptpath):
-#            spend_type |= 2
-#        ss += bytes([spend_type])
-#        if in_type == SIGHASH_ANYONECANPAY:
-#            ss += txTo.vin[input_index].prevout.serialize()
-#            ss += struct.pack("<q", spent_utxos[input_index].nValue)
-#            ss += ser_string(spk)
-#            ss += struct.pack("<I", txTo.vin[input_index].nSequence)
-#        else:
-#            ss += struct.pack("<I", input_index)
-#        if (spend_type & 1):
-#            ss += sha256(ser_string(annex))
-#        if out_type == SIGHASH_SINGLE:
-#            if input_index < len(txTo.vout):
-#                ss += sha256(txTo.vout[input_index].serialize())
-#            else:
-#                ss += bytes(0 for _ in range(32))
-#        if (scriptpath):
-#            ss += tagged_hash("TapLeaf", bytes([leaf_ver]) + ser_string(script))
-#            ss += bytes([0])
-#            ss += struct.pack("<i", codeseparator_pos)
-#        assert len(ss) ==  175 - (in_type == SIGHASH_ANYONECANPAY) * 49 - (out_type != SIGHASH_ALL and out_type != SIGHASH_SINGLE) * 32 + (annex is not None) * 32 + scriptpath * 37
-#        return tagged_hash("TapSighash", ss)
-#
 
 
 
