@@ -783,13 +783,13 @@ class Transaction:
                 hash_prevouts += unhexlify(txin.txid)[::-1] + \
                                  struct.pack('<I', txin.txout_index)
             hash_prevouts = hashlib.sha256(hash_prevouts).digest()
-            tx_for_signing += hash_prevouts
+            tx_for_signing += hash_prevouts#[::-1]
 
             # the SHA256 of the serialization of all input amounts
             for a in amounts:
                 hash_amounts += a.to_bytes(8, 'little')
             hash_amounts = hashlib.sha256(hash_amounts).digest()
-            tx_for_signing += hash_amounts
+            tx_for_signing += hash_amounts#[::-1]
 
             # the SHA256 of all spent outputs' scriptPubKeys
             for s in scriptPubkeys:
@@ -797,13 +797,13 @@ class Transaction:
                 hash_scriptPubkeys += script_len.to_bytes(1, 'little') + \
                                       unhexlify(s)
             hash_scriptPubkeys = hashlib.sha256(hash_scriptPubkeys).digest()
-            tx_for_signing += hash_scriptPubkeys
+            tx_for_signing += hash_scriptPubkeys#[::-1]
 
             # the SHA256 of the serialization of all input nSequence
             for txin in tmp_tx.inputs:
                 hash_sequences += txin.sequence
             hash_sequences = hashlib.sha256(hash_sequences).digest()
-            tx_for_signing += hash_sequences
+            tx_for_signing += hash_sequences#[::-1]
 
 
         if not (sighash_none or sighash_single):
@@ -815,7 +815,7 @@ class Transaction:
                                 struct.pack('B', len(script_bytes)) + \
                                 script_bytes
             hash_outputs = hashlib.sha256(hash_outputs).digest()
-            tx_for_signing += hash_outputs
+            tx_for_signing += hash_outputs#[::-1]
 
 
         # Data about this input
@@ -837,8 +837,7 @@ class Transaction:
                               unhexlify(script_pubkey)
 
             tx_for_signing += txin.sequence
-
-        if not anyone_can_pay:
+        else:
             print('4')
             tx_for_signing += txin_index.to_bytes(4, 'little')
 
@@ -854,9 +853,13 @@ class Transaction:
                            unhexlify(script_pubkey)
             tx_for_signing += hashlib.sha256(script_bytes).digest()
 
+        print("message:", hexlify(tx_for_signing))
+        print("hash message:", hashlib.sha256(tx_for_signing).hexdigest())
+        a = tagged_hash("TapSighash", tx_for_signing).digest()[::-1]
+        print("tagged hash message:", hexlify(a))
 
         #return hashlib.sha256(tx_for_signing).digest()
-        return tagged_hash("TapSighash", tx_for_signing).digest()
+        return tagged_hash("TapSighash", tx_for_signing).digest()[::-1]
 
 
 
