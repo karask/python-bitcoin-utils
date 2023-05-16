@@ -136,7 +136,7 @@ def add_magic_prefix(message):
     return message_magic
 
 
-def tagged_hash(tag: bytes, data: bytes) -> bytes:
+def tagged_hash(data: bytes, tag: str) -> bytes:
     '''
     Tagged hashes ensure that hashes used in one context can not be used in another.
     It is used extensively in Taproot
@@ -154,7 +154,8 @@ def tagged_hash(tag: bytes, data: bytes) -> bytes:
 def is_hex_even(h: str) -> bool:
     return int(h[-2:], 16) % 2 == 0
 
-
+# TODO script also needs to be passed when spending with script
+# since it is part of the calculation
 def tweak_taproot_pubkey(pubkey: bytes, tweak: str) -> str:
     '''
     Tweaks the public key with the specified tweak. Required to create the
@@ -162,7 +163,8 @@ def tweak_taproot_pubkey(pubkey: bytes, tweak: str) -> str:
     '''
 
     # only the x coordinate is tagged_hash'ed
-    th = tagged_hash(tweak, pubkey[:32])
+    # TODO if also script spending this should include the script!)
+    th = tagged_hash(pubkey[:32], tweak)
     # we convert to int for later elliptic curve  arithmetics
     th_as_int = hex_str_to_int( th.hexdigest() )
 
@@ -179,7 +181,7 @@ def tweak_taproot_pubkey(pubkey: bytes, tweak: str) -> str:
     if y % 2 != 0:
         P = -P
 
-    # tweak the pk
+    # tweak the pk Q = P + 
     Q = P + (th_as_int * curve.generator)
     return f'{Q.x:064x}{Q.y:064x}'
 
@@ -197,17 +199,33 @@ def tweak_taproot_privkey(privkey: bytes, tweak: str) -> str:
     ecpy_pubkey = ecpy_privkey.get_public_key()
 
     # if y coordinate is not even, negate private key
+    # TODO Tested with even (02) - also test with odd (03) pubkey
     if ecpy_pubkey.W.y % 2 != 0:
+        # negate private key
         key_secret_exponent = curve.order - key_secret_exponent
+        # negate public key
+        ecpy_pubkey.W = -ecpy_pubkey.W
 
-    # convert int to bytes - TODO make utils function bytes_to_int and reverse
-    key_bytes = unhexlify(hex(key_secret_exponent)[2:])
+    # TODO delete.. pubkey is used for tweaking! not privkey!
+    #### convert int to bytes - TODO make utils function bytes_to_int and reverse
+    ###key_bytes = unhexlify(hex(key_secret_exponent)[2:])
 
-    # tag the key - needs to convert it to bytes first
-    th = tagged_hash(tweak, key_bytes)
+    # get public key's x coord for tweaking
+    pubkey_x = f'{ecpy_pubkey.W.x:064x}'
+
+    # convert pubkey to bytes before tweaking it
+    pubkey_bytes = unhexlify(pubkey_x)
+
+    # tag hash the public key (bytes)
+    th = tagged_hash(pubkey_bytes, tweak)
     th_as_int = hex_str_to_int( th.hexdigest() )
 
+    # The tweaked private key can be computed by d + hash(P || S)
+    # where d is the normal private key, P is the normal public key
+    # and S is the alt script, if any (empty script, if none?? TODO)
     tweaked_privkey_int = (key_secret_exponent + th_as_int) % curve.order
+    print(tweaked_privkey_int)
+    print(tweaked_privkey_int % curve.order)
 
     return hex(tweaked_privkey_int)[2:]
 

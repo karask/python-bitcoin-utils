@@ -403,7 +403,7 @@ class PrivateKey:
         # sign using bitcoin's LIBSECP from ecpy -- note that we do not use the
         # Default Signing process as defined in
         # https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-        signer = ECSchnorr(hashlib.sha256,"LIBSECP","ITUPLE")
+        signer = ECSchnorr(hashlib.sha256, "LIBSECP", "ITUPLE")
         sig = signer.sign(tx_digest, ecpy_key)
 
         # return 64 bytes signature
@@ -559,7 +559,8 @@ class PublicKey:
         Tweaks and negates, if necessary, the key first.
         """
         if tagged:
-            # public key in x form only
+            # public key in x form only (TODO pass x-only for here rather than
+            # do it from tweak_taproot_pubkey!?)
             pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
         else:
             pubkey = self.to_hex(compressed=True)[2:]

@@ -718,6 +718,8 @@ class Transaction:
     def get_transaction_taproot_digest(self, txin_index, scriptPubkeys, amounts, ext_flag=0, sighash=TAPROOT_SIGHASH_ALL):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
            https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
+           Also consult Bitcoin Core code at: https://github.com/bitcoin/bitcoin/blob/29c36f070618ea5148cd4b2da3732ee4d37af66b/src/script/interpreter.cpp#L1478
+           And: https://github.com/bitcoinops/taproot-workshop/blob/1d90851b8301fa4ac7469b9027f5ab543a67f269/test_framework/script.py#L730   (note, fields' order is old/wrong in this one)
 
                 |  SIGHASH types (see constants.py):
                 |      SIGHASH_ALL - signs all inputs and outputs (default)
@@ -855,11 +857,11 @@ class Transaction:
 
         print("message:", hexlify(tx_for_signing))
         print("hash message:", hashlib.sha256(tx_for_signing).hexdigest())
-        a = tagged_hash("TapSighash", tx_for_signing).digest()[::-1]
+        a = tagged_hash(tx_for_signing, "TapSighash").digest()[::-1]
         print("tagged hash message:", hexlify(a))
 
         #return hashlib.sha256(tx_for_signing).digest()
-        return tagged_hash("TapSighash", tx_for_signing).digest()[::-1]
+        return tagged_hash(tx_for_signing, "TapSighash").digest()[::-1]
 
 
 
