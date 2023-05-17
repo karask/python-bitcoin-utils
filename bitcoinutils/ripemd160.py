@@ -115,6 +115,7 @@ def ripemd160(data):
     return b"".join((h & 0xffffffff).to_bytes(4, 'little') for h in state)
 
 
+# TODO clean this
 #class TestFrameworkKey(unittest.TestCase):
 #    def test_ripemd160(self):
 #        """RIPEMD-160 test vectors."""

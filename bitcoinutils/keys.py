@@ -34,6 +34,7 @@ from bitcoinutils.utils import bytes32_from_int, encode_varint, add_magic_prefix
                                is_hex_even, tweak_taproot_pubkey, negate_public_key, \
                                tweak_taproot_privkey
 from bitcoinutils.ripemd160 import ripemd160
+from bitcoinutils.schnorr import schnorr_sign
 import bitcoinutils.script
 import bitcoinutils.bech32
 
@@ -394,23 +395,37 @@ class PrivateKey:
 
         # get key exponent from ecdsa lib and tweak it before signing (tweaking
         # code takes care of negating the private key if it is necessary (i.e. if
-        # the corresponding public key's y is odd.
+        # the corresponding public key's y is odd).
         tagged_key = tweak_taproot_privkey(self.key.to_string(), 'TapTweak')
 
-        cv = Curve.get_curve('secp256k1')
-        ecpy_key = ECPrivateKey(hex_str_to_int(tagged_key), cv)
+        #cv = Curve.get_curve('secp256k1')
+        #ecpy_key = ECPrivateKey(hex_str_to_int(tagged_key), cv)
 
         # sign using bitcoin's LIBSECP from ecpy -- note that we do not use the
         # Default Signing process as defined in
         # https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-        signer = ECSchnorr(hashlib.sha256, "LIBSECP", "ITUPLE")
-        sig = signer.sign(tx_digest, ecpy_key)
+        #signer = ECSchnorr(hashlib.sha256, "LIBSECP", "ITUPLE")
+        #sig = signer.sign(tx_digest, ecpy_key)
+
+        # USE schnorr.py from ref impl. for signing (maybe ecpy not needed at all !!!)
+        # CLEANUP ecpy completely if this is used
+        # has some tagged_hash usages that are required and ecpy does not use them...
+        # Our tagged key is already checked and negated if corresponding pubkey's
+        # y is odd.
+        byte_key = unhexlify(tagged_key)
+        rand_aux = b'0' * 32
+        sig = schnorr_sign(tx_digest, byte_key, rand_aux)
+    
+        sig_hex = hexlify(sig)
+        print('SIG:', sig_hex)
+        return sig_hex
+        # END USE schnorr.py from ref impl. for signing (maybe ecpy not needed at all !!!)
 
         # return 64 bytes signature
         # TODO 65 bytes with sighash if <> SIGHASH_ALL
-        r = hex(sig[0])[2:]
-        s = hex(sig[1])[2:]
-        return f'{r}{s}'
+        #r = hex(sig[0])[2:]
+        #s = hex(sig[1])[2:]
+        #return f'{r}{s}'
 
 
     def get_public_key(self):
