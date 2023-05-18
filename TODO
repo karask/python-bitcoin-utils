@@ -1,7 +1,8 @@
 
 ******
-0.5.10 is current working copy -- HAVEN'T TAGGED IT YET, will refactor PrivateKey first
-0.6.0 on github - not on pypi yet...
+Next v will be 0.6.1, will tag only when taproot is cleaned up and tested properly (except script path for now).
+
+A lot of clean up is required but most changes are easy. Will do and clean soon. Commiting anyway.
 
 - rename VarInt to CompactSize
 
@@ -23,6 +24,8 @@
 
 - test taproot keys and addresses
 - load public key with x-only pubkey, ensure it works for several...
+- REMOVE ecpy COMPLETELY
+- CLEAN comments (not all TODOs though)
 - TEST sent to schnorr address and then spend
 - TEST schnorr with SINGLE
 - TEST schnorr with ANYONE_CAN_PAY
@@ -34,7 +37,6 @@ CLEAN UP
 -- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream())
 -- scriptPubkey to script_pubkey (but check for duplicates!)
 -- use sha256 rather than hashlib.sha256
--- will use ecpy lib for ECSchorr (point mul, signing, etc) - use ecpy for ECDSA as well to remove ecdsa lib
 -- internally everything should be handled in bytes -- and converted to hex when displayed
 -- privkey seckey (use one of the two... currently privkey is mostly used)
 -- hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
