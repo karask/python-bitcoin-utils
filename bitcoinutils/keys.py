@@ -413,7 +413,14 @@ class PrivateKey:
         # Our tagged key is already checked and negated if corresponding pubkey's
         # y is odd.
         byte_key = unhexlify(tagged_key)
-        rand_aux = b'0' * 32
+
+        # deterministic signing nonce is random and based in RFC6979
+        # it is the hash of the tx_digest and private key
+        # TODO not identical to Bitcoin Core's signature, rand_aux
+        # needs slight changes if we want identical signatures!
+        rand_aux = hashlib.sha256(tx_digest + byte_key).digest()
+
+        # use BIP-340 python's reference implementation for signing
         sig = schnorr_sign(tx_digest, byte_key, rand_aux)
     
         sig_hex = hexlify(sig)
