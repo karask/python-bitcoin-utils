@@ -154,6 +154,7 @@ def tagged_hash(data: bytes, tag: str) -> bytes:
 def is_hex_even(h: str) -> bool:
     return int(h[-2:], 16) % 2 == 0
 
+
 # TODO script also needs to be passed when spending with script
 # since it is part of the calculation
 def tweak_taproot_pubkey(pubkey: bytes, tweak: str) -> str:
@@ -181,7 +182,7 @@ def tweak_taproot_pubkey(pubkey: bytes, tweak: str) -> str:
     if y % 2 != 0:
         P = -P
 
-    # tweak the pk Q = P + 
+    # calculated tweaked public key Q = P + th*G
     Q = P + (th_as_int * curve.generator)
     return f'{Q.x:064x}{Q.y:064x}'
 
@@ -206,10 +207,6 @@ def tweak_taproot_privkey(privkey: bytes, tweak: str) -> str:
         # negate public key
         ecpy_pubkey.W = -ecpy_pubkey.W
 
-    # TODO delete.. pubkey is used for tweaking! not privkey!
-    #### convert int to bytes - TODO make utils function bytes_to_int and reverse
-    ###key_bytes = unhexlify(hex(key_secret_exponent)[2:])
-
     # get public key's x coord for tweaking
     pubkey_x = f'{ecpy_pubkey.W.x:064x}'
 
@@ -224,8 +221,6 @@ def tweak_taproot_privkey(privkey: bytes, tweak: str) -> str:
     # where d is the normal private key, P is the normal public key
     # and S is the alt script, if any (empty script, if none?? TODO)
     tweaked_privkey_int = (key_secret_exponent + th_as_int) % curve.order
-    print(tweaked_privkey_int)
-    print(tweaked_privkey_int % curve.order)
 
     return hex(tweaked_privkey_int)[2:]
 
