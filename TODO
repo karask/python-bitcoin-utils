@@ -23,6 +23,9 @@
 
 - test taproot keys and addresses
 - load public key with x-only pubkey, ensure it works for several...
+- TEST schnorr with pubkey starting with 03
+- TEST schnorr with SINGLE
+- TEST schnorr with ANYONE_CAN_PAY
 
 - ADD NOTE or github issue that specifies that CODE_SEPERATOR is not handled appropriately, etc. when creating the message digest to sign
 
@@ -41,6 +44,7 @@ IMPROVE
 
 SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
+  . PRIORITY - also check github python-bitcoin-utils issue example
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!)
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !

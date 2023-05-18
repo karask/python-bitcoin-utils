@@ -861,7 +861,7 @@ class Transaction:
         print("tagged hash message:", hexlify(a))
 
         #return hashlib.sha256(tx_for_signing).digest()
-        return tagged_hash(tx_for_signing, "TapSighash").digest()[::-1]
+        return tagged_hash(tx_for_signing, "TapSighash").digest()
 
 
 
