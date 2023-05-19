@@ -5,15 +5,17 @@ Next v will be 0.6.1, will tag only when taproot is cleaned up and tested proper
 A lot of clean up is required but most changes are easy. Will do and clean soon. Commiting anyway.
 
 PRIORITIES
+- DO TxInputWitness (see below!)
 
-- test taproot keys and addresses
+- add tests taproot keys and addresses (done, partially??)
+- add tests simple p2tr spends (02 and 03)
 - load public key with x-only pubkey, ensure it works for several...
-- CLEAN comments (not all TODOs though)
 - TEST sent to schnorr address and then spend
 - TEST schnorr with SINGLE
 - TEST schnorr with ANYONE_CAN_PAY
 - add single alt spending
 - add tree alt spendin
+
 
 SEGWIT-related
 - create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
