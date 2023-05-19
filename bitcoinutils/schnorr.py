@@ -1,8 +1,8 @@
 from typing import Tuple, Optional, Any
 import hashlib
 
-# This is the python reference implementation for schnorr signatures by
-# the BIP-340 authors, from
+# This is a slightly modified version of the python reference implementation
+# for schnorr signatures by the BIP-340 authors, from
 # https://github.com/bitcoin/bips/blob/master/bip-0340/reference.py
 
 # Set DEBUG to True to get a detailed debug output including
@@ -97,6 +97,15 @@ def pubkey_gen(seckey: bytes) -> bytes:
     P = point_mul(G, d0)
     assert P is not None
     return bytes_from_point(P)
+
+def full_pubkey_gen(seckey: bytes) -> bytes:
+    d0 = int_from_bytes(seckey)
+    if not (1 <= d0 <= n - 1):
+        raise ValueError('The secret key must be an integer in the range 1..n-1.')
+    P = point_mul(G, d0)
+    assert P is not None
+    return bytes_from_int(x(P)) + bytes_from_int(y(P))
+
 
 def schnorr_sign(msg: bytes, seckey: bytes, aux_rand: bytes) -> bytes:
     if len(msg) != 32:

@@ -4,14 +4,32 @@ Next v will be 0.6.1, will tag only when taproot is cleaned up and tested proper
 
 A lot of clean up is required but most changes are easy. Will do and clean soon. Commiting anyway.
 
+PRIORITIES
+
+- test taproot keys and addresses
+- load public key with x-only pubkey, ensure it works for several...
+- CLEAN comments (not all TODOs though)
+- TEST sent to schnorr address and then spend
+- TEST schnorr with SINGLE
+- TEST schnorr with ANYONE_CAN_PAY
+- add single alt spending
+- add tree alt spendin
+
+SEGWIT-related
+- create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
+  . PRIORITY - also check github python-bitcoin-utils issue example
+- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) - done??
+- explain get_transaction_segwit_digest() better and test further
+- clean and comment the segwit examples !
+  . test some more segwit txs including nested ones
+
+- unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
+
 - rename VarInt to CompactSize
 
 - add Taproot to Transaction.from_raw
   . test from_raw more
 
-- WHEN removing ecdsa lib check if the following makes sense
-  . REPRESENT privkey as just an int internally
-  . REPRESENT pubkey as just a a tuple of ints internally
 
 - tx.get_txid() exists... also impl. tx.get_txwid
   . taproot example unsigned has txid: 25b5c96b8e0305f921e6153229f5b30515eb00e14546203754a9e01e8ac92c87
@@ -21,14 +39,6 @@ A lot of clean up is required but most changes are easy. Will do and clean soon.
 - maybe make RBF the default from now on (like Bitcoin Core) -- WILL NEED to change all the tests, unless I add minor hack that uses RBF by default only for taproot
 
 - remove hex_str_to_int and int_to_hex_str !?!?!
-
-- test taproot keys and addresses
-- load public key with x-only pubkey, ensure it works for several...
-- REMOVE ecpy COMPLETELY
-- CLEAN comments (not all TODOs though)
-- TEST sent to schnorr address and then spend
-- TEST schnorr with SINGLE
-- TEST schnorr with ANYONE_CAN_PAY
 
 - ADD NOTE or github issue that specifies that CODE_SEPERATOR is not handled appropriately, etc. when creating the message digest to sign
 
@@ -40,39 +50,15 @@ CLEAN UP
 -- internally everything should be handled in bytes -- and converted to hex when displayed
 -- privkey seckey (use one of the two... currently privkey is mostly used)
 -- hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
+-- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
 
 IMPROVE
 - why does bitcoinlib.services.service worked for connecting and proxy didn't for some students? (services probably has some redundancy code)
-
-SEGWIT-related
-- create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
-  . PRIORITY - also check github python-bitcoin-utils issue example
-- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!)
-- explain get_transaction_segwit_digest() better and test further
-- clean and comment the segwit examples !
-  . test some more segwit txs including nested ones
-
-- unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
-
-
-Taproot-related
-- bech32m (done)
-- add P2trAddress and test with new example (done) ??!?
-
-
-- add tests for bech32m
-- refactor P2trAddress (and PublicKey?) - taproot requires just the compressed public key as a witness program (rather than witness hash 20/32bytes as segwit v0) -- thus the code talks about witness_hash but the compressed public key is there instead !!?!
-- refactor Private Key (make class, that ECDSA and Schnorr inherit from!?)
-- add schnorr
-- add default taproot spending
-- add single alt spending
-- add tree alt spendin
 
 PRIVATE KEYS compressed
 - should accept keys with 01 at the end or otherwise specify 'compressed' for the public key
 - use it when generating the public key
 - and when generating the address
-
 
 PSBT
 - add!

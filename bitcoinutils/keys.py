@@ -16,13 +16,9 @@ from abc import ABC, abstractmethod
 from base64 import b64encode, b64decode
 from binascii import unhexlify, hexlify
 from base58check import b58encode, b58decode
-# TODO Refactor code to use ecpy for ecdsa as well and remove ecdsa lib dependency
-from ecdsa import SigningKey, VerifyingKey, SECP256k1, ellipticcurve, numbertheory
+from ecdsa import SigningKey, VerifyingKey, SECP256k1, numbertheory
 from ecdsa.util import sigencode_string, sigdecode_string, sigencode_der
 from sympy.ntheory import sqrt_mod
-from ecpy.keys import ECPrivateKey
-from ecpy.ecschnorr import ECSchnorr
-from ecpy.curves import Curve#, Point
 
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
@@ -31,45 +27,13 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes32_from_int, encode_varint, add_magic_prefix, \
                                hex_str_to_int, int_to_hex_str, \
-                               is_hex_even, tweak_taproot_pubkey, negate_public_key, \
+                               tweak_taproot_pubkey, \
                                tweak_taproot_privkey
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.schnorr import schnorr_sign
+from bitcoinutils.utils import EcdsaParams
 import bitcoinutils.script
 import bitcoinutils.bech32
-
-
-class EcdsaParams:
-    # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
-    # This is done modulo p which (secp256k1) is:
-    # p is the finite field prime number and is equal to:
-    # 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
-    # Note that we could also get that from ecdsa lib from the curve, e.g.:
-    # SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
-    _p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
-    # Curve's a and b are (y**2 = x**3 + a*x + b)
-    _a = 0x0000000000000000000000000000000000000000000000000000000000000000
-    _b = 0x0000000000000000000000000000000000000000000000000000000000000007
-    # Curve's generator point is:
-    _Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
-    _Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
-    # prime number of points in the group (the order)
-    _order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-    
-    # The ECDSA curve (secp256k1) is:
-    # Note that we could get that from ecdsa lib, e.g.:
-    # SECP256k1.__dict__['curve']
-    _curve = ellipticcurve.CurveFp( _p, _a, _b )
-    
-    # The generator base point is:
-    # Note that we could get that from ecdsa lib, e.g.:
-    # SECP256k1.__dict__['generator']
-    _G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
-
-
-class SchnorrParams:
-    pass
-
 
 
 class PrivateKey:
@@ -378,7 +342,7 @@ class PrivateKey:
         return hexlify(signature).decode('utf-8')
 
 
-    # TODO AAAAAAAAAAAAA
+
     def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL):
         """Signs a taproot transaction input with the private key
 
@@ -389,29 +353,11 @@ class PrivateKey:
         Returns a signature for that input
         """
 
-        # For now keep using ecdsa lib for private key. For schnorr get bytes
-        # and instantiate an ecpy ECSchnorr private key to sign instead!
-        # TODO If/when ecdsa lib is removed this step needs to be removed as well
-
-        # get key exponent from ecdsa lib and tweak it before signing (tweaking
-        # code takes care of negating the private key if it is necessary (i.e. if
+        # tweak private key before signing (tweaking code takes care of
+        # negating the private key if it is necessary (i.e. if
         # the corresponding public key's y is odd).
         tagged_key = tweak_taproot_privkey(self.key.to_string(), 'TapTweak')
 
-        #cv = Curve.get_curve('secp256k1')
-        #ecpy_key = ECPrivateKey(hex_str_to_int(tagged_key), cv)
-
-        # sign using bitcoin's LIBSECP from ecpy -- note that we do not use the
-        # Default Signing process as defined in
-        # https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki
-        #signer = ECSchnorr(hashlib.sha256, "LIBSECP", "ITUPLE")
-        #sig = signer.sign(tx_digest, ecpy_key)
-
-        # USE schnorr.py from ref impl. for signing (maybe ecpy not needed at all !!!)
-        # CLEANUP ecpy completely if this is used
-        # has some tagged_hash usages that are required and ecpy does not use them...
-        # Our tagged key is already checked and negated if corresponding pubkey's
-        # y is odd.
         byte_key = unhexlify(tagged_key)
 
         # deterministic signing nonce is random and based in RFC6979
@@ -424,15 +370,11 @@ class PrivateKey:
         sig = schnorr_sign(tx_digest, byte_key, rand_aux)
     
         sig_hex = hexlify(sig)
-        print('SIG:', sig_hex)
-        return sig_hex
-        # END USE schnorr.py from ref impl. for signing (maybe ecpy not needed at all !!!)
-
+        
         # return 64 bytes signature
         # TODO 65 bytes with sighash if <> SIGHASH_ALL
-        #r = hex(sig[0])[2:]
-        #s = hex(sig[1])[2:]
-        #return f'{r}{s}'
+        return sig_hex
+
 
 
     def get_public_key(self):
@@ -737,22 +679,17 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
 
-    def get_taproot_address(self, tagged=True):
+    def get_taproot_address(self):
         """Returns the corresponding P2TR address
 
         Only compressed is allowed. Taproot uses x-only public key with
         even y (02 compressed keys). By default tagged_hashes are used.
         """
-        # TODO maybe remove option for non-tagged pubkeys since we don't
-        # have option to not tag privkeys when signing
 
         # Tweak public key (BIP340)
         # https://bitcoin.stackexchange.com/a/116391/31844
-        if tagged:
-            # note that taproot's even y is checked/negated during tweaking
-            pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
-        else:
-            pubkey = self.to_hex(compressed=True)[2:]
+        # note that taproot's even y is checked/negated during tweaking
+        pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
 
         return P2trAddress(witness_program=pubkey)
 

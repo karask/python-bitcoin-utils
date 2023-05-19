@@ -11,9 +11,41 @@
 
 from hashlib import sha256
 from binascii import hexlify, unhexlify
-from ecpy.curves import Curve, Point
-from ecpy.keys import ECPrivateKey
+from ecdsa import ellipticcurve
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
+from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
+
+
+# TODO rename to Secp256k1Params and clean whatever is not used!
+class EcdsaParams:
+    # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
+    # This is done modulo p which (secp256k1) is:
+    # p is the finite field prime number and is equal to:
+    # 2^256 - 2^32 - 2^9 - 2^8 - 2^7 - 2^6 - 2^4 - 1
+    # Note that we could also get that from ecdsa lib from the curve, e.g.:
+    # SECP256k1.__dict__['curve'].__dict__['_CurveFp__p']
+    _p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+    # Curve's a and b are (y**2 = x**3 + a*x + b)
+    _a = 0x0000000000000000000000000000000000000000000000000000000000000000
+    _b = 0x0000000000000000000000000000000000000000000000000000000000000007
+    # Curve's generator point is:
+    _Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+    _Gy = 0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8
+    # prime number of points in the group (the order)
+    _order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+
+    # field
+    _field = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+
+    # The ECDSA curve (secp256k1) is:
+    # Note that we could get that from ecdsa lib, e.g.:
+    # SECP256k1.__dict__['curve']
+    _curve = ellipticcurve.CurveFp( _p, _a, _b )
+
+    # The generator base point is:
+    # Note that we could get that from ecdsa lib, e.g.:
+    # SECP256k1.__dict__['generator']
+    _G = ellipticcurve.Point( _curve, _Gx, _Gy, _order )
 
 
 
@@ -151,9 +183,6 @@ def tagged_hash(data: bytes, tag: str) -> bytes:
     tag_digest = sha256(tag.encode()).digest()
     return sha256( tag_digest + tag_digest + data )
 
-def is_hex_even(h: str) -> bool:
-    return int(h[-2:], 16) % 2 == 0
-
 
 # TODO script also needs to be passed when spending with script
 # since it is part of the calculation
@@ -169,22 +198,22 @@ def tweak_taproot_pubkey(pubkey: bytes, tweak: str) -> str:
     # we convert to int for later elliptic curve  arithmetics
     th_as_int = hex_str_to_int( th.hexdigest() )
 
-    # compute the tweaked public key Q = P + (t * G)
-    curve = Curve.get_curve('secp256k1')
-
-    # convert public key bytes to Point
+    # convert public key bytes to tuple Point
     x = hex_str_to_int( pubkey[:32].hex() )
     y = hex_str_to_int( pubkey[32:].hex() )
-    P = Point(x, y, curve)
+    P = (x, y)
 
     # if y is odd then negate y (effectively P) to make it even and equiv
     # to a 02 compressed pk
     if y % 2 != 0:
-        P = -P
+        y = EcdsaParams._field - y 
+
+    P = (x, y)
 
     # calculated tweaked public key Q = P + th*G
-    Q = P + (th_as_int * curve.generator)
-    return f'{Q.x:064x}{Q.y:064x}'
+    Q = point_add(P, (point_mul(G, th_as_int)))
+    
+    return f'{Q[0]:064x}{Q[1]:064x}'
 
 
 def tweak_taproot_privkey(privkey: bytes, tweak: str) -> str:
@@ -194,57 +223,26 @@ def tweak_taproot_privkey(privkey: bytes, tweak: str) -> str:
     '''
     key_secret_exponent = int(hexlify(privkey).decode('utf-8'), 16)
 
-    # get the ecpy lib private key and from that the public key!
-    curve = Curve.get_curve('secp256k1')
-    ecpy_privkey = ECPrivateKey(key_secret_exponent, curve)
-    ecpy_pubkey = ecpy_privkey.get_public_key()
+    # get the private key from BIP-340 schnorr ref impl.
+    pubkey_bytes = full_pubkey_gen(privkey)
+    pubkey_x_bytes = pubkey_bytes[:32]
+    pubkey_y_int = int.from_bytes(pubkey_bytes[32:], byteorder="big")
 
     # if y coordinate is not even, negate private key
-    # TODO Tested with even (02) - also test with odd (03) pubkey
-    if ecpy_pubkey.W.y % 2 != 0:
+    if pubkey_y_int % 2 != 0:
         # negate private key
-        key_secret_exponent = curve.order - key_secret_exponent
-        # negate public key
-        ecpy_pubkey.W = -ecpy_pubkey.W
-
-    # get public key's x coord for tweaking
-    pubkey_x = f'{ecpy_pubkey.W.x:064x}'
-
-    # convert pubkey to bytes before tweaking it
-    pubkey_bytes = unhexlify(pubkey_x)
+        key_secret_exponent = EcdsaParams._order - key_secret_exponent
 
     # tag hash the public key (bytes)
-    th = tagged_hash(pubkey_bytes, tweak)
+    th = tagged_hash(pubkey_x_bytes, tweak)
     th_as_int = hex_str_to_int( th.hexdigest() )
 
     # The tweaked private key can be computed by d + hash(P || S)
     # where d is the normal private key, P is the normal public key
     # and S is the alt script, if any (empty script, if none?? TODO)
-    tweaked_privkey_int = (key_secret_exponent + th_as_int) % curve.order
+    tweaked_privkey_int = (key_secret_exponent + th_as_int) % EcdsaParams._order
 
     return hex(tweaked_privkey_int)[2:]
-
-
-
-def negate_public_key(pubkey: bytes) -> str:
-    '''
-    Negate the public key (effectively negates y coordinate. This is useful
-    in taproot where we only use even y's (02 compr.pubkey). If y is odd 
-    (03 compr.pubkey) we need to negate to make it 02.
-    '''
-    curve = Curve.get_curve('secp256k1')
-
-    # convert public key bytes to Point
-    x = hex_str_to_int( pubkey[:32].hex() )
-    y = hex_str_to_int( pubkey[32:].hex() )
-    P = Point(x, y, curve)
-
-    # if y is odd then negate y (effectively P) to make it even and equiv
-    # to a 02 compressed pk
-    if y % 2 != 0:
-        P = -P
-
-    return hex(P.x)[2:] + hex(P.y)[2:]
 
 
 
