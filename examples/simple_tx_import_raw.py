@@ -12,7 +12,7 @@
 
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from bitcoinutils.keys import P2pkhAddress, PrivateKey
 from bitcoinutils.script import Script
 
@@ -147,9 +147,10 @@ def test_segwit():
 
 
 
-
     sig = priv.sign_segwit_input(tx, 0, script_code, fromAddressAmount)
-    tx.witnesses.append( Script([sig, pub.to_hex()]) )
+
+    # note that TxWitnessInput gets a list of witness items (not script opcodes)
+    tx.witnesses.append( TxWitnessInput([sig, pub.to_hex()]) )
 
     # print raw signed transaction ready to be broadcasted
     print("\nSigned transaction:", tx)

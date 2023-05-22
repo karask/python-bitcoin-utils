@@ -22,7 +22,8 @@ from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     TYPE_ABSOLUTE_TIMELOCK, TYPE_RELATIVE_TIMELOCK, \
                     TYPE_REPLACE_BY_FEE, SATOSHIS_PER_BITCOIN
 from bitcoinutils.script import Script
-from bitcoinutils.utils import to_bytes, vi_to_int, encode_varint, tagged_hash
+from bitcoinutils.utils import to_bytes, vi_to_int, encode_varint, \
+        tagged_hash, prepend_varint
 
 class TxInput:
     """Represents a transaction input.
@@ -38,7 +39,7 @@ class TxInput:
     txout_index : int
         the index of the UTXO that we want to spend
     script_sig : list (strings)
-        the op code and data of the script as string
+        the script that satisfies the locking conditions (aka unlocking script)
     sequence : bytes
         the input sequence (for timelocks, RBF, etc.)
 
@@ -140,6 +141,54 @@ class TxInput:
 
         return cls(txin.txid, txin.txout_index, txin.script_sig,
                        txin.sequence)
+
+
+class TxWitnessInput:
+    """A list of the witness items required to satisfy the locking conditions
+       of a segwit input (aka witness stack).
+
+    Attributes
+    ----------
+    stack : list
+        the witness items (hex str) list 
+
+    Methods
+    -------
+    to_bytes()
+        returns a serialized byte version of the witness items list
+    copy()
+        creates a copy of the object (classmethod)
+    """
+
+    def __init__(self, stack):
+        """See description"""
+
+        self.stack = stack
+
+    def to_bytes(self):
+        """Converts to bytes"""
+        stack_bytes = b''
+        for item in self.stack:
+            # witness items can only be data items (hex str)
+            item_bytes = prepend_varint( unhexlify(item) )
+            stack_bytes += item_bytes
+
+        return stack_bytes
+
+    @classmethod
+    def copy(cls, txwin):
+        """Deep copy of TxWitnessInput"""
+
+        return cls(txwin.stack)
+
+
+    def __str__(self):
+        return str({
+            "witness_items": self.stack,
+        })
+
+    def __repr__(self):
+        return self.__str__()
 
 
 
@@ -349,8 +398,8 @@ class Transaction:
         The transaction version
     has_segwit : bool
         Specifies a tx that includes segwit inputs
-    witnesses : list (Script)
-        The witness scripts that correspond to the inputs
+    witnesses : list (TxWitnessInput)
+        The witness structure that corresponds to the inputs
 
 
     Methods
@@ -434,7 +483,7 @@ class Transaction:
             cursor += 2
 
         # read the size (bytes length) of the integer representing the size of the inputs
-        # number and the the inputs number
+        # number and the inputs number
 
         n_inputs, size = vi_to_int(rawtx[cursor:cursor + 9])
         cursor += size
@@ -453,7 +502,7 @@ class Transaction:
         output_total = 0
 
         # iterate n_outputs times to read the inputs from raw
-        for index in range(0,n_outputs):
+        for index in range(0, n_outputs):
             output, cursor = TxOutput.from_raw(rawtx, cursor=cursor, has_segwit=has_segwit)
             outputs.append(output)
 
@@ -471,7 +520,7 @@ class Transaction:
                         witness = rawtx[cursor + size:cursor + item_size + size]
                     cursor += item_size + size
                     witnesses_tmp.append(witness.hex())
-                witnesses.append(Script(script=witnesses_tmp))
+                witnesses.append(TxWitnessInput(stack=witnesses_tmp))
 
         return Transaction(inputs = inputs,
                            outputs = outputs,
@@ -500,7 +549,7 @@ class Transaction:
 
         ins = [TxInput.copy(txin) for txin in tx.inputs]
         outs = [TxOutput.copy(txout) for txout in tx.outputs]
-        wits = [Script.copy(witness) for witness in tx.witnesses]
+        wits = [TxWitnessInput.copy(witness) for witness in tx.witnesses]
         return cls(ins, outs, tx.locktime, tx.version, tx.has_segwit, wits)
 
 
@@ -869,6 +918,9 @@ class Transaction:
         """Converts to bytes"""
 
         data = self.version
+        # TODO unsigned segwit txs do not have the marker/flag because
+        # they have no witnesses - maybe remove 'and self.witnesses'
+        # unsigned segwit example for from_raw fails for that reason!!
         if has_segwit and self.witnesses:
             # marker
             data += b'\x00'
@@ -886,9 +938,9 @@ class Transaction:
         if has_segwit:
             for witness in self.witnesses:
                 # add witnesses script Count
-                witnesses_count_bytes = chr(len(witness.script)).encode()
+                witnesses_count_bytes = chr(len(witness.stack)).encode()
                 data += witnesses_count_bytes
-                data += witness.to_bytes(True)
+                data += witness.to_bytes()
         data += self.locktime
         return data
 

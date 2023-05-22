@@ -5,7 +5,6 @@ Next v will be 0.6.1, will tag only when taproot is cleaned up and tested proper
 A lot of clean up is required but most changes are easy. Will do and clean soon. Commiting anyway.
 
 PRIORITIES
-- DO TxInputWitness (see below!)
 
 - add tests taproot keys and addresses (done, partially??)
 - add tests simple p2tr spends (02 and 03)
@@ -18,7 +17,7 @@ PRIORITIES
 
 
 SEGWIT-related
-- create TxInputWitness class that includes the witness script and knows how to serialize itself and how to calc byte length (for get_vsize)
+- check if vsize is correct, esp. with the introduction of TxInputWitness - does the object need to calc byte length (for get_vsize)
   . PRIORITY - also check github python-bitcoin-utils issue example
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) - done??
 - explain get_transaction_segwit_digest() better and test further
@@ -46,7 +45,7 @@ SEGWIT-related
 
 CLEAN UP 
 -- in TxInput move txid+index to prevout field ?! (maybe not this one, but keep it here to re-think)
--- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream())
+-- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream()) -- or have both but one returns bytes and the other hex ??!?! -- sometimes we USE to_bytes() again for serialization !!??! - clean and be consistent
 -- scriptPubkey to script_pubkey (but check for duplicates!)
 -- use sha256 rather than hashlib.sha256
 -- internally everything should be handled in bytes -- and converted to hex when displayed

@@ -259,6 +259,9 @@ class Script:
     get_script()
         returns the list of strings that makes up this script
 
+    copy()
+        creates a copy of the object (classmethod)
+
     Raises
     ------
     ValueError
@@ -312,16 +315,16 @@ class Script:
             raise ValueError("Data too large. Cannot push into script")
 
 
-    def _segwit_op_push_data(self, data):
+#    def _segwit_op_push_data(self, data):
         # expects data in hexadecimal characters and converts to bytes with
         # varint (or compact size) length prefix.
         #
         # TODO maybe, for convenience, also accept objects for public keys,
         # addresses, etc. and use isinstance and convert manually
-        data_bytes = unhexlify(data)
+#        data_bytes = unhexlify(data)
 
         # return prepended varint (compact size) length to data bytes
-        return prepend_varint(data_bytes)
+#        return prepend_varint(data_bytes)
 
 
 
@@ -334,7 +337,7 @@ class Script:
         if integer < 0:
             raise ValueError('Integer is currently required to be positive.')
 
-        # bytes requires to represent the integer
+        # bytes required to represent the integer
         number_of_bytes = (integer.bit_length() + 7) // 8
 
         # convert to little-endian bytes
@@ -348,7 +351,7 @@ class Script:
         return self._op_push_data( hexlify(integer_bytes) )
 
 
-    def to_bytes(self, segwit = False):
+    def to_bytes(self):
         """Converts the script to bytes
 
         If an OP code the appropriate byte is included according to:
@@ -369,11 +372,7 @@ class Script:
                 if type(token) is int:
                     script_bytes += self._push_integer(token)
                 else:
-                    if segwit:
-                        # probably add TxInputWitness which will know how to serialize
-                        script_bytes += self._segwit_op_push_data(token)
-                    else:
-                        script_bytes += self._op_push_data(token)
+                    script_bytes += self._op_push_data(token)
 
         return script_bytes
 
@@ -419,6 +418,7 @@ class Script:
 
 
         return Script(script=commands)
+
 
     def to_hex(self):
         """Converts the script to hexadecimal"""

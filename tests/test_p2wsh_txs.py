@@ -19,7 +19,7 @@ from bitcoinutils.setup import setup
 from bitcoinutils.keys import PrivateKey, P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
 from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, \
     SIGHASH_ANYONECANPAY, TYPE_RELATIVE_TIMELOCK
-from bitcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence
+from bitcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence, TxWitnessInput
 from bitcoinutils.script import Script
 from bitcoinutils.utils import to_satoshis
 
@@ -84,8 +84,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         sig2 = self.sk2.sign_segwit_input(tx, 0, self.p2wsh_redeem_script, self.txin_spend_amount)
 
         pk = self.p2wsh_redeem_script.to_hex()
-        tx.witnesses = [ Script(['OP_0', sig1, sig2, pk]) ]
-        #print(tx.serialize())
+        tx.witnesses = [ TxWitnessInput(['', sig1, sig2, pk]) ]
         self.assertEqual(tx.serialize(), self.spend_p2pkh_result)
 
     def test_multiple_input_multiple_ouput(self):
@@ -96,18 +95,17 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         sig1 = self.sk1.sign_input(tx, 0, self.p2pkh_addr.to_script_pub_key())
         pk1 = self.sk1.get_public_key().to_hex()
         self.txin1_multiple.script_sig = Script([sig1, pk1])
-        tx.witnesses = [ Script([]) ]
+        tx.witnesses = [ TxWitnessInput([]) ]
 
         sig_p2sh1 = self.sk1.sign_segwit_input(tx, 1, self.p2wsh_redeem_script, self.txin2_multiple_amount)
         sig_p2sh2 = self.sk2.sign_segwit_input(tx, 1, self.p2wsh_redeem_script, self.txin2_multiple_amount)
         pk2 = self.p2wsh_redeem_script.to_hex()
-        tx.witnesses.append(Script(['OP_0', sig_p2sh1, sig_p2sh2, pk2]))
+        tx.witnesses.append(TxWitnessInput(['', sig_p2sh1, sig_p2sh2, pk2]))
 
         sig3 = self.sk1.sign_segwit_input(tx, 2, self.p2pkh_addr.to_script_pub_key(), self.txin3_multiple_amount)
         pk3 = self.sk1.get_public_key().to_hex()
-        tx.witnesses.append(Script([sig3, pk3]))
+        tx.witnesses.append(TxWitnessInput([sig3, pk3]))
 
-        #print(tx.serialize())
         self.assertEqual(tx.serialize(), self.multiple_input_multiple_ouput_result)
 
 

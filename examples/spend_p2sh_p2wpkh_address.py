@@ -12,7 +12,7 @@
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
 from bitcoinutils.keys import PrivateKey, P2pkhAddress, P2shAddress
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from bitcoinutils.script import Script
 
 def main():
@@ -55,7 +55,8 @@ def main():
     inp.script_sig = Script([redeem_script.to_hex()])
 
     # finally, the unlocking script is added as a witness
-    tx.witnesses.append(Script([sig, pub.to_hex()]))
+    # note that TxWitnessInput gets a list of witness items (not script opcodes)
+    tx.witnesses.append(TxWitnessInput([sig, pub.to_hex()]))
 
     # print raw signed transaction ready to be broadcasted
     print("\nRaw signed transaction:\n" + tx.serialize())
