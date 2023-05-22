@@ -17,14 +17,13 @@ PRIORITIES
 
 
 SEGWIT-related
-- check if vsize is correct, esp. with the introduction of TxInputWitness - does the object need to calc byte length (for get_vsize)
-  . PRIORITY - also check github python-bitcoin-utils issue example
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) - done??
+- vsize seems to work but need to check more multi-input txs
+- unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !
   . test some more segwit txs including nested ones
 
-- unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
 
 - rename VarInt to CompactSize
 

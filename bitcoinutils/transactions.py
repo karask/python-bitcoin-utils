@@ -996,13 +996,11 @@ class Transaction:
 
         # count witnesses data
         for witness in self.witnesses:
-            # add witnesses script Count
-            witnesses_count_bytes = chr(len(witness.script)).encode()
+            # add witnesses stack count
+            witnesses_count_bytes = chr(len(witness.stack)).encode()
             data = witnesses_count_bytes
-            data += witness.to_bytes(True)
+            data += witness.to_bytes()
         wit_size = len(data)
-        # TODO when TxInputWitness is created it will contain it's own len or
-        # size method
 
         size = self.get_size() - (marker_size + wit_size)
         vsize = size + (marker_size + wit_size) / 4
