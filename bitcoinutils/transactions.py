@@ -764,6 +764,7 @@ class Transaction:
 
 
     # TODO Update doc with TAPROOT_SIGHASH_ALL
+    # clean prints after finishing other sighashes
     def get_transaction_taproot_digest(self, txin_index, scriptPubkeys, amounts, ext_flag=0, sighash=TAPROOT_SIGHASH_ALL):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
            https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
@@ -828,7 +829,7 @@ class Transaction:
 
         # Data about the transaction
         if not anyone_can_pay:
-            print('1')
+            #print('1')
             # the SHA256 of the serialization of all input outpoints
             for txin in tmp_tx.inputs:
                 hash_prevouts += unhexlify(txin.txid)[::-1] + \
@@ -858,7 +859,7 @@ class Transaction:
 
 
         if not (sighash_none or sighash_single):
-            print('2')
+            #print('2')
             for txout in tmp_tx.outputs:
                 amount_bytes = struct.pack('<Q', txout.amount)
                 script_bytes = txout.script_pubkey.to_bytes()
@@ -874,7 +875,7 @@ class Transaction:
         tx_for_signing += bytes([spend_type])
 
         if anyone_can_pay:
-            print('3')
+            #print('3')
             txin = tmp_tx.inputs[txin_index]
             # convert txid to big-endian first
             outpoint = txin.txid[::-1]
@@ -889,14 +890,14 @@ class Transaction:
 
             tx_for_signing += txin.sequence
         else:
-            print('4')
+            #print('4')
             tx_for_signing += txin_index.to_bytes(4, 'little')
 
         # TODO if annex is present it should be added here
 
         # Data about this output
         if sighash_single:
-            print('5')
+            #print('5')
             script_pubkey = scriptPubkeys[txin_index]
             script_len = int( len(script_pubkey) / 2 )
             # TODO script length size? ..use bytes([])
@@ -904,10 +905,10 @@ class Transaction:
                            unhexlify(script_pubkey)
             tx_for_signing += hashlib.sha256(script_bytes).digest()
 
-        print("message:", hexlify(tx_for_signing))
-        print("hash message:", hashlib.sha256(tx_for_signing).hexdigest())
+        #print("message:", hexlify(tx_for_signing))
+        #print("hash message:", hashlib.sha256(tx_for_signing).hexdigest())
         a = tagged_hash(tx_for_signing, "TapSighash").digest()[::-1]
-        print("tagged hash message:", hexlify(a))
+        #print("tagged hash message:", hexlify(a))
 
         #return hashlib.sha256(tx_for_signing).digest()
         return tagged_hash(tx_for_signing, "TapSighash").digest()

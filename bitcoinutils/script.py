@@ -256,6 +256,9 @@ class Script:
     to_bytes()
         returns a serialized byte version of the script
 
+    to_hex()
+        returns a serialized version of the script in hex
+
     get_script()
         returns the list of strings that makes up this script
 
@@ -375,6 +378,12 @@ class Script:
                     script_bytes += self._op_push_data(token)
 
         return script_bytes
+
+
+    def to_hex(self):
+        """Converts to_bytes() to hex"""
+        return hexlify(self.to_bytes()).decode('utf-8')
+
 
     @staticmethod
     def from_raw(scriptraw, has_segwit=False):

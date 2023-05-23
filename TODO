@@ -6,8 +6,6 @@ A lot of clean up is required but most changes are easy. Will do and clean soon.
 
 PRIORITIES
 
-- add tests taproot keys and addresses (done, partially??)
-- add tests simple p2tr spends (02 and 03)
 - load public key with x-only pubkey, ensure it works for several...
 - TEST sent to schnorr address and then spend
 - TEST schnorr with SINGLE
