@@ -999,7 +999,7 @@ class Transaction:
         for witness in self.witnesses:
             # add witnesses stack count
             witnesses_count_bytes = chr(len(witness.stack)).encode()
-            data = witnesses_count_bytes
+            data += witnesses_count_bytes
             data += witness.to_bytes()
         wit_size = len(data)
 
