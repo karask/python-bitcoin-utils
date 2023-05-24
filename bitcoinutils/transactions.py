@@ -845,6 +845,7 @@ class Transaction:
 
             # the SHA256 of all spent outputs' scriptPubKeys
             for s in scriptPubkeys:
+                s = s.to_hex()
                 script_len = int( len(s) / 2 )
                 hash_scriptPubkeys += script_len.to_bytes(1, 'little') + \
                                       unhexlify(s)

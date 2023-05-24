@@ -39,7 +39,11 @@ def main():
 
     # all scriptPubKeys are needed to sign a taproot input 
     # (depending on sighash) but always of the spend input
-    first_scriptPubkey = Script(['OP_1', pub.to_taproot_hex()]).to_hex()
+    first_scriptPubkey = fromAddress.to_script_pub_key()
+
+    # alternatively:
+    #first_scriptPubkey = Script(['OP_1', pub.to_taproot_hex()])
+
     utxos_scriptPubkeys = [ first_scriptPubkey ]
 
     toAddress = P2pkhAddress('mtVHHCqCECGwiMbMoZe8ayhJHuTdDbYWdJ')
