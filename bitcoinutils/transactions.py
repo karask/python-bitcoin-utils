@@ -920,10 +920,10 @@ class Transaction:
         """Converts to bytes"""
 
         data = self.version
-        # TODO unsigned segwit txs do not have the marker/flag because
-        # they have no witnesses - maybe remove 'and self.witnesses'
-        # unsigned segwit example for from_raw fails for that reason!!
-        if has_segwit and self.witnesses:
+        # we just check the flag and not actual witnesses so that
+        # the unsigned transactions also have the segwit marker/flag
+        # TODO make sure that this does not cause problems and delete comment
+        if has_segwit:   # and self.witnesses:
             # marker
             data += b'\x00'
             # flag

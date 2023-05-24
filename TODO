@@ -15,32 +15,28 @@ PRIORITIES
 
 
 SEGWIT-related
-- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) - done??
-- vsize seems to work but need to check more multi-input txs
-- unsigned segwit serialized transaction does not get the segwit flag/marker (signed is fine!)
+- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically ?!??
+  . currently adding it manually works fine (see 3 inputs 1 output example)
+  . think of clean way of automating this (auto-magically adding them could confuse users!)
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !
   . test some more segwit txs including nested ones
 
-
-- rename VarInt to CompactSize
-
 - add Taproot to Transaction.from_raw
   . test from_raw more
 
-
 - tx.get_txid() exists... also impl. tx.get_txwid
-  . taproot example unsigned has txid: 25b5c96b8e0305f921e6153229f5b30515eb00e14546203754a9e01e8ac92c87
-  . taproot example unsigned has txwid: 092ea577513162b941e0f5f2451a87d35ac308d4f23e133791cb978c448d00ac
-  . should be above - current code has identical hash... probably it ignores the segwit marker (witnesses should exist anyway in both cases)
+  . taproot sigs are not identical to core's due to deterministic nonce
+  . we use the hash of the digest+key but not identical
 
-- maybe make RBF the default from now on (like Bitcoin Core) -- WILL NEED to change all the tests, unless I add minor hack that uses RBF by default only for taproot
+- maybe make RBF the default from now on (like Bitcoin Core)
+  . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
 
-- remove hex_str_to_int and int_to_hex_str !?!?!
 
 - ADD NOTE or github issue that specifies that CODE_SEPERATOR is not handled appropriately, etc. when creating the message digest to sign
 
 CLEAN UP 
+-- rename VarInt to CompactSize
 -- in TxInput move txid+index to prevout field ?! (maybe not this one, but keep it here to re-think)
 -- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream()) -- or have both but one returns bytes and the other hex ??!?! -- sometimes we USE to_bytes() again for serialization !!??! - clean and be consistent
 -- scriptPubkey to script_pubkey (but check for duplicates!)
@@ -49,6 +45,7 @@ CLEAN UP
 -- privkey seckey (use one of the two... currently privkey is mostly used)
 -- hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
 -- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
+-- remove hex_str_to_int and int_to_hex_str !?!?!
 
 IMPROVE
 - why does bitcoinlib.services.service worked for connecting and proxy didn't for some students? (services probably has some redundancy code)
