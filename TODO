@@ -2,8 +2,6 @@
 ******
 Next v will be 0.6.1, will tag only when taproot is cleaned up and tested properly (except script path for now).
 
-A lot of clean up is required but most changes are easy. Will do and clean soon. Commiting anyway.
-
 PRIORITIES
 
 - load public key with x-only pubkey, ensure it works for several...
@@ -24,10 +22,6 @@ SEGWIT-related
 
 - add Taproot to Transaction.from_raw
   . test from_raw more
-
-- tx.get_txid() exists... also impl. tx.get_txwid
-  . taproot sigs are not identical to core's due to deterministic nonce
-  . we use the hash of the digest+key but not identical
 
 - maybe make RBF the default from now on (like Bitcoin Core)
   . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot

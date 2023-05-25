@@ -60,4 +60,7 @@ Use NodeProxy to make calls to a Bitcoin node
 Spend from a taproot address
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_default_path.py - single input, single output default key path spending.
 
+Spend a multi input that contains both taproot and legacy UTXOs
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_multi_input_p2tr_and_p2pkh.py - three inputs (two taproot and one legacy), single legacy output.
+
 Please explore the codebase or the API documentation (BitcoinUtilities.pdf) for supported functionality and other options.
