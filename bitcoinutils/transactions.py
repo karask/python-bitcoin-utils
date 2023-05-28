@@ -835,28 +835,27 @@ class Transaction:
                 hash_prevouts += unhexlify(txin.txid)[::-1] + \
                                  struct.pack('<I', txin.txout_index)
             hash_prevouts = hashlib.sha256(hash_prevouts).digest()
-            tx_for_signing += hash_prevouts#[::-1]
+            tx_for_signing += hash_prevouts
 
             # the SHA256 of the serialization of all input amounts
             for a in amounts:
                 hash_amounts += a.to_bytes(8, 'little')
             hash_amounts = hashlib.sha256(hash_amounts).digest()
-            tx_for_signing += hash_amounts#[::-1]
+            tx_for_signing += hash_amounts
 
             # the SHA256 of all spent outputs' scriptPubKeys
             for s in scriptPubkeys:
                 s = s.to_hex()
                 script_len = int( len(s) / 2 )
-                hash_scriptPubkeys += script_len.to_bytes(1, 'little') + \
-                                      unhexlify(s)
+                hash_scriptPubkeys += bytes([script_len]) + unhexlify(s)
             hash_scriptPubkeys = hashlib.sha256(hash_scriptPubkeys).digest()
-            tx_for_signing += hash_scriptPubkeys#[::-1]
+            tx_for_signing += hash_scriptPubkeys
 
             # the SHA256 of the serialization of all input nSequence
             for txin in tmp_tx.inputs:
                 hash_sequences += txin.sequence
             hash_sequences = hashlib.sha256(hash_sequences).digest()
-            tx_for_signing += hash_sequences#[::-1]
+            tx_for_signing += hash_sequences
 
 
         if not (sighash_none or sighash_single):
@@ -868,7 +867,7 @@ class Transaction:
                                 struct.pack('B', len(script_bytes)) + \
                                 script_bytes
             hash_outputs = hashlib.sha256(hash_outputs).digest()
-            tx_for_signing += hash_outputs#[::-1]
+            tx_for_signing += hash_outputs
 
 
         # Data about this input
@@ -879,6 +878,7 @@ class Transaction:
             #print('3')
             txin = tmp_tx.inputs[txin_index]
             # convert txid to big-endian first
+            # TODO convert to bytes before reversing...!!
             outpoint = txin.txid[::-1]
             tx_for_signing += unhexlify(outpoint)
 
@@ -886,8 +886,7 @@ class Transaction:
 
             script_pubkey = scriptPubkeys[txin_index]
             script_len = int( len(script_pubkey) / 2 )
-            tx_for_signing += script_len.to_bytes(1, 'little') + \
-                              unhexlify(script_pubkey)
+            tx_for_signing += bytes([script_len]) + unhexlify(script_pubkey)
 
             tx_for_signing += txin.sequence
         else:
@@ -899,12 +898,13 @@ class Transaction:
         # Data about this output
         if sighash_single:
             #print('5')
-            script_pubkey = scriptPubkeys[txin_index]
-            script_len = int( len(script_pubkey) / 2 )
-            # TODO script length size? ..use bytes([])
-            script_bytes = script_len.to_bytes(1, 'little') + \
-                           unhexlify(script_pubkey)
-            tx_for_signing += hashlib.sha256(script_bytes).digest()
+            txout = tmp_tx.outputs[txin_index]
+            amount_bytes = struct.pack('<Q', txout.amount)
+            script_bytes = txout.script_pubkey.to_bytes()
+            hash_output = amount_bytes + struct.pack('B', len(script_bytes)) + \
+                              script_bytes
+            tx_for_signing += hashlib.sha256(hash_output).digest()
+
 
         #print("message:", hexlify(tx_for_signing))
         #print("hash message:", hashlib.sha256(tx_for_signing).hexdigest())

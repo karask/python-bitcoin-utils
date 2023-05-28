@@ -17,6 +17,7 @@ from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
 from bitcoinutils.keys import PrivateKey, P2pkhAddress
 #from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
+from bitcoinutils.constants import SIGHASH_SINGLE
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
 from bitcoinutils.script import Script
 
@@ -54,6 +55,11 @@ class TestCreateP2trTransaction(unittest.TestCase):
         self.raw_unsigned03 = '02000000000101af13b1a8f3ed87c4a9424bd063f87d0ba3730031da90a3868a51a08bbdf8282a0100000000ffffffff01a00f0000000000001976a9148e48a6c5108efac226d33018b5347bb24adec37a88ac00000000'
         self.raw_signed03 = '02000000000101af13b1a8f3ed87c4a9424bd063f87d0ba3730031da90a3868a51a08bbdf8282a0100000000ffffffff01a00f0000000000001976a9148e48a6c5108efac226d33018b5347bb24adec37a88ac01409e42a9fe684abd801be742e558caeadc1a8d096f2f17660ba7b264b3d1f14c7a0a3f96da1fbd413ea494562172b99c1a7c95e921299f686587578d7060b89d2100000000'
 
+        # values for testing taproot signed tx with SINGLE
+        # uses mostly values from 02 key above
+        self.raw_signed_signle = '02000000000101566e10098ddba743bedbe1e4b356377abb3ef106c6831e733863d5eea012647b0100000000ffffffff01a00f0000000000001976a9148e48a6c5108efac226d33018b5347bb24adec37a88ac0141a01ba79ead43b55bf732ccb75115f3f428decf128d482a2d4c1add6e2b160c0a2a1288bce076e75bc6d978030ce4b1a74f5602ae99601bad35c58418fe9333750300000000'
+
+
     # 1 input 1 output - spending default key path for 02 pubkey
     def test_unsigned_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
@@ -86,6 +92,13 @@ class TestCreateP2trTransaction(unittest.TestCase):
         sig = self.priv03.sign_taproot_input(tx, 0, [self.scriptPubkey03], [self.amount02])
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed03)
+
+    # 1 input 1 output - sign SINGLE with 02 pubkey
+    def test_signed_single_1i_1o_02_pubkey(self):
+        tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_SINGLE)
+        tx.witnesses.append( TxWitnessInput([ sig ]) )
+        self.assertEqual(tx.serialize(), self.raw_signed_signle)
 
 
 if __name__ == '__main__':

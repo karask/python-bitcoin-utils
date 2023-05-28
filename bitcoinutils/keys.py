@@ -368,12 +368,14 @@ class PrivateKey:
 
         # use BIP-340 python's reference implementation for signing
         sig = schnorr_sign(tx_digest, byte_key, rand_aux)
-    
+
+        # 65 bytes if sighash is not TAPROOT_SIGHASH_ALL
+        if sighash != TAPROOT_SIGHASH_ALL:
+            sig += sighash.to_bytes(1, 'big')
+
         sig_hex = hexlify(sig)
         
-        # return 64 bytes signature
-        # TODO 65 bytes with sighash if <> SIGHASH_ALL
-        return sig_hex
+        return sig_hex 
 
 
 
