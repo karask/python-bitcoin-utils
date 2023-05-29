@@ -6,7 +6,6 @@ PRIORITIES
 
 - load public key with x-only pubkey, ensure it works for several...
 - TEST sent to schnorr address and then spend
-- TEST schnorr with ANYONE_CAN_PAY
 - add single alt spending
 - add tree alt spendin
 

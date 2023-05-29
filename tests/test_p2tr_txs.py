@@ -16,8 +16,7 @@ from context import bitcoinutils
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
 from bitcoinutils.keys import PrivateKey, P2pkhAddress
-#from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, SIGHASH_ANYONECANPAY
-from bitcoinutils.constants import SIGHASH_SINGLE, SIGHASH_NONE
+from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_SINGLE, SIGHASH_NONE, SIGHASH_ANYONECANPAY
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
 from bitcoinutils.script import Script
 
@@ -63,6 +62,10 @@ class TestCreateP2trTransaction(unittest.TestCase):
         # uses mostly values from 02 key above
         self.raw_signed_none = '02000000000101566e10098ddba743bedbe1e4b356377abb3ef106c6831e733863d5eea012647b0100000000ffffffff01a00f0000000000001976a9148e48a6c5108efac226d33018b5347bb24adec37a88ac0141fd01234cf9569112f20ed54dad777560d66b3611dcd6076bc98096e5d354e01556ee52a8dc35dac22b398978f2e05c9586bafe81d9d5ff8f8fa966a9e458c4410200000000'
 
+        # values for testing taproot signed tx with ALL|ANYONECANPAY
+        # uses mostly values from 02 key above
+        self.raw_signed_all_anyonecanpay = '02000000000101566e10098ddba743bedbe1e4b356377abb3ef106c6831e733863d5eea012647b0100000000ffffffff01a00f0000000000001976a9148e48a6c5108efac226d33018b5347bb24adec37a88ac0141530cc8246d3624f54faa50312204a89c67e1595f1b418b6da66a61b089195c54e853a1e2d80b3379a3ec9f9429daf9f5bc332986af6463381fe4e9f5d686f7468100000000'
+        self.sig_65_bytes_size = 103
 
     # 1 input 1 output - spending default key path for 02 pubkey
     def test_unsigned_1i_1o_02_pubkey(self):
@@ -110,6 +113,21 @@ class TestCreateP2trTransaction(unittest.TestCase):
         sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_NONE)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed_none)
+
+    # 1 input 1 output - sign ALL|ANYONECANPAY with 02 pubkey
+    def test_signed_all_anyonecanpay_1i_1o_02_pubkey(self):
+        tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
+        tx.witnesses.append( TxWitnessInput([ sig ]) )
+        self.assertEqual(tx.serialize(), self.raw_signed_all_anyonecanpay)
+
+    # 1 input 1 output - sign ALL|ANYONECANPAY with 02 pubkey vsize
+    def test_signed_all_anyonecanpay_1i_1o_02_pubkey_vsize(self):
+        tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
+        tx.witnesses.append( TxWitnessInput([ sig ]) )
+        self.assertEqual(tx.get_vsize(), self.sig_65_bytes_size)
+
 
 
 

@@ -878,13 +878,12 @@ class Transaction:
             #print('3')
             txin = tmp_tx.inputs[txin_index]
             # convert txid to big-endian first
-            # TODO convert to bytes before reversing...!!
-            outpoint = txin.txid[::-1]
-            tx_for_signing += unhexlify(outpoint)
+            tx_for_signing += unhexlify(txin.txid)[::-1] + \
+                              struct.pack('<I', txin.txout_index)
 
-            tx_for_signing += struct.pack('<I', txin.txout_index)
+            tx_for_signing += amounts[txin_index].to_bytes(8, 'little')
 
-            script_pubkey = scriptPubkeys[txin_index]
+            script_pubkey = scriptPubkeys[txin_index].to_hex()
             script_len = int( len(script_pubkey) / 2 )
             tx_for_signing += bytes([script_len]) + unhexlify(script_pubkey)
 
@@ -905,13 +904,7 @@ class Transaction:
                               script_bytes
             tx_for_signing += hashlib.sha256(hash_output).digest()
 
-
-        #print("message:", hexlify(tx_for_signing))
-        #print("hash message:", hashlib.sha256(tx_for_signing).hexdigest())
-        a = tagged_hash(tx_for_signing, "TapSighash").digest()[::-1]
-        #print("tagged hash message:", hexlify(a))
-
-        #return hashlib.sha256(tx_for_signing).digest()
+        # tagged hash the digest and return
         return tagged_hash(tx_for_signing, "TapSighash").digest()
 
 
