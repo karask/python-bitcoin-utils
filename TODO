@@ -6,14 +6,13 @@ PRIORITIES
 
 - load public key with x-only pubkey, ensure it works for several...
 - TEST sent to schnorr address and then spend
-- TEST schnorr with SINGLE
 - TEST schnorr with ANYONE_CAN_PAY
 - add single alt spending
 - add tree alt spendin
 
 
 SEGWIT-related
-- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically ?!??
+- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
   . currently adding it manually works fine (see 3 inputs 1 output example)
   . think of clean way of automating this (auto-magically adding them could confuse users!)
 - explain get_transaction_segwit_digest() better and test further
