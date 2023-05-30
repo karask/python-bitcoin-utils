@@ -1178,7 +1178,7 @@ class P2trAddress(SegwitAddress):
                  version=P2TR_ADDRESS_V1):
         """Allow creation only from witness program"""
 
-        super().__init__(address=None, witness_program=witness_program,  # script=None, ?
+        super().__init__(address=address, witness_program=witness_program,  # script=None, ?
                          version=P2TR_ADDRESS_V1)
 
 

@@ -4,8 +4,8 @@ Next v will be 0.6.1, will tag only when taproot is cleaned up and tested proper
 
 PRIORITIES
 
+- wrap bip39 (ian coleman's??) lib!!
 - load public key with x-only pubkey, ensure it works for several...
-- TEST sent to schnorr address and then spend
 - add single alt spending
 - add tree alt spendin
 
@@ -16,10 +16,13 @@ SEGWIT-related
   . think of clean way of automating this (auto-magically adding them could confuse users!)
 - explain get_transaction_segwit_digest() better and test further
 - clean and comment the segwit examples !
-  . test some more segwit txs including nested ones
+  . add more segwit txs tests including nested ones
+- segwit v0 and v1 address object instantiates from address, witness program and script
+  . are all used? test?
 
 - add Taproot to Transaction.from_raw
   . test from_raw more
+  . crean up from_raw code in general
 
 - maybe make RBF the default from now on (like Bitcoin Core)
   . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
@@ -29,7 +32,7 @@ SEGWIT-related
 
 CLEAN UP 
 -- rename VarInt to CompactSize
--- in TxInput move txid+index to prevout field ?! (maybe not this one, but keep it here to re-think)
+-- in TxInput move txid+index to prevout field (to be more aligned with core code)
 -- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream()) -- or have both but one returns bytes and the other hex ??!?! -- sometimes we USE to_bytes() again for serialization !!??! - clean and be consistent
 -- scriptPubkey to script_pubkey (but check for duplicates!)
 -- use sha256 rather than hashlib.sha256
