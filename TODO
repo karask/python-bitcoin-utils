@@ -2,9 +2,22 @@
 ******
 Next v will be 0.6.1, will tag only when taproot is cleaned up and tested properly (except script path for now).
 
-PRIORITIES
 
-- wrap bip39 (ian coleman's??) lib!!
+CLEAN UP 
+-- rename VarInt to CompactSize
+-- in TxInput move txid+index to prevout field (to be more aligned with core code)
+-- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream()) -- or have both but one returns bytes and the other hex ??!?! -- sometimes we USE to_bytes() again for serialization !!??! - clean and be consistent
+-- scriptPubkey to script_pubkey (but check for duplicates!)
+-- use sha256 rather than hashlib.sha256
+-- internally everything should be handled in bytes -- and converted to hex when displayed
+-- privkey seckey (use one of the two... currently privkey is mostly used)
+-- hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
+-- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
+-- remove hex_str_to_int and int_to_hex_str !?!?!
+
+PRIORITIES
+- wrap hdwallet https://hdwallet.readthedocs.io/en/v2.2.1/hdwallet.html
+  . test first
 - load public key with x-only pubkey, ensure it works for several...
 - add single alt spending
 - add tree alt spendin
@@ -29,18 +42,6 @@ SEGWIT-related
 
 
 - ADD NOTE or github issue that specifies that CODE_SEPERATOR is not handled appropriately, etc. when creating the message digest to sign
-
-CLEAN UP 
--- rename VarInt to CompactSize
--- in TxInput move txid+index to prevout field (to be more aligned with core code)
--- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream()) -- or have both but one returns bytes and the other hex ??!?! -- sometimes we USE to_bytes() again for serialization !!??! - clean and be consistent
--- scriptPubkey to script_pubkey (but check for duplicates!)
--- use sha256 rather than hashlib.sha256
--- internally everything should be handled in bytes -- and converted to hex when displayed
--- privkey seckey (use one of the two... currently privkey is mostly used)
--- hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
--- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
--- remove hex_str_to_int and int_to_hex_str !?!?!
 
 IMPROVE
 - why does bitcoinlib.services.service worked for connecting and proxy didn't for some students? (services probably has some redundancy code)
