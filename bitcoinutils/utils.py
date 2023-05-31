@@ -254,10 +254,10 @@ def hex_str_to_int(hex_str):
     return int(hex_str, base=16) 
 
 
-def int_to_hex_str(i):
-    '''
-    Converts an int to a string hexadecimal to a number (starting with 0x)
-    '''
-    return f'{i:064x}'
+#def int_to_hex_str(i):
+#    '''
+#    Converts an int to a string hexadecimal to a number (starting with 0x)
+#    '''
+#    return f'{i:064x}'
 
 

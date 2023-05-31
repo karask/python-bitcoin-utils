@@ -26,7 +26,7 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES, TAPROOT_SIGHASH_ALL
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes32_from_int, encode_varint, add_magic_prefix, \
-                               hex_str_to_int, int_to_hex_str, \
+                               hex_str_to_int, \
                                tweak_taproot_pubkey, \
                                tweak_taproot_privkey
 from bitcoinutils.ripemd160 import ripemd160
