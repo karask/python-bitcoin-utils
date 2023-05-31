@@ -765,7 +765,7 @@ class Transaction:
 
     # TODO Update doc with TAPROOT_SIGHASH_ALL
     # clean prints after finishing other sighashes
-    def get_transaction_taproot_digest(self, txin_index, scriptPubkeys, amounts, ext_flag=0, sighash=TAPROOT_SIGHASH_ALL):
+    def get_transaction_taproot_digest(self, txin_index, script_pubkeys, amounts, ext_flag=0, sighash=TAPROOT_SIGHASH_ALL):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
            https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
            Also consult Bitcoin Core code at: https://github.com/bitcoin/bitcoin/blob/29c36f070618ea5148cd4b2da3732ee4d37af66b/src/script/interpreter.cpp#L1478
@@ -822,7 +822,7 @@ class Transaction:
         # defaults
         hash_prevouts = b''
         hash_amounts = b''
-        hash_scriptPubkeys = b''
+        hash_script_pubkeys = b''
         hash_sequences = b''
         hash_outputs = b''
 
@@ -844,12 +844,12 @@ class Transaction:
             tx_for_signing += hash_amounts
 
             # the SHA256 of all spent outputs' scriptPubKeys
-            for s in scriptPubkeys:
+            for s in script_pubkeys:
                 s = s.to_hex()
                 script_len = int( len(s) / 2 )
-                hash_scriptPubkeys += bytes([script_len]) + unhexlify(s)
-            hash_scriptPubkeys = hashlib.sha256(hash_scriptPubkeys).digest()
-            tx_for_signing += hash_scriptPubkeys
+                hash_script_pubkeys += bytes([script_len]) + unhexlify(s)
+            hash_script_pubkeys = hashlib.sha256(hash_script_pubkeys).digest()
+            tx_for_signing += hash_script_pubkeys
 
             # the SHA256 of the serialization of all input nSequence
             for txin in tmp_tx.inputs:
@@ -883,7 +883,7 @@ class Transaction:
 
             tx_for_signing += amounts[txin_index].to_bytes(8, 'little')
 
-            script_pubkey = scriptPubkeys[txin_index].to_hex()
+            script_pubkey = script_pubkeys[txin_index].to_hex()
             script_len = int( len(script_pubkey) / 2 )
             tx_for_signing += bytes([script_len]) + unhexlify(script_pubkey)
 

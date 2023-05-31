@@ -7,7 +7,6 @@ CLEAN UP
 -- rename VarInt to CompactSize
 -- in TxInput move txid+index to prevout field (to be more aligned with core code)
 -- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream()) -- or have both but one returns bytes and the other hex ??!?! -- sometimes we USE to_bytes() again for serialization !!??! - clean and be consistent
--- scriptPubkey to script_pubkey (but check for duplicates!)
 -- internally everything should be handled in bytes -- and converted to hex when displayed
 -- privkey seckey (use one of the two... currently privkey is mostly used)
 -- hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??

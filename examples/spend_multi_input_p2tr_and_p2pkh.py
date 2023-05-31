@@ -52,10 +52,10 @@ def main():
 
     # all scriptPubKeys are needed to sign a taproot input 
     # (depending on sighash) but always of the spend input
-    scriptPubkey1 = fromAddress1.to_script_pub_key()
-    scriptPubkey2 = fromAddress2.to_script_pub_key()
-    scriptPubkey3 = fromAddress3.to_script_pub_key()
-    utxos_scriptPubkeys = [ scriptPubkey1, scriptPubkey2, scriptPubkey3 ]
+    script_pubkey1 = fromAddress1.to_script_pub_key()
+    script_pubkey2 = fromAddress2.to_script_pub_key()
+    script_pubkey3 = fromAddress3.to_script_pub_key()
+    utxos_script_pubkeys = [ script_pubkey1, script_pubkey2, script_pubkey3 ]
 
     toAddress = P2pkhAddress('mtVHHCqCECGwiMbMoZe8ayhJHuTdDbYWdJ')
 
@@ -79,9 +79,9 @@ def main():
     # sign taproot input
     # to create the digest message to sign in taproot we need to
     # pass all the utxos' scriptPubKeys and their amounts
-    sig1 = priv1.sign_taproot_input(tx, 0, utxos_scriptPubkeys, amounts)
-    sig2 = priv2.sign_input(tx, 1, utxos_scriptPubkeys[1] )
-    sig3 = priv3.sign_taproot_input(tx, 2, utxos_scriptPubkeys, amounts)
+    sig1 = priv1.sign_taproot_input(tx, 0, utxos_script_pubkeys, amounts)
+    sig2 = priv2.sign_input(tx, 1, utxos_script_pubkeys[1] )
+    sig3 = priv3.sign_taproot_input(tx, 2, utxos_script_pubkeys, amounts)
 
     tx.witnesses.append( TxWitnessInput([ sig1 ]) )
     txin2.script_sig = Script([sig2, pub2.to_hex()])

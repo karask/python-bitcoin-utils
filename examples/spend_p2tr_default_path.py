@@ -39,12 +39,12 @@ def main():
 
     # all scriptPubKeys are needed to sign a taproot input 
     # (depending on sighash) but always of the spend input
-    first_scriptPubkey = fromAddress.to_script_pub_key()
+    first_script_pubkey = fromAddress.to_script_pub_key()
 
     # alternatively:
-    #first_scriptPubkey = Script(['OP_1', pub.to_taproot_hex()])
+    #first_script_pubkey = Script(['OP_1', pub.to_taproot_hex()])
 
-    utxos_scriptPubkeys = [ first_scriptPubkey ]
+    utxos_script_pubkeys = [ first_script_pubkey ]
 
     toAddress = P2pkhAddress('mtVHHCqCECGwiMbMoZe8ayhJHuTdDbYWdJ')
 
@@ -66,7 +66,7 @@ def main():
     # sign taproot input
     # to create the digest message to sign in taproot we need to
     # pass all the utxos' scriptPubKeys and their amounts
-    sig = priv.sign_taproot_input(tx, 0, utxos_scriptPubkeys, \
+    sig = priv.sign_taproot_input(tx, 0, utxos_script_pubkeys, \
                                   amounts)
     #print(sig)
 

@@ -32,7 +32,7 @@ class TestCreateP2trTransaction(unittest.TestCase):
         self.pub02 = self.priv02.get_public_key()
         self.txin02 = TxInput('7b6412a0eed56338731e83c606f13ebb7a3756b3e4e1dbbe43a7db8d09106e56', 1)
         self.amount02 = to_satoshis(0.00005)
-        self.scriptPubkey02 = Script(['OP_1', self.pub02.to_taproot_hex()])
+        self.script_pubkey02 = Script(['OP_1', self.pub02.to_taproot_hex()])
         # same for 03
         self.toAddress02 = P2pkhAddress('mtVHHCqCECGwiMbMoZe8ayhJHuTdDbYWdJ')
         # same for 03
@@ -49,7 +49,7 @@ class TestCreateP2trTransaction(unittest.TestCase):
         self.pub03 = self.priv03.get_public_key()
         self.txin03 = TxInput('2a28f8bd8ba0518a86a390da310073a30b7df863d04b42a9c487edf3a8b113af', 1)
         self.amount02 = to_satoshis(0.00005)
-        self.scriptPubkey03 = Script(['OP_1', self.pub03.to_taproot_hex()])
+        self.script_pubkey03 = Script(['OP_1', self.pub03.to_taproot_hex()])
 
         self.raw_unsigned03 = '02000000000101af13b1a8f3ed87c4a9424bd063f87d0ba3730031da90a3868a51a08bbdf8282a0100000000ffffffff01a00f0000000000001976a9148e48a6c5108efac226d33018b5347bb24adec37a88ac00000000'
         self.raw_signed03 = '02000000000101af13b1a8f3ed87c4a9424bd063f87d0ba3730031da90a3868a51a08bbdf8282a0100000000ffffffff01a00f0000000000001976a9148e48a6c5108efac226d33018b5347bb24adec37a88ac01409e42a9fe684abd801be742e558caeadc1a8d096f2f17660ba7b264b3d1f14c7a0a3f96da1fbd413ea494562172b99c1a7c95e921299f686587578d7060b89d2100000000'
@@ -74,18 +74,18 @@ class TestCreateP2trTransaction(unittest.TestCase):
 
     def test_signed_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02])
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02])
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed02)
 
     def test_signed_1i_1o_02_pubkey_size(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02])
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02])
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.get_size(), self.txsize02)
     def test_signed_1i_1o_02_pubkey_vsize(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02])
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02])
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.get_vsize(), self.txvsize02)
 
@@ -96,35 +96,35 @@ class TestCreateP2trTransaction(unittest.TestCase):
 
     def test_signed_1i_1o_03_pubkey(self):
         tx = Transaction([self.txin03], [self.txout02], has_segwit=True)
-        sig = self.priv03.sign_taproot_input(tx, 0, [self.scriptPubkey03], [self.amount02])
+        sig = self.priv03.sign_taproot_input(tx, 0, [self.script_pubkey03], [self.amount02])
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed03)
 
     # 1 input 1 output - sign SINGLE with 02 pubkey
     def test_signed_single_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_SINGLE)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_SINGLE)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed_signle)
 
     # 1 input 1 output - sign NONE with 02 pubkey
     def test_signed_none_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_NONE)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_NONE)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed_none)
 
     # 1 input 1 output - sign ALL|ANYONECANPAY with 02 pubkey
     def test_signed_all_anyonecanpay_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed_all_anyonecanpay)
 
     # 1 input 1 output - sign ALL|ANYONECANPAY with 02 pubkey vsize
     def test_signed_all_anyonecanpay_1i_1o_02_pubkey_vsize(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.scriptPubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.get_vsize(), self.sig_65_bytes_size)
 
