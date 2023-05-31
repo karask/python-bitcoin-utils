@@ -9,7 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from hashlib import sha256
+import hashlib
 from binascii import hexlify, unhexlify
 from ecdsa import ellipticcurve
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
@@ -180,8 +180,8 @@ def tagged_hash(data: bytes, tag: str) -> bytes:
     Returns hashlib object (can then use .digest() or hexdigest())
     '''
 
-    tag_digest = sha256(tag.encode()).digest()
-    return sha256( tag_digest + tag_digest + data )
+    tag_digest = hashlib.sha256(tag.encode()).digest()
+    return hashlib.sha256( tag_digest + tag_digest + data )
 
 
 # TODO script also needs to be passed when spending with script

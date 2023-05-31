@@ -1174,7 +1174,7 @@ class P2trAddress(SegwitAddress):
         returns the type of address
     """
 
-    def __init__(self, address=None, witness_program=None,               # script=None, ?
+    def __init__(self, address=None, witness_program=None,                  # script=None, ?
                  version=P2TR_ADDRESS_V1):
         """Allow creation only from witness program"""
 
