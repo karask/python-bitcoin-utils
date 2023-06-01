@@ -45,8 +45,8 @@ class TxInput:
 
     Methods
     -------
-    stream()
-        converts TxInput to bytes
+    to_bytes()
+        serializes TxInput to bytes
     copy()
         creates a copy of the object (classmethod)
     """
@@ -66,8 +66,8 @@ class TxInput:
             self.sequence = sequence
 
 
-    def stream(self):
-        """Converts to bytes"""
+    def to_bytes(self):
+        """Serializes to bytes"""
 
         # Internally Bitcoin uses little-endian byte order as it improves
         # speed. Hashes are defined and implemented as big-endian thus
@@ -204,8 +204,8 @@ class TxOutput:
 
     Methods
     -------
-    stream()
-        converts TxInput to bytes
+    to_bytes()
+        serializes TxInput to bytes
     copy()
         creates a copy of the object (classmethod)
     """
@@ -221,8 +221,8 @@ class TxOutput:
         self.script_pubkey = script_pubkey
 
 
-    def stream(self):
-        """Converts to bytes"""
+    def to_bytes(self):
+        """Serializes to bytes"""
 
         # internally all little-endian except hashes
         # note struct uses little-endian by default
@@ -404,10 +404,12 @@ class Transaction:
 
     Methods
     -------
-    stream()
-        Converts Transaction to bytes
+    to_bytes()
+        Serializes Transaction to bytes
+    to_hex()
+        converts result of to_bytes to hexadecimal string
     serialize()
-        Converts Transaction to hex string
+        converts result of to_bytes to hexadecimal string
     from_raw()
         Instantiates a Transaction from serialized raw hexadacimal data (classmethod)
     get_txid()
@@ -638,8 +640,8 @@ class Transaction:
             # anyone can add new inputs
             tmp_tx.inputs = [tmp_tx.inputs[txin_index]]
 
-        # get the byte stream of the temporary transaction
-        tx_for_signing = tmp_tx.stream(False)
+        # get the bytes of the temporary transaction
+        tx_for_signing = tmp_tx.to_bytes(False)
 
         # add sighash bytes to be hashed
         # Note that although sighash is one byte it is hashed as a 4 byte value.
@@ -683,7 +685,7 @@ class Transaction:
         """
 
         # clone transaction to modify without messing up the real transaction
-        # TODO tmp_tx is not really used for its stream() - we can access self directly
+        # TODO tmp_tx is not really used for its to_bytes() - we can access self directly
         tmp_tx = Transaction.copy(self)
 
         # defaults for BIP143
@@ -700,7 +702,7 @@ class Transaction:
         if not anyone_can_pay:
             hash_prevouts = b''
             for txin in tmp_tx.inputs:
-                # TODO <L is 8 bytes, should be 4 bytes <I instead
+                # TODO ? <L is 8 bytes, should be 4 bytes <I instead
                 hash_prevouts += unhexlify(txin.txid)[::-1] + \
                                     struct.pack('<L', txin.txout_index)
             hash_prevouts = hashlib.sha256(hashlib.sha256(hash_prevouts).digest()).digest()
@@ -797,7 +799,7 @@ class Transaction:
         """
 
         # clone transaction to modify without messing up the real transaction
-        # tmp_tx is not really used for its stream() here
+        # tmp_tx is not really used for its to_bytes() here
         # TODO we could use self directly to access fields
         tmp_tx = Transaction.copy(self)
 
@@ -909,8 +911,8 @@ class Transaction:
 
 
 
-    def stream(self, has_segwit):
-        """Converts to bytes"""
+    def to_bytes(self, has_segwit):
+        """Serializes to bytes"""
 
         data = self.version
         # we just check the flag and not actual witnesses so that
@@ -926,10 +928,10 @@ class Transaction:
         txout_count_bytes = encode_varint(len(self.outputs))
         data += txin_count_bytes
         for txin in self.inputs:
-            data += txin.stream()
+            data += txin.to_bytes()
         data += txout_count_bytes
         for txout in self.outputs:
-            data += txout.stream()
+            data += txout.to_bytes()
         if has_segwit:
             for witness in self.witnesses:
                 # add witnesses script Count
@@ -943,7 +945,7 @@ class Transaction:
     def get_txid(self):
         """Hashes the serialized (bytes) tx to get a unique id"""
 
-        data = self.stream(False)
+        data = self.to_bytes(False)
         hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode('utf-8')
@@ -958,7 +960,7 @@ class Transaction:
     def get_hash(self):
         """Hashes the serialized (bytes) tx including segwit marker and witnesses"""
 
-        data = self.stream(self.has_segwit)
+        data = self.to_bytes(self.has_segwit)
         hash = hashlib.sha256( hashlib.sha256(data).digest() ).digest()
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode('utf-8')
@@ -967,7 +969,7 @@ class Transaction:
     def get_size(self):
         """Gets the size of the transaction"""
 
-        return len(self.stream(self.has_segwit))
+        return len(self.to_bytes(self.has_segwit))
 
 
     def get_vsize(self):
@@ -1003,10 +1005,16 @@ class Transaction:
         return int( math.ceil(vsize) )
 
 
-    def serialize(self):
-        """Converts to hex string"""
+    def to_hex(self):
+        """Converts object to hexadecimal string"""
 
-        return hexlify(self.stream(self.has_segwit)).decode('utf-8')
+        return hexlify(self.to_bytes(self.has_segwit)).decode('utf-8')
+
+
+    def serialize(self):
+        """Converts object to hexadecimal string"""
+
+        return self.to_hex()
 
 
 def main():

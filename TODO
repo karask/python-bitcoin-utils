@@ -4,11 +4,9 @@ Next v will be 0.6.1, will tag only when taproot is cleaned up and tested proper
 
 
 CLEAN UP 
--- rename stream() to serialize() !!! (serialize() exists in some/all? already and calls stream()) -- or have both but one returns bytes and the other hex ??!?! -- sometimes we USE to_bytes() again for serialization !!??! - clean and be consistent
 -- utils' to_bytes used in from_raw -- clean/reuse appropriate one
+   . hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
 -- rename VarInt to CompactSize
--- internally everything should be handled in bytes -- and converted to hex when displayed
--- hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
 -- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
 
 PRIORITIES
