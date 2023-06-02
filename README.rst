@@ -12,7 +12,8 @@ Complementary to this library is a CC BY-SA 4.0 licensed `Bitcoin programming bo
 Notes
 -----
 * For schnorr, bech32[m], ripemd160 the python Bitcoin Core reference implementations are used.
-* For making calls to a Bitcoin node a simple node proxy object exists, which wraps the python-bitcoinrpc library
+* For making calls to a Bitcoin node a simple node proxy object exists, which wraps the python-bitcoinrpc library.
+* For Hierarchical Deterministic keys we wrap the python hdwallet library. For now we wrap only some very basic functionality to acquire a PrivateKey object that is used throughtout the library.
 
 Installation
 ------------
@@ -24,6 +25,9 @@ Examples
 --------
 Keys and Addresses
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/keys_addresses.py - creates a private key which we use to derive a public key and in turn an address. We also use the private key to sign a message and then verify it using the public key. 
+
+Hierarchical Deterministic Keys
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/hd_keys.py - creates an extended private key, from an xpriv/tpriv and path, which we use to derive a public key and in turn all different address.
 
 Segwit Addresses
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/keys_segwit_addresses.py - creates P2WPKH, P2SH-P2WPKH, P2WSH and P2SH-P2WSH addresses.
