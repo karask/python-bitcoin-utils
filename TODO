@@ -3,19 +3,10 @@
 Next v will be 0.6.1, will tag only when taproot is cleaned up and tested properly (except script path for now).
 
 
-CLEAN UP 
--- utils' to_bytes used in from_raw -- clean/reuse appropriate one
-   . hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
--- rename VarInt to CompactSize
--- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
-
 PRIORITIES
-- wrap hdwallet https://hdwallet.readthedocs.io/en/v2.2.1/hdwallet.html
-  . test first
 - load public key with x-only pubkey, ensure it works for several...
 - add single alt spending
 - add tree alt spendin
-
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -26,43 +17,26 @@ SEGWIT-related
   . add more segwit txs tests including nested ones
 - segwit v0 and v1 address object instantiates from address, witness program and script
   . are all used? test?
-
 - add Taproot to Transaction.from_raw
   . test from_raw more
   . crean up from_raw code in general
 
-- maybe make RBF the default from now on (like Bitcoin Core)
-  . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
-
-
-- ADD NOTE or github issue that specifies that CODE_SEPERATOR is not handled appropriately, etc. when creating the message digest to sign
+CLEAN UP 
+-- utils' to_bytes used in from_raw -- clean/reuse appropriate one
+   . hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
+-- rename VarInt to CompactSize
+-- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
 
 IMPROVE
 - why does bitcoinlib.services.service worked for connecting and proxy didn't for some students? (services probably has some redundancy code)
 
-PRIVATE KEYS compressed
-- should accept keys with 01 at the end or otherwise specify 'compressed' for the public key
-- use it when generating the public key
-- and when generating the address
-
-PSBT
-- add!
-- https://bip174.org/
-
 DOC-related
 - add explicit documentation for each module before members...
 - commit docs/usage/proxy.rst
-- add segwit examples in README 
 - segwit in documentation
-- add more modules to documantation
 
-CODE-related
-- make all code < 80 chars !?
-- improve test structure - look at python-bitcoinlib or its derived python-bitcointx for example
-
-Efficiency
-- make all internal variables bytes for processing and convert when input (hex usually) or output (displaying hex usually)
-  . hmm, only applies for Addresses' classes
+tests-related
+- improve test structure - look at python-bitcointx for example
 
 WINDOWS
 - it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy
@@ -80,5 +54,6 @@ OTHER
 - create test with 260 outputs (inputs too much trouble) - file: test_extreme_txs.py
 - create test with script of 260 and another with 66000 commands
 - make test of send to P2WPKH transaction example
-
+- maybe make RBF the default from now on (like Bitcoin Core)
+  . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
 
