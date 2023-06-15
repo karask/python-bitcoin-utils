@@ -793,7 +793,7 @@ class Transaction:
                     The amount of the UTXO to spend is included in the
                     signature for segwit (in satoshis)
                 ext_flag : int
-                    Extension mechanism, default is 0; 1 is for BIP342
+                    Extension mechanism, default is 0; 1 is for script spending (BIP342)
                 sighash : int
                     The type of the signature hash to be created
         """
@@ -873,7 +873,7 @@ class Transaction:
 
 
         # Data about this input
-        spend_type = ext_flag * 2 + 0      # hard-coded annex_present
+        spend_type = ext_flag * 2 + 0      # 0 for hard-coded - no annex_present
         tx_for_signing += bytes([spend_type])
 
         if anyone_can_pay:
