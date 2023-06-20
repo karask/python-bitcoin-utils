@@ -1,5 +1,7 @@
 
+
 PRIORITIES
+- single alt spending... pass script.to_bytes in get_taproot_address() ... send some funds and then try to spend it
 - load public key with x-only pubkey, ensure it works for several...
 - add single alt spending
 - add tree alt spendin
@@ -23,6 +25,8 @@ CLEAN UP
    . hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
 -- rename VarInt to CompactSize
 -- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
+-- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
+-- sign_taproot_input takes tr_script as bytes... maybe better to pass the object - similar to the other params - and call to_bytes() internally
 
 IMPROVE
 - test proxy object extensively, students reports it fails sometimes...
