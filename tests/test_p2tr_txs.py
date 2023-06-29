@@ -103,28 +103,28 @@ class TestCreateP2trTransaction(unittest.TestCase):
     # 1 input 1 output - sign SINGLE with 02 pubkey
     def test_signed_single_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_SINGLE)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], sighash=SIGHASH_SINGLE)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed_signle)
 
     # 1 input 1 output - sign NONE with 02 pubkey
     def test_signed_none_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_NONE)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], sighash=SIGHASH_NONE)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed_none)
 
     # 1 input 1 output - sign ALL|ANYONECANPAY with 02 pubkey
     def test_signed_all_anyonecanpay_1i_1o_02_pubkey(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], sighash=SIGHASH_ALL|SIGHASH_ANYONECANPAY)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.serialize(), self.raw_signed_all_anyonecanpay)
 
     # 1 input 1 output - sign ALL|ANYONECANPAY with 02 pubkey vsize
     def test_signed_all_anyonecanpay_1i_1o_02_pubkey_vsize(self):
         tx = Transaction([self.txin02], [self.txout02], has_segwit=True)
-        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], SIGHASH_ALL|SIGHASH_ANYONECANPAY)
+        sig = self.priv02.sign_taproot_input(tx, 0, [self.script_pubkey02], [self.amount02], sighash=SIGHASH_ALL|SIGHASH_ANYONECANPAY)
         tx.witnesses.append( TxWitnessInput([ sig ]) )
         self.assertEqual(tx.get_vsize(), self.sig_65_bytes_size)
 

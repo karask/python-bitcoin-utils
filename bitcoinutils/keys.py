@@ -23,15 +23,14 @@ from sympy.ntheory import sqrt_mod
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
-        P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES, TAPROOT_SIGHASH_ALL
+        P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES, TAPROOT_SIGHASH_ALL, \
+        LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.setup import get_network
 from bitcoinutils.utils import bytes32_from_int, encode_varint, add_magic_prefix, \
-                               hex_str_to_int, \
-                               tweak_taproot_pubkey, \
-                               tweak_taproot_privkey
+                               hex_str_to_int#, tweak_taproot_pubkey
 from bitcoinutils.ripemd160 import ripemd160
-from bitcoinutils.schnorr import schnorr_sign
-from bitcoinutils.utils import EcdsaParams
+from bitcoinutils.schnorr import schnorr_sign, point_add, point_mul, G, full_pubkey_gen
+from bitcoinutils.utils import EcdsaParams, prepend_varint, tagged_hash, calculate_tweak
 import bitcoinutils.script
 import bitcoinutils.bech32
 
@@ -55,11 +54,19 @@ class PrivateKey:
     sign_message(message, compressed=True)
         signs the message's digest and returns the signature
     sign_input(tx, txin_index, script, sighash=SIGHASH_ALL)
-        signs the transaction's digest for a particular index and returns the
-        signature.
+        creates the transaction's digest and signs it for a particular index
+        and returns the signature.
     sign_segwit_input(tx, txin_index, script, amount, sighash=SIGHASH_ALL)
-        signs the transaction's digest for a particular index and amount and 
-        returns the signature.
+        creates the transaction's digest and signs it for a particular index
+        and amount and returns the signature.
+    sign_taproot_input(tx, txin_index, utxo_scripts, amounts, script_path=False, script=None, sighash=TAPROOT_SIGHASH_ALL, tweak=True)
+        creates the transaction's digest and signs it for a particular index
+        input script_pub_keys and amounts and returns the signature. By default
+        it tweaks the keys but it can be disabled for tapleaf scripts.
+    get_negated_key()
+        returns the negated private key as a hexadecimal string
+    get_taproot_tweak()
+        returns the tweaked private key as a hexadecimal string (classmethod)
     get_public_key()
         returns the corresponding PublicKey object
     """
@@ -217,24 +224,28 @@ class PrivateKey:
 
 
     def sign_input(self, tx, txin_index, script, sighash=SIGHASH_ALL):
-        # the tx knows how to calculate the digest for the corresponding
-        # sighash)
+        # get the digest from the transaction object and sign
         tx_digest = tx.get_transaction_digest(txin_index, script, sighash)
         return self._sign_input(tx_digest, sighash)
 
 
     def sign_segwit_input(self, tx, txin_index, script, amount, sighash=SIGHASH_ALL):
-        # the tx knows how to calculate the digest for the corresponding
-        # sighash)
+        # get the digest from the transaction object and sign
         tx_digest = tx.get_transaction_segwit_digest(txin_index, script, amount, sighash)
         return self._sign_input(tx_digest, sighash)
 
 
-    def sign_taproot_input(self, tx, txin_index, utxo_scripts, amounts, sighash=TAPROOT_SIGHASH_ALL):
-        # the tx knows how to calculate the digest for the corresponding
-        # sighash)
-        tx_digest = tx.get_transaction_taproot_digest(txin_index, utxo_scripts, amounts, 0, sighash)
-        return self._sign_taproot_input(tx_digest, sighash)
+    def sign_taproot_input(self, tx, txin_index, utxo_scripts, amounts, script_path=False, script=None, sighash=TAPROOT_SIGHASH_ALL, tweak=True):
+        # get the digest from the transaction object and sign
+        # note that when signing a tapleaf we typically won't use tweaked 
+        # keys - so tweak should be set to False
+        if script_path:
+            tx_digest = tx.get_transaction_taproot_digest(txin_index, utxo_scripts, 
+                    amounts, 1, script=script, sighash=sighash)
+        else:
+            tx_digest = tx.get_transaction_taproot_digest(txin_index, utxo_scripts, 
+                    amounts, 0, sighash=sighash)
+        return self._sign_taproot_input(tx_digest, sighash, script, tweak)
 
 
     def _sign_input(self, tx_digest, sighash=SIGHASH_ALL):
@@ -262,7 +273,7 @@ class PrivateKey:
         #
         # For this reason we test if we get a Low R value (should be <0x80 and
         # thus not have the 0x00 prefix that specifies a negative signed
-        # number) we need to change the entropy by using extra_entropy and resign
+        # number) we need to change the entropy by using extra_entropy and re-sign
         # until we get a Low R value.
 
         # sign - note that deterministic signing is used
@@ -343,27 +354,35 @@ class PrivateKey:
 
 
 
-    def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL):
+    def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL, script=None, tweak=True):
         """Signs a taproot transaction input with the private key
 
         Taproot uses Schnorr signatures. The format is just R and S so only
         64 bytes. If SIGHASH_ALL then nothing is included (i.e. default).
         If another sighash then it is included in the end (65 bytes).
 
+        Note that when signing for script path (tapleafs) we typically won't 
+        use tweaking so tweak should be set to False
+
         Returns a signature for that input
         """
 
-        # tweak private key before signing (tweaking code takes care of
-        # negating the private key if it is necessary (i.e. if
-        # the corresponding public key's y is odd).
-        tagged_key = tweak_taproot_privkey(self.key.to_string(), 'TapTweak')
+        byte_key = None
 
-        byte_key = unhexlify(tagged_key)
+        if tweak:
+            # negate the private key if necessary and then tweak it before signing 
+            negated_key = self.get_negated_key()
+            tweaked_key = PrivateKey.get_taproot_tweak(self.key.to_string().hex(), negated_key, script)
+            byte_key = bytes.fromhex(tweaked_key)
+        else:
+            # negate the private key if necessary
+            negated_key = self.get_negated_key()
+            byte_key = bytes.fromhex(negated_key)
 
-        # deterministic signing nonce is random and based in RFC6979
+        # deterministic signing nonce is random and RFC6979-like
         # it is the hash of the tx_digest and private key
         # TODO not identical to Bitcoin Core's signature, rand_aux
-        # needs slight changes if we want identical signatures!
+        # needs to change if we want identical signatures!
         rand_aux = hashlib.sha256(tx_digest + byte_key).digest()
 
         # use BIP-340 python's reference implementation for signing
@@ -378,6 +397,46 @@ class PrivateKey:
         return sig_hex 
 
 
+    def get_negated_key(self):
+        """Checks if corresponding public is has odd y and negates"""
+
+        key_secret_exponent = hex_str_to_int(self.key.to_string().hex())
+
+        pubkey = self.get_public_key()
+
+        if not pubkey.is_y_even():
+            # negate private key
+            key_secret_exponent = EcdsaParams._order - key_secret_exponent
+
+        return hex(key_secret_exponent)[2:]
+
+
+    @classmethod
+    def get_taproot_tweak(self, internal_key: str, negated_privkey: str, script: object) -> str:
+        """Returns a tweaked private key as a hexadecimal string.
+
+        TODO cleanup: we pass internal_key because the pubkey_x_bytes used to tweak
+        should be from the internal key!
+
+        Assumes that the key is already negated, if necessary. (privkey is the negated one)
+        """
+
+        # could also use the PrivateKey object to get pubkey_x_bytes
+        internal_pubkey_bytes = full_pubkey_gen(bytes.fromhex(internal_key))
+        #pubkey_x_bytes = pubkey_bytes[:32]
+        internal_pubkey = PublicKey( '04' + internal_pubkey_bytes.hex() )
+
+        tweak_int = calculate_tweak( internal_pubkey, script )
+
+        # privkey is already negated
+        key_secret_exponent = hex_str_to_int(negated_privkey)
+
+        tweaked_privkey_int = (key_secret_exponent + tweak_int) % EcdsaParams._order
+
+        #print(f'Tweaked Private Key: {tweaked_privkey_int:064x}')
+        return f'{tweaked_privkey_int:064x}'
+
+ 
 
     def get_public_key(self):
         """Returns the corresponding PublicKey"""
@@ -398,19 +457,27 @@ class PublicKey:
     Methods
     -------
     from_hex(hex_str)
-        creates an object from a hex string in SEC format
+        creates an object from a hex string in SEC format (classmethod)
     from_message_signature(signature)
-        NO-OP!
-    verify_message(address, signature, message)
-        Class method that constructs the public key, confirms the address and
-        verifies the signature
+        NO-OP! (classmethod)
+    verify_message(address, signature, message) (classmethod)
+        constructs the public key, confirms the address and
+        verifies the signature (classmethod)
     verify(signature, message)
         returns true if the message was signed with this public key's
         corresponding private key.
     to_hex(compressed=True)
         returns the key as hex string (in SEC format - compressed by default)
-    to_taproot_hex()
-        returns the x coordinate only as hex string (needed for taproot)
+    to_x_only_hex(script)
+        returns the x coordinate only as hex string before tweaking (needed for taproot)
+    to_taproot_hex(script)
+        returns the x coordinate only as hex string after tweaking (needed for taproot)
+    is_y_even()
+        returns true if y coordinate is even
+    get_negated_key()
+        returns the negated public key as a hexadecimal string
+    get_taproot_tweak()
+        returns the tweaked public key as a hexadecimal string (classmethod)
     to_bytes()
         returns the key's raw bytes
     to_hash160()
@@ -419,7 +486,7 @@ class PublicKey:
         returns the corresponding P2pkhAddress object
     get_segwit_address()
         returns the corresponding P2wpkhAddress object
-    get_taproot_address()
+    get_taproot_address(script)
         returns the corresponding P2trAddress object
     """
 
@@ -437,6 +504,7 @@ class PublicKey:
             If first byte of public key (corresponding to SEC format) is
             invalid.
         """
+        # TODO accepts hex str in any format and handle here!
 
         # expects key as hex string - SEC format
         first_byte_in_hex = hex_str[:2] # 2 since a byte is represented by 2 hex characters
@@ -517,21 +585,90 @@ class PublicKey:
         return key_str.decode('utf-8')
 
 
-    # TODO probably remove tagged flag in the future to always tag the public key
-    # Note that we do not optionally tag the private key when signing!!!
-    def to_taproot_hex(self, tagged=True):
-        """Returns the x coordinate of the public key as a hex string.
+    def to_x_only_hex(self):
+        """Returns the x coordinate of the public key as hex string."""
 
-        Tweaks and negates, if necessary, the key first.
+        key_hex = self.key.to_string().hex()
+
+        # x does not change, thus only for displaying purposes we don't need
+        # to negate, even for taproot
+        #if not self.is_y_even():
+        #    key_hex = self.get_negated_key()
+
+        return key_hex[:64]
+
+
+
+    def to_taproot_hex(self, script=None):
+        """Returns the tweaked x coordinate of the public key as a hex string."""
+
+        key_hex = self.key.to_string().hex()
+        negated_key = key_hex if self.is_y_even() else self.get_negated_key()
+
+        # negated key is sent - y is required internally for ec arithmetics
+        tweaked_key = PublicKey.get_taproot_tweak(key_hex, negated_key, script)
+
+        # public key in x form only
+        # negate again, if necessary !?!
+        tweaked_pubkey = PublicKey('04' + tweaked_key)
+        negated_tweaked_key = tweaked_key if tweaked_pubkey.is_y_even() else tweaked_pubkey.get_negated_key()
+        return negated_tweaked_key[:64]
+        #return tweaked_key[:64]
+
+        #pubkey = tweak_taproot_pubkey(self.key.to_string(), script.to_bytes(), 'TapTweak')[:64]
+        #return pubkey
+
+
+    def is_y_even(self):
+        """Returns True if the y coordinate of the public key is even and False otherwise."""
+        
+        key_hex = self.key.to_string().hex()
+
+        y = hex_str_to_int( key_hex[64:] )
+
+        return y % 2 == 0
+
+
+    def get_negated_key(self):
+        """Returns a negated hexadecimal string of the public key or just the key if already a key with even y (i.e. key that starts with 02 pre-taproot)."""
+        
+        key_hex = self.key.to_string().hex()
+
+        x = hex_str_to_int( key_hex[:64] )
+        y = hex_str_to_int( key_hex[64:] )
+
+        # if y is odd then negate y (effectively P) to make it even and equivalent
+        # to a 02 compressed pk
+        if y % 2 != 0:
+            y = EcdsaParams._field - y
+
+        #print(f'{x:064x}{y:064x}')
+        return f'{x:064x}{y:064x}'
+
+
+    @classmethod
+    def get_taproot_tweak(self, internal_pubkey: str, negated_pubkey: str,
+                          script: object) -> str:
+        # TODO CLEAN
+        """Returns a tweaked public key as a hexadecimal string.
+
+        Assumes that the key is already negated, if necessary.
         """
-        if tagged:
-            # public key in x form only (TODO pass x-only for here rather than
-            # do it from tweak_taproot_pubkey!?)
-            pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
-        else:
-            pubkey = self.to_hex(compressed=True)[2:]
+        
+        pub_key = PublicKey( '04' + internal_pubkey )
 
-        return pubkey
+        # calculate tweak
+        tweak_int = calculate_tweak( pub_key, script )
+
+        # convert public key bytes to tuple Point
+        P = (hex_str_to_int(negated_pubkey[:64]), 
+             hex_str_to_int(negated_pubkey[64:]))
+
+        # calculated tweaked public key Q = P + th*G
+        Q = point_add(P, (point_mul(G, tweak_int)))
+
+        #print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
+        return f'{Q[0]:064x}{Q[1]:064x}'
 
 
     @classmethod
@@ -681,17 +818,20 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
 
-    def get_taproot_address(self):
+    def get_taproot_address(self, script=None):
         """Returns the corresponding P2TR address
 
         Only compressed is allowed. Taproot uses x-only public key with
         even y (02 compressed keys). By default tagged_hashes are used.
+
+        script contains the hash of the script (or merkle root for
+        multiple scripts) for the script spending path
         """
 
         # Tweak public key (BIP340)
         # https://bitcoin.stackexchange.com/a/116391/31844
         # note that taproot's even y is checked/negated during tweaking
-        pubkey = tweak_taproot_pubkey(self.key.to_string(), 'TapTweak')[:64]
+        pubkey = self.to_taproot_hex(script) #tweak_taproot_pubkey(self.key.to_string(), script, 'TapTweak')[:64]
 
         return P2trAddress(witness_program=pubkey)
 
