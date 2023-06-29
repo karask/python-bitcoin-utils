@@ -30,8 +30,7 @@ from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.schnorr import schnorr_sign, point_add, point_mul, G, full_pubkey_gen
 from bitcoinutils.utils import EcdsaParams, prepend_varint, tagged_hash, calculate_tweak, \
                                bytes32_from_int, encode_varint, add_magic_prefix, \
-                               hex_str_to_int
-#from bitcoinutils.utils import tweak_taproot_pubkey, tweak_taproot_privkey
+                               hex_str_to_int, tweak_taproot_pubkey, tweak_taproot_privkey
 import bitcoinutils.script
 import bitcoinutils.bech32
 
@@ -1358,7 +1357,7 @@ class P2trAddress(SegwitAddress):
 ########################################################
 # Split in several methods as part of PublicKey object #
 ########################################################
-def tweak_taproot_pubkey(internal_pubkey: bytes, script: bytes) -> bytes:
+def tweak_taproot_pubkey2(internal_pubkey: bytes, script: bytes) -> bytes:
     '''
     Tweaks the public key with the specified tweak. Required to create the
     taproot public key from the internal key.
@@ -1392,7 +1391,7 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, script: bytes) -> bytes:
 #########################################################
 # Split in several methods as part of PrivateKey object #
 #########################################################
-def tweak_taproot_privkey(privkey: bytes, script: bytes) -> bytes:
+def tweak_taproot_privkey2(privkey: bytes, script: bytes) -> bytes:
     '''
     Tweaks the private key before signing with it. Check if public key's y
     is even and negate the private key before tweaking it.
