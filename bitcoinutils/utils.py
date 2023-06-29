@@ -13,7 +13,7 @@ import hashlib
 from binascii import hexlify, unhexlify
 from ecdsa import ellipticcurve
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
-#from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
+from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 
 
 # TODO rename to Secp256k1Params and clean whatever is not used!
@@ -73,7 +73,7 @@ class ControlBlock:
         Parameters
         ----------
         pubkey : PublicKey
-            the public key object
+            the internal public key object
         scripts : list (Script)
             a list of Scripts lexicographically ordered to construct the merkle root
         '''
@@ -84,22 +84,29 @@ class ControlBlock:
     def to_bytes(self):
         # leaf version is fixed but we check if the public key required negation
         # if negated (y is odd) add one to the leaf_version
-        if int(self.pubkey.to_hex()[-2:], 16) % 2 == 0:
-            leaf_version = bytes([LEAF_VERSION_TAPSCRIPT])
-        else:
-            leaf_version = bytes([LEAF_VERSION_TAPSCRIPT + 1])
+        #if int(self.pubkey.to_hex()[-2:], 16) % 2 == 0:
+        #    leaf_version = bytes([LEAF_VERSION_TAPSCRIPT])
+        #else:
+        #    leaf_version = bytes([LEAF_VERSION_TAPSCRIPT + 1])
+        leaf_version = bytes([LEAF_VERSION_TAPSCRIPT])
 
         # x-only public key is required
         pub_key = bytes.fromhex( self.pubkey.to_x_only_hex() )
 
+        # if a single alt script no merkle path is required
+        if len(self.scripts) == 1:
+            return leaf_version + pub_key 
+        
+        
         # TODO only single alternative script path for now
-        script_bytes = self.scripts[0].to_bytes()
+#        script_bytes = self.scripts[0].to_bytes()
 
         # tag hash the script
-        th = tagged_hash(bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script_bytes), 
-                         "TapLeaf").digest()
+#        th = tagged_hash(bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script_bytes), 
+#                         "TapLeaf").digest()
 
-        return leaf_version + pub_key + th
+        return leaf_version + pub_key 
+        #return leaf_version + pub_key + th
 
 
     def to_hex(self):
@@ -246,10 +253,6 @@ def tagged_hash(data: bytes, tag: str) -> bytes:
 def calculate_tweak(pubkey: object, script: object) -> int:
     '''
     Calculates the tweak to apply to the public and private key when required.
-
-    The tweaked private key can be computed by d + hash(P || S) where d is the
-    internal private key, P is the internal public key and S is the alternative 
-    script, if any.
     '''
 
     # only the x coordinate is tagged_hash'ed
@@ -273,86 +276,73 @@ def has_even_y(key: object) -> bool:
     TODO
     '''
 
-    if isinstance(key, PrivateKey):
+    if isinstance(key, bitcoinutils.keys.PrivateKey):
         return 'PrivateKey'
 
 
 ########################################################
 # Split in several methods as part of PublicKey object #
 ########################################################
-#def tweak_taproot_pubkey(pubkey: bytes, script: bytes, tweak: str) -> str:
-#    '''
-#    Tweaks the public key with the specified tweak. Required to create the
-#    taproot public key from the internal key.
-#    '''
-#
-#    # only the x coordinate is tagged_hash'ed
-#    key = pubkey[:32]
-#    if not script:
-#        th_final = tagged_hash(key, tweak)
-#    else:
-#        # if also script spending this should include the tapleaf of the versioned script!
-#        script_th_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script)
-#        th_script = tagged_hash(script_th_part, 'TapLeaf').digest()
-#        th_final = tagged_hash(key + th_script, tweak)
-#
-#    # we convert to int for later elliptic curve  arithmetics
-#    th_as_int = hex_str_to_int( th.hexdigest() )
-#
-#    # convert public key bytes to tuple Point
-#    x = hex_str_to_int( pubkey[:32].hex() )
-#    y = hex_str_to_int( pubkey[32:].hex() )
-#    # if y is odd then negate y (effectively P) to make it even and equivalent
-#    # to a 02 compressed pk
-#    if y % 2 != 0:
-#        y = EcdsaParams._field - y 
-#    P = (x, y)
-#
-#    # calculated tweaked public key Q = P + th*G
-#    Q = point_add(P, (point_mul(G, th_as_int)))
-#    
-#    #print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
-#    return f'{Q[0]:064x}{Q[1]:064x}'
+def tweak_taproot_pubkey(internal_pubkey: bytes, script: bytes) -> bytes:
+    '''
+    Tweaks the public key with the specified tweak. Required to create the
+    taproot public key from the internal key.
+    '''
+
+    internal_pubkey_obj = bitcoinutils.keys.PublicKey( '04' + internal_pubkey.hex() )
+
+    # calculate tweak
+    tweak_int = calculate_tweak( internal_pubkey_obj, script )
+
+    # convert public key bytes to tuple Point
+    x = hex_str_to_int( internal_pubkey[:32].hex() )
+    y = hex_str_to_int( internal_pubkey[32:].hex() )
+
+    # if y is odd then negate y (effectively P) to make it even and equivalent
+    # to a 02 compressed pk
+    if y % 2 != 0:
+        y = EcdsaParams._field - y 
+    P = (x, y)
+
+    # calculated tweaked public key Q = P + th*G
+    Q = point_add(P, (point_mul(G, tweak_int)))
+    
+    # negate Q as well before returning ?!?
+    if Q[1] % 2 != 0:
+        Q = ( Q[0], EcdsaParams._field - Q[1] )
+
+    #print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
+    return bytes.fromhex( f'{Q[0]:064x}{Q[1]:064x}' )
 
 
 #########################################################
 # Split in several methods as part of PrivateKey object #
 #########################################################
-#def tweak_taproot_privkey(privkey: bytes, script: bytes, tweak: str) -> str:
-#    '''
-#    Tweaks the private key before signing with it. Check if public key's y
-#    is even and negate the private key before tweaking if it is not.
-#    '''
-#    key_secret_exponent = int(hexlify(privkey).decode('utf-8'), 16)
-#
-#    # get the public key from BIP-340 schnorr ref impl.
-#    pubkey_bytes = full_pubkey_gen(privkey)
-#    pubkey_x_bytes = pubkey_bytes[:32]
-#    pubkey_y_int = int.from_bytes(pubkey_bytes[32:], byteorder="big")
-#
-#    # if y coordinate is not even, negate private key
-#    if pubkey_y_int % 2 != 0:
-#        # negate private key
-#        key_secret_exponent = EcdsaParams._order - key_secret_exponent
-#
-#    # tag hash the public key (bytes) plus script, if any
-#    if not script:
-#        th = tagged_hash(pubkey_x_bytes, tweak)
-#    else:
-#        # if also script spending this should include the tapleaf of the versioned script!
-#        script_th_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script)
-#        th = tagged_hash(pubkey_x_bytes + script_th_part, tweak)
-#
-#
-#    th_as_int = hex_str_to_int( th.hexdigest() )
-#
-#    # The tweaked private key can be computed by d + hash(P || S)
-#    # where d is the normal private key, P is the normal public key
-#    # and S is the alt script, if any (empty script, if none?? TODO)
-#    tweaked_privkey_int = (key_secret_exponent + th_as_int) % EcdsaParams._order
-#
-#    #print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
-#    return hex(tweaked_privkey_int)[2:]
+def tweak_taproot_privkey(privkey: bytes, script: bytes) -> bytes:
+    '''
+    Tweaks the private key before signing with it. Check if public key's y
+    is even and negate the private key before tweaking if it is not.
+    '''
+
+    # get the public key from BIP-340 schnorr ref impl.
+    internal_privkey = bitcoinutils.keys.PrivateKey.from_bytes(privkey)
+    internal_pubkey = internal_privkey.get_public_key()
+
+    tweak_int = calculate_tweak( internal_pubkey, script )
+
+    # negate private key if necessary
+    if internal_pubkey.is_y_even():
+        negated_key = internal_privkey.to_bytes().hex()
+    else:
+        negated_key = internal_privkey.get_negated_key()
+
+    # The tweaked private key can be computed by d + hash(P || S)
+    # where d is the normal private key, P is the normal public key
+    # and S is the alt script, if any (empty script, if none?? TODO)
+    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak_int) % EcdsaParams._order
+
+    #print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
+    return bytes.fromhex( hex(tweaked_privkey_int)[2:] )
 
 
 

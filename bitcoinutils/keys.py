@@ -26,11 +26,12 @@ from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES, TAPROOT_SIGHASH_ALL, \
         LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.setup import get_network
-from bitcoinutils.utils import bytes32_from_int, encode_varint, add_magic_prefix, \
-                               hex_str_to_int#, tweak_taproot_pubkey
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.schnorr import schnorr_sign, point_add, point_mul, G, full_pubkey_gen
-from bitcoinutils.utils import EcdsaParams, prepend_varint, tagged_hash, calculate_tweak
+from bitcoinutils.utils import EcdsaParams, prepend_varint, tagged_hash, calculate_tweak, \
+                               bytes32_from_int, encode_varint, add_magic_prefix, \
+                               hex_str_to_int
+#from bitcoinutils.utils import tweak_taproot_pubkey, tweak_taproot_privkey
 import bitcoinutils.script
 import bitcoinutils.bech32
 
@@ -47,6 +48,8 @@ class PrivateKey:
     -------
     from_wif(wif)
         creates an object from a WIF of WIFC format (string)
+    from_bytes()
+        creates an object from raw 32 bytes
     to_wif(compressed=True)
         returns as WIFC (compressed) or WIF format (string)
     to_bytes()
@@ -71,7 +74,7 @@ class PrivateKey:
         returns the corresponding PublicKey object
     """
 
-    def __init__(self, wif=None, secret_exponent=None):
+    def __init__(self, wif=None, secret_exponent=None, b=None):
         """With no parameters a random key is created
 
         Parameters
@@ -80,13 +83,17 @@ class PrivateKey:
             the key in WIF of WIFC format (default None)
         secret_exponent : int, optional
             used to create a specific key deterministically (default None)
+        b : bytes, optional
+            used to create a key from raw bytes
         """
 
-        if not secret_exponent and not wif:
+        if not secret_exponent and not wif and not b:
             self.key = SigningKey.generate(curve=SECP256k1)
         else:
             if wif:
                 self._from_wif(wif)
+            elif b:
+                self._from_bytes(b)
             elif secret_exponent:
                 self.key = SigningKey.from_secret_exponent(secret_exponent,
                                                            curve=SECP256k1)
@@ -102,6 +109,20 @@ class PrivateKey:
         """Creates key from WIFC or WIF format key"""
 
         return cls(wif=wif)
+
+
+    @classmethod
+    def from_bytes(cls, b):
+        """Creates key from WIFC or WIF format key"""
+
+        return cls(b=b)
+
+
+    def _from_bytes(self, b):
+        """Creates a key directly from 32 raw bytes"""
+        
+        # TODO check if b is len 32 and raise error
+        self.key = SigningKey.from_string(b, curve=SECP256k1)
 
 
     # expects wif in hex string
@@ -371,9 +392,10 @@ class PrivateKey:
 
         if tweak:
             # negate the private key if necessary and then tweak it before signing 
-            negated_key = self.get_negated_key()
-            tweaked_key = PrivateKey.get_taproot_tweak(self.key.to_string().hex(), negated_key, script)
-            byte_key = bytes.fromhex(tweaked_key)
+            #negated_key = self.get_negated_key()
+            #tweaked_key = PrivateKey.get_taproot_tweak(self.key.to_string().hex(), negated_key, script)
+            #byte_key = bytes.fromhex(tweaked_key)
+            byte_key = tweak_taproot_privkey(self.key.to_string(), script)
         else:
             # negate the private key if necessary
             negated_key = self.get_negated_key()
@@ -411,30 +433,30 @@ class PrivateKey:
         return hex(key_secret_exponent)[2:]
 
 
-    @classmethod
-    def get_taproot_tweak(self, internal_key: str, negated_privkey: str, script: object) -> str:
-        """Returns a tweaked private key as a hexadecimal string.
-
-        TODO cleanup: we pass internal_key because the pubkey_x_bytes used to tweak
-        should be from the internal key!
-
-        Assumes that the key is already negated, if necessary. (privkey is the negated one)
-        """
-
-        # could also use the PrivateKey object to get pubkey_x_bytes
-        internal_pubkey_bytes = full_pubkey_gen(bytes.fromhex(internal_key))
-        #pubkey_x_bytes = pubkey_bytes[:32]
-        internal_pubkey = PublicKey( '04' + internal_pubkey_bytes.hex() )
-
-        tweak_int = calculate_tweak( internal_pubkey, script )
-
-        # privkey is already negated
-        key_secret_exponent = hex_str_to_int(negated_privkey)
-
-        tweaked_privkey_int = (key_secret_exponent + tweak_int) % EcdsaParams._order
-
-        #print(f'Tweaked Private Key: {tweaked_privkey_int:064x}')
-        return f'{tweaked_privkey_int:064x}'
+#    @classmethod
+#    def get_taproot_tweak(self, internal_key: str, negated_privkey: str, script: object) -> str:
+#        """Returns a tweaked private key as a hexadecimal string.
+#
+#        TODO cleanup: we pass internal_key because the pubkey_x_bytes used to tweak
+#        should be from the internal key!
+#
+#        Assumes that the key is already negated, if necessary. (privkey is the negated one)
+#        """
+#
+#        # could also use the PrivateKey object to get pubkey_x_bytes
+#        internal_pubkey_bytes = full_pubkey_gen(bytes.fromhex(internal_key))
+#        #pubkey_x_bytes = pubkey_bytes[:32]
+#        internal_pubkey = PublicKey( '04' + internal_pubkey_bytes.hex() )
+#
+#        tweak_int = calculate_tweak( internal_pubkey, script )
+#
+#        # privkey is already negated
+#        key_secret_exponent = hex_str_to_int(negated_privkey)
+#
+#        tweaked_privkey_int = (key_secret_exponent + tweak_int) % EcdsaParams._order
+#
+#        #print(f'Tweaked Private Key: {tweaked_privkey_int:064x}')
+#        return f'{tweaked_privkey_int:064x}'
 
  
 
@@ -590,8 +612,8 @@ class PublicKey:
 
         key_hex = self.key.to_string().hex()
 
-        # x does not change, thus only for displaying purposes we don't need
-        # to negate, even for taproot
+        # x does not change by negation, thus only for displaying purposes 
+        # we don't need to negate, even for taproot
         #if not self.is_y_even():
         #    key_hex = self.get_negated_key()
 
@@ -602,21 +624,22 @@ class PublicKey:
     def to_taproot_hex(self, script=None):
         """Returns the tweaked x coordinate of the public key as a hex string."""
 
-        key_hex = self.key.to_string().hex()
-        negated_key = key_hex if self.is_y_even() else self.get_negated_key()
+        #internal_pubkey_hex = self.key.to_string().hex()
+        #negated_key = key_hex if self.is_y_even() else self.get_negated_key()
 
         # negated key is sent - y is required internally for ec arithmetics
-        tweaked_key = PublicKey.get_taproot_tweak(key_hex, negated_key, script)
+        #tweaked_key = PublicKey.get_taproot_tweak(key_hex, negated_key, script)
 
         # public key in x form only
         # negate again, if necessary !?!
-        tweaked_pubkey = PublicKey('04' + tweaked_key)
-        negated_tweaked_key = tweaked_key if tweaked_pubkey.is_y_even() else tweaked_pubkey.get_negated_key()
-        return negated_tweaked_key[:64]
+        #tweaked_pubkey = PublicKey('04' + tweaked_key)
+        #negated_tweaked_key = tweaked_key if tweaked_pubkey.is_y_even() else tweaked_pubkey.get_negated_key()
+        #return negated_tweaked_key[:64]
         #return tweaked_key[:64]
 
+        pubkey = tweak_taproot_pubkey(self.key.to_string(), script)[:32]
         #pubkey = tweak_taproot_pubkey(self.key.to_string(), script.to_bytes(), 'TapTweak')[:64]
-        #return pubkey
+        return pubkey.hex()
 
 
     def is_y_even(self):
@@ -646,29 +669,29 @@ class PublicKey:
         return f'{x:064x}{y:064x}'
 
 
-    @classmethod
-    def get_taproot_tweak(self, internal_pubkey: str, negated_pubkey: str,
-                          script: object) -> str:
-        # TODO CLEAN
-        """Returns a tweaked public key as a hexadecimal string.
-
-        Assumes that the key is already negated, if necessary.
-        """
-        
-        pub_key = PublicKey( '04' + internal_pubkey )
-
-        # calculate tweak
-        tweak_int = calculate_tweak( pub_key, script )
-
-        # convert public key bytes to tuple Point
-        P = (hex_str_to_int(negated_pubkey[:64]), 
-             hex_str_to_int(negated_pubkey[64:]))
-
-        # calculated tweaked public key Q = P + th*G
-        Q = point_add(P, (point_mul(G, tweak_int)))
-
-        #print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
-        return f'{Q[0]:064x}{Q[1]:064x}'
+#    @classmethod
+#    def get_taproot_tweak(self, internal_pubkey: str, negated_pubkey: str,
+#                          script: object) -> str:
+#        # TODO CLEAN
+#        """Returns a tweaked public key as a hexadecimal string.
+#
+#        Assumes that the key is already negated, if necessary.
+#        """
+#        
+#        pub_key = PublicKey( '04' + internal_pubkey )
+#
+#        # calculate tweak
+#        tweak_int = calculate_tweak( pub_key, script )
+#
+#        # convert public key bytes to tuple Point
+#        P = (hex_str_to_int(negated_pubkey[:64]), 
+#             hex_str_to_int(negated_pubkey[64:]))
+#
+#        # calculated tweaked public key Q = P + th*G
+#        Q = point_add(P, (point_mul(G, tweak_int)))
+#
+#        #print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
+#        return f'{Q[0]:064x}{Q[1]:064x}'
 
 
     @classmethod
@@ -1332,6 +1355,67 @@ class P2trAddress(SegwitAddress):
         return self.version
 
 
+########################################################
+# Split in several methods as part of PublicKey object #
+########################################################
+def tweak_taproot_pubkey(internal_pubkey: bytes, script: bytes) -> bytes:
+    '''
+    Tweaks the public key with the specified tweak. Required to create the
+    taproot public key from the internal key.
+    '''
+
+    internal_pubkey_obj = bitcoinutils.keys.PublicKey( '04' + internal_pubkey.hex() )
+
+    # calculate tweak
+    tweak_int = calculate_tweak( internal_pubkey_obj, script )
+
+    # convert public key bytes to tuple Point
+    x = hex_str_to_int( internal_pubkey[:32].hex() )
+    y = hex_str_to_int( internal_pubkey[32:].hex() )
+
+    # if y is odd then negate y (effectively P) to make it even and equivalent
+    # to a 02 compressed pk
+    if y % 2 != 0:
+        y = EcdsaParams._field - y 
+    P = (x, y)
+
+    # calculated tweaked public key Q = P + th*G
+    Q = point_add(P, (point_mul(G, tweak_int)))
+    
+    # negate Q as well before returning ?!?
+    if Q[1] % 2 != 0:
+        Q = ( Q[0], EcdsaParams._field - Q[1] )
+
+    return bytes.fromhex( f'{Q[0]:064x}{Q[1]:064x}' )
+
+
+#########################################################
+# Split in several methods as part of PrivateKey object #
+#########################################################
+def tweak_taproot_privkey(privkey: bytes, script: bytes) -> bytes:
+    '''
+    Tweaks the private key before signing with it. Check if public key's y
+    is even and negate the private key before tweaking it.
+    '''
+
+    # get the public key from BIP-340 schnorr ref impl.
+    internal_privkey = bitcoinutils.keys.PrivateKey.from_bytes(privkey)
+    internal_pubkey = internal_privkey.get_public_key()
+
+    tweak_int = calculate_tweak( internal_pubkey, script )
+
+    # negate private key if necessary
+    if internal_pubkey.is_y_even():
+        negated_key = internal_privkey.to_bytes().hex()
+    else:
+        negated_key = internal_privkey.get_negated_key()
+
+    # The tweaked private key can be computed by d + hash(P || S)
+    # where d is the normal private key, P is the normal public key
+    # and S is the alt script, if any (empty script, if none?? TODO)
+    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak_int) % EcdsaParams._order
+
+    return bytes.fromhex( f'{tweaked_privkey_int:064x}' )
 
 
 def main():
