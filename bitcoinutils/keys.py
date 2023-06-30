@@ -255,17 +255,17 @@ class PrivateKey:
         return self._sign_input(tx_digest, sighash)
 
 
-    def sign_taproot_input(self, tx, txin_index, utxo_scripts, amounts, script_path=False, script=None, sighash=TAPROOT_SIGHASH_ALL, tweak=True):
+    def sign_taproot_input(self, tx, txin_index, utxo_scripts, amounts, script_path=False, tapleaf_script=None,  tapleaf_scripts=None, sighash=TAPROOT_SIGHASH_ALL, tweak=True):
         # get the digest from the transaction object and sign
         # note that when signing a tapleaf we typically won't use tweaked 
         # keys - so tweak should be set to False
         if script_path:
             tx_digest = tx.get_transaction_taproot_digest(txin_index, utxo_scripts, 
-                    amounts, 1, script=script, sighash=sighash)
+                    amounts, 1, script=tapleaf_script, sighash=sighash)
         else:
             tx_digest = tx.get_transaction_taproot_digest(txin_index, utxo_scripts, 
                     amounts, 0, sighash=sighash)
-        return self._sign_taproot_input(tx_digest, sighash, script, tweak)
+        return self._sign_taproot_input(tx_digest, sighash, tapleaf_scripts, tweak)
 
 
     def _sign_input(self, tx_digest, sighash=SIGHASH_ALL):
@@ -374,7 +374,8 @@ class PrivateKey:
 
 
 
-    def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL, script=None, tweak=True):
+    # TODO add all_scripts to proper tweaking
+    def _sign_taproot_input(self, tx_digest, sighash=SIGHASH_ALL, scripts=None, tweak=True):
         """Signs a taproot transaction input with the private key
 
         Taproot uses Schnorr signatures. The format is just R and S so only
@@ -394,9 +395,11 @@ class PrivateKey:
             #negated_key = self.get_negated_key()
             #tweaked_key = PrivateKey.get_taproot_tweak(self.key.to_string().hex(), negated_key, script)
             #byte_key = bytes.fromhex(tweaked_key)
-            byte_key = tweak_taproot_privkey(self.key.to_string(), script)
+            tweak_int = calculate_tweak(self.get_public_key(), scripts)
+            byte_key = tweak_taproot_privkey(self.key.to_string(), tweak_int)
         else:
-            # negate the private key if necessary
+            # TODO is that required, schnorr lib seems to handle that
+            # negate the private key, if necessary
             negated_key = self.get_negated_key()
             byte_key = bytes.fromhex(negated_key)
 
@@ -507,7 +510,7 @@ class PublicKey:
         returns the corresponding P2pkhAddress object
     get_segwit_address()
         returns the corresponding P2wpkhAddress object
-    get_taproot_address(script)
+    get_taproot_address(scripts)
         returns the corresponding P2trAddress object
     """
 
@@ -620,8 +623,14 @@ class PublicKey:
 
 
 
-    def to_taproot_hex(self, script=None):
-        """Returns the tweaked x coordinate of the public key as a hex string."""
+    def to_taproot_hex(self, scripts=None):
+        """Returns the tweaked x coordinate of the public key as a hex string.
+
+        Parameters
+        ==========
+        scripts : list[ list[Script] ]
+            a list of list of Scripts describing the merkle tree of scripts to commit
+        """
 
         #internal_pubkey_hex = self.key.to_string().hex()
         #negated_key = key_hex if self.is_y_even() else self.get_negated_key()
@@ -635,8 +644,10 @@ class PublicKey:
         #negated_tweaked_key = tweaked_key if tweaked_pubkey.is_y_even() else tweaked_pubkey.get_negated_key()
         #return negated_tweaked_key[:64]
         #return tweaked_key[:64]
+        tweak_int = calculate_tweak(self, scripts)
 
-        pubkey = tweak_taproot_pubkey(self.key.to_string(), script)[:32]
+        # keep x-only coordinate
+        pubkey = tweak_taproot_pubkey(self.key.to_string(), tweak_int)[:32]
         #pubkey = tweak_taproot_pubkey(self.key.to_string(), script.to_bytes(), 'TapTweak')[:64]
         return pubkey.hex()
 
@@ -840,20 +851,20 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
 
-    def get_taproot_address(self, script=None):
+    def get_taproot_address(self, scripts=None):
         """Returns the corresponding P2TR address
 
         Only compressed is allowed. Taproot uses x-only public key with
         even y (02 compressed keys). By default tagged_hashes are used.
 
-        script contains the hash of the script (or merkle root for
-        multiple scripts) for the script spending path
+        scripts contains the list of lists of Scripts describing the merkle
+        tree
         """
 
         # Tweak public key (BIP340)
         # https://bitcoin.stackexchange.com/a/116391/31844
         # note that taproot's even y is checked/negated during tweaking
-        pubkey = self.to_taproot_hex(script) #tweak_taproot_pubkey(self.key.to_string(), script, 'TapTweak')[:64]
+        pubkey = self.to_taproot_hex(scripts) #tweak_taproot_pubkey(self.key.to_string(), script, 'TapTweak')[:64]
 
         return P2trAddress(witness_program=pubkey)
 
@@ -1354,67 +1365,63 @@ class P2trAddress(SegwitAddress):
         return self.version
 
 
-########################################################
-# Split in several methods as part of PublicKey object #
-########################################################
-def tweak_taproot_pubkey2(internal_pubkey: bytes, script: bytes) -> bytes:
-    '''
-    Tweaks the public key with the specified tweak. Required to create the
-    taproot public key from the internal key.
-    '''
-
-    internal_pubkey_obj = bitcoinutils.keys.PublicKey( '04' + internal_pubkey.hex() )
-
-    # calculate tweak
-    tweak_int = calculate_tweak( internal_pubkey_obj, script )
-
-    # convert public key bytes to tuple Point
-    x = hex_str_to_int( internal_pubkey[:32].hex() )
-    y = hex_str_to_int( internal_pubkey[32:].hex() )
-
-    # if y is odd then negate y (effectively P) to make it even and equivalent
-    # to a 02 compressed pk
-    if y % 2 != 0:
-        y = EcdsaParams._field - y 
-    P = (x, y)
-
-    # calculated tweaked public key Q = P + th*G
-    Q = point_add(P, (point_mul(G, tweak_int)))
-    
-    # negate Q as well before returning ?!?
-    if Q[1] % 2 != 0:
-        Q = ( Q[0], EcdsaParams._field - Q[1] )
-
-    return bytes.fromhex( f'{Q[0]:064x}{Q[1]:064x}' )
+# TODO clean up / handled from utils module now
+#def tweak_taproot_pubkey2(internal_pubkey: bytes, script: bytes) -> bytes:
+#    '''
+#    Tweaks the public key with the specified tweak. Required to create the
+#    taproot public key from the internal key.
+#    '''
+#
+#    internal_pubkey_obj = bitcoinutils.keys.PublicKey( '04' + internal_pubkey.hex() )
+#
+#    # calculate tweak
+#    tweak_int = calculate_tweak( internal_pubkey_obj, script )
+#
+#    # convert public key bytes to tuple Point
+#    x = hex_str_to_int( internal_pubkey[:32].hex() )
+#    y = hex_str_to_int( internal_pubkey[32:].hex() )
+#
+#    # if y is odd then negate y (effectively P) to make it even and equivalent
+#    # to a 02 compressed pk
+#    if y % 2 != 0:
+#        y = EcdsaParams._field - y 
+#    P = (x, y)
+#
+#    # calculated tweaked public key Q = P + th*G
+#    Q = point_add(P, (point_mul(G, tweak_int)))
+#    
+#    # negate Q as well before returning ?!?
+#    if Q[1] % 2 != 0:
+#        Q = ( Q[0], EcdsaParams._field - Q[1] )
+#
+#    return bytes.fromhex( f'{Q[0]:064x}{Q[1]:064x}' )
 
 
-#########################################################
-# Split in several methods as part of PrivateKey object #
-#########################################################
-def tweak_taproot_privkey2(privkey: bytes, script: bytes) -> bytes:
-    '''
-    Tweaks the private key before signing with it. Check if public key's y
-    is even and negate the private key before tweaking it.
-    '''
-
-    # get the public key from BIP-340 schnorr ref impl.
-    internal_privkey = bitcoinutils.keys.PrivateKey.from_bytes(privkey)
-    internal_pubkey = internal_privkey.get_public_key()
-
-    tweak_int = calculate_tweak( internal_pubkey, script )
-
-    # negate private key if necessary
-    if internal_pubkey.is_y_even():
-        negated_key = internal_privkey.to_bytes().hex()
-    else:
-        negated_key = internal_privkey.get_negated_key()
-
-    # The tweaked private key can be computed by d + hash(P || S)
-    # where d is the normal private key, P is the normal public key
-    # and S is the alt script, if any (empty script, if none?? TODO)
-    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak_int) % EcdsaParams._order
-
-    return bytes.fromhex( f'{tweaked_privkey_int:064x}' )
+# TODO clean up / handled from utils module now
+#def tweak_taproot_privkey2(privkey: bytes, script: bytes) -> bytes:
+#    '''
+#    Tweaks the private key before signing with it. Check if public key's y
+#    is even and negate the private key before tweaking it.
+#    '''
+#
+#    # get the public key from BIP-340 schnorr ref impl.
+#    internal_privkey = bitcoinutils.keys.PrivateKey.from_bytes(privkey)
+#    internal_pubkey = internal_privkey.get_public_key()
+#
+#    tweak_int = calculate_tweak( internal_pubkey, script )
+#
+#    # negate private key if necessary
+#    if internal_pubkey.is_y_even():
+#        negated_key = internal_privkey.to_bytes().hex()
+#    else:
+#        negated_key = internal_privkey.get_negated_key()
+#
+#    # The tweaked private key can be computed by d + hash(P || S)
+#    # where d is the normal private key, P is the normal public key
+#    # and S is the alt script, if any (empty script, if none?? TODO)
+#    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak_int) % EcdsaParams._order
+#
+#    return bytes.fromhex( f'{tweaked_privkey_int:064x}' )
 
 
 def main():

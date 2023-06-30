@@ -50,7 +50,7 @@ def main():
     tr_script_p2pk = Script([pubkey_tr_script.to_x_only_hex(), 'OP_CHECKSIG'])
 
     # taproot script path address
-    fromAddress = pub1.get_taproot_address(tr_script_p2pk)
+    fromAddress = pub1.get_taproot_address([ [tr_script_p2pk] ])
     print('From Taproot script address', fromAddress.to_string())
 
     # UTXO of fromAddress from pubkey 03
@@ -108,11 +108,13 @@ def main():
     # sign taproot input
     # to create the digest message to sign in taproot we need to
     # pass all the utxos' scriptPubKeys, their amounts and taproot script
-    sig1 = privkey_tr_script.sign_taproot_input(tx, 0, utxos_scriptPubkeys, amounts, script_path=True, script=tr_script_p2pk, tweak=False)
+    sig1 = privkey_tr_script.sign_taproot_input(tx, 0, utxos_scriptPubkeys, amounts,
+                                                script_path=True, tapleaf_script=tr_script_p2pk,
+                                                tapleaf_scripts=[ [tr_script_p2pk] ], tweak=False)
     #sig1 = priv1.sign_taproot_input(tx, 0, utxos_scriptPubkeys, amounts, script_path=True, script=tr_script_p2pk, tweak=False)
     #print(sig1)
 
-    control_block = ControlBlock(pub1, [ tr_script_p2pk ])
+    control_block = ControlBlock(pub1, [ [tr_script_p2pk] ])
 
     tx.witnesses.append( TxWitnessInput([ sig1, tr_script_p2pk.to_hex(), control_block.to_hex() ]) )
 

@@ -83,7 +83,7 @@ def main():
     tr_script_p2pk = Script([pubkey_tr_script.to_x_only_hex(), 'OP_CHECKSIG'])
 
     # taproot script path address
-    toAddress2 = pub2.get_taproot_address(tr_script_p2pk)
+    toAddress2 = pub2.get_taproot_address([ [tr_script_p2pk] ])
     print('To Taproot script address', toAddress2.to_string())
 
     # create transaction output

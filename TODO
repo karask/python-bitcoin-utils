@@ -1,9 +1,12 @@
 
 PRIORITIES
-- single alt spending... pass script.to_bytes in get_taproot_address() ... send some funds and then try to spend it
-- load public key with x-only pubkey, ensure it works for several...
 - add single alt spending
 - add tree alt spendin
+  . create method that takes scripts and constructs merkle root
+  . update ControlBlock as appropriate
+  . what else needs to change?
+  . confirm by looking at the spec!
+- load public key with x-only pubkey, ensure it works for several...
 - create Address object that covers ALL addresses and can convert from one to another!
 - clean .from_raw in the transaction object!?!
 
@@ -26,9 +29,11 @@ CLEAN UP
 -- utils' to_bytes used in from_raw -- clean/reuse appropriate one
    . hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
    . b'bbbb'.hex() instead of hexlify!! (remove all and binascii)
+   . create h_to_i, i_to_h, h_to_b, b_to_h, b_to_i, i_to_b ?!
 -- rename VarInt to CompactSize
 -- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
 -- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
+-- USE type hints everywhere, make aliases to support objects, etc.
 
 IMPROVE
 - test proxy object extensively, students reports it fails sometimes...

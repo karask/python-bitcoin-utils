@@ -55,9 +55,11 @@ class ControlBlock:
     Attributes
     ----------
     pubkey : PublicKey
-        the public key object
-    scripts : list (Script)
-        a list of Scripts lexicographically ordered to construct the merkle root
+        the internal public key object
+    script_to_spend : Script
+        the tapscript leaf that we want to spend
+    scripts : list[ list[Script] ]
+        a list of list of Scripts describing the merkle tree of scripts to commit
 
     Methods
     -------
@@ -68,17 +70,40 @@ class ControlBlock:
     '''
 
 
-    def __init__(self, pubkey, scripts):
+    def __init__(self, pubkey, script_to_spend=None, scripts=None):
         '''
         Parameters
         ----------
         pubkey : PublicKey
             the internal public key object
-        scripts : list (Script)
-            a list of Scripts lexicographically ordered to construct the merkle root
+        script_to_spend : Script
+            the tapscript leaf that we want to spend
+        scripts : list[ list[Script] ]
+            a list of list of Scripts describing the merkle tree of scripts to commit
         '''
         self.pubkey = pubkey
+        self.script_to_spend = script_to_spend
         self.scripts = scripts
+
+
+    # tag hashed merkle root of all scripts is used to tweak the keys
+    def get_merkle_root(self):
+        if not self.scripts:
+            # TODO raise error
+            return b''
+        # single script only
+        if len(self.scripts) == 1 and len(self.scripts[0]) == 1:
+            return tapleaf_tagged_hash(self.scripts[0][0])
+
+
+    # merkle path is used get all the intermediate hashes to get to the 
+    # merkle root from the script_to_spend script
+    def get_merkle_path(self):
+        if not self.scripts:
+            return b''
+        else:
+            # will use script to get to the script of which the path we need...
+            pass
 
 
     def to_bytes(self):
@@ -94,18 +119,25 @@ class ControlBlock:
         pub_key = bytes.fromhex( self.pubkey.to_x_only_hex() )
 
         # if a single alt script no merkle path is required
-        if len(self.scripts) == 1:
-            return leaf_version + pub_key 
-        
+        #if len(self.scripts) == 1:
+        #    return leaf_version + pub_key 
+
+        merkle_root = b''
+
+        # get merkle path from scripts, if any
+        if self.scripts:
+            merkle_root = self.get_merkle_path()
         
         # TODO only single alternative script path for now
+        # calc the PATH with get_merkle_path and use for th
+        # script_to_spend!!
 #        script_bytes = self.scripts[0].to_bytes()
 
         # tag hash the script
 #        th = tagged_hash(bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script_bytes), 
 #                         "TapLeaf").digest()
 
-        return leaf_version + pub_key 
+        return leaf_version + pub_key + merkle_root
         #return leaf_version + pub_key + th
 
 
@@ -251,25 +283,39 @@ def tagged_hash(data: bytes, tag: str) -> bytes:
 
 
 # TODO take scripts and construct merkle root to tweak
-def calculate_tweak(pubkey: bytes, script: object) -> int:
+# use controlblock obj to do it...
+# rename script to scripts and handle with control block obj, then get root and tweak
+# remember that leafs need TapLeaf tag, branches TapBranch tag, etc.
+def calculate_tweak(pubkey: object, scripts: object) -> int:
     '''
     Calculates the tweak to apply to the public and private key when required.
     '''
 
+    # TODO use script [ [], [ [],[] ], ...  ] to get all scripts to construct the m.tree
+    # and calc the root that is used as tweak...
     # only the x coordinate is tagged_hash'ed
-    key_x = pubkey[:32]
-    if not script:
-        th_final = tagged_hash(key_x, 'TapTweak')
+    key_x = pubkey.to_bytes()[:32]
+
+
+    if not scripts:
+        tweak = tagged_hash(key_x, 'TapTweak')
     else:
         # if also script spending this should include the tapleaf of the versioned script!
-        script_th_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script.to_bytes())
-        th_script = tagged_hash(script_th_part, 'TapLeaf').digest()
-        th_final = tagged_hash(key_x + th_script, 'TapTweak')
+        merkle_root = ControlBlock(pubkey, scripts=scripts).get_merkle_root()
+        tweak = tagged_hash(key_x + merkle_root, 'TapTweak')
+        #script_th_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script.to_bytes())
+        #th_script = tagged_hash(script_th_part, 'TapLeaf').digest()
+        #th_final = tagged_hash(key_x + th_script, 'TapTweak')
 
     # we convert to int for later elliptic curve  arithmetics
-    th_as_int = hex_str_to_int( th_final.hexdigest() )
+    tweak_int = hex_str_to_int( tweak.hexdigest() )
 
-    return th_as_int
+    return tweak_int
+
+def tapleaf_tagged_hash(script: object) -> bytes:
+    '''Calculates the tagged hash for a tapleaf'''
+    script_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script.to_bytes())
+    return tagged_hash(script_part, 'TapLeaf').digest()
 
 
 def negate_privkey(key: bytes) -> str:
@@ -308,14 +354,14 @@ def negate_privkey(key: bytes) -> str:
 # Split in several methods as part of PublicKey object #
 ########################################################
 # TODO takes scripts !?
-def tweak_taproot_pubkey(internal_pubkey: bytes, script: bytes) -> bytes:
+def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
     '''
     Tweaks the public key with the specified tweak. Required to create the
     taproot public key from the internal key.
     '''
 
     # calculate tweak
-    tweak_int = calculate_tweak( internal_pubkey, script )
+    #tweak_int = calculate_tweak( internal_pubkey, script )
 
     # convert public key bytes to tuple Point
     x = hex_str_to_int( internal_pubkey[:32].hex() )
@@ -327,8 +373,9 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, script: bytes) -> bytes:
         y = EcdsaParams._field - y 
     P = (x, y)
 
-    # calculated tweaked public key Q = P + th*G
-    Q = point_add(P, (point_mul(G, tweak_int)))
+    # apply tweak to public key (Q = P + th*G)
+    Q = point_add(P, (point_mul(G, tweak)))
+    #Q = point_add(P, (point_mul(G, tweak_int)))
     
     # negate Q as well before returning ?!?
     if Q[1] % 2 != 0:
@@ -342,7 +389,7 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, script: bytes) -> bytes:
 # Split in several methods as part of PrivateKey object #
 #########################################################
 # TODO takes scripts !?
-def tweak_taproot_privkey(privkey: bytes, script: bytes) -> bytes:
+def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     '''
     Tweaks the private key before signing with it. Check if public key's y
     is even and negate the private key before tweaking if it is not.
@@ -351,7 +398,7 @@ def tweak_taproot_privkey(privkey: bytes, script: bytes) -> bytes:
     # get the public key from BIP-340 schnorr ref impl.
     internal_pubkey_bytes = full_pubkey_gen(privkey)
 
-    tweak_int = calculate_tweak( internal_pubkey_bytes, script )
+    #tweak_int = calculate_tweak( internal_pubkey_bytes, script )
 
     internal_pubkey_hex = internal_pubkey_bytes.hex()
 
@@ -364,7 +411,7 @@ def tweak_taproot_privkey(privkey: bytes, script: bytes) -> bytes:
     # The tweaked private key can be computed by d + hash(P || S)
     # where d is the normal private key, P is the normal public key
     # and S is the alt script, if any (empty script, if none?? TODO)
-    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak_int) % EcdsaParams._order
+    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak) % EcdsaParams._order
 
     #print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
     return bytes.fromhex( f'{tweaked_privkey_int:064x}' )
