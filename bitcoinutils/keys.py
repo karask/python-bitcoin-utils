@@ -646,6 +646,7 @@ class PublicKey:
         #return tweaked_key[:64]
         tweak_int = calculate_tweak(self, scripts)
 
+        #print('PUBKEY TWEAK', tweak_int)
         # keep x-only coordinate
         pubkey = tweak_taproot_pubkey(self.key.to_string(), tweak_int)[:32]
         #pubkey = tweak_taproot_pubkey(self.key.to_string(), script.to_bytes(), 'TapTweak')[:64]

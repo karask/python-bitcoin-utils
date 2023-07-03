@@ -70,6 +70,7 @@ class ControlBlock:
     '''
 
 
+    # TODO TEMP scripts is just the top root th_branch manually calculated!
     def __init__(self, pubkey, script_to_spend=None, scripts=None):
         '''
         Parameters
@@ -86,6 +87,7 @@ class ControlBlock:
         self.scripts = scripts
 
 
+    # TODO delete.. another (external) function is used
     # tag hashed merkle root of all scripts is used to tweak the keys
     #def get_merkle_root(self):
     #    if not self.scripts:
@@ -95,15 +97,15 @@ class ControlBlock:
     #    if len(self.scripts) == 1 and len(self.scripts[0]) == 1:
     #        return tapleaf_tagged_hash(self.scripts[0][0])
 
-
+    # TODO delete? will get path from code that spends it...
     # merkle path is used get all the intermediate hashes to get to the 
     # merkle root from the script_to_spend script
-    def get_merkle_path(self):
-        if not self.scripts:
-            return b''
-        else:
-            # will use script to get to the script of which the path we need...
-            pass
+    #def get_merkle_path(self):
+    #    if not self.scripts:
+    #        return b''
+    #    else:
+    #        # will use script to get to the script of which the path we need...
+    #        pass
 
 
     def to_bytes(self):
@@ -126,7 +128,9 @@ class ControlBlock:
 
         # get merkle path from scripts, if any
         if self.scripts:
-            merkle_path = self.get_merkle_path()
+            #merkle_path = self.get_merkle_path()
+            merkle_path = self.scripts # manually constructed path
+            #print('MANUALLY CALCED MERKLE_PATH', merkle_path.hex())
         
         # TODO only single alternative script path for now
         # calc the PATH with get_merkle_path and use for th
@@ -148,18 +152,37 @@ class ControlBlock:
 
 
 def get_tag_hashed_merkle_root(scripts):
-    '''Tag hashed merkle root of all scripts - tweaks tapleafs and branches as
-    needed.
+    '''Tag hashed merkle root of all scripts - tag hashes tapleafs and branches
+    as needed.
 
     scripts is a list of list of Scripts describing the merkle tree of scripts to commit
     '''
-    if not scripts:
-        # TODO raise error
-        return b''
-    # single script only
-    if len(scripts) == 1 and len(scripts[0]) == 1:
-        return tapleaf_tagged_hash(scripts[0][0])
+    # TODO raise errors
 
+    # empty scripts or empty list
+    if not scripts:
+        return b''
+    #print('1')
+    # if not list return tapleaf_hash of Script
+    if not isinstance(scripts, list):
+        #print('2')
+        return tapleaf_tagged_hash(scripts)
+    # list
+    else:
+        if len(scripts) == 0:
+            #print('3')
+            return b''
+        elif len(scripts) == 1:
+            #print('4')
+            return get_tag_hashed_merkle_root(scripts[0])
+        elif len(scripts) == 2:
+            #print('5')
+            left = get_tag_hashed_merkle_root(scripts[0])
+            right = get_tag_hashed_merkle_root(scripts[1])
+            return tapbranch_tagged_hash(left, right)
+        else:
+            # TODO throw exception
+            exit('List cannot have more than 2 branches.')
 
 
 def to_satoshis(num):
@@ -306,17 +329,17 @@ def calculate_tweak(pubkey: object, scripts: object) -> int:
     Calculates the tweak to apply to the public and private key when required.
     '''
 
-    # TODO use script [ [], [ [],[] ], ...  ] to get all scripts to construct the m.tree
+    # TODO use script [ [A, B], C ] to get all scripts to construct the m.tree
     # and calc the root that is used as tweak...
     # only the x coordinate is tagged_hash'ed
     key_x = pubkey.to_bytes()[:32]
-
 
     if not scripts:
         tweak = tagged_hash(key_x, 'TapTweak')
     else:
         # if also script spending this should include the tapleaf of the versioned script!
         merkle_root = get_tag_hashed_merkle_root(scripts)
+        #print('CALC MERKLE_ROOT for TWEAK', merkle_root.hex())
         tweak = tagged_hash(key_x + merkle_root, 'TapTweak')
         #script_th_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script.to_bytes())
         #th_script = tagged_hash(script_th_part, 'TapLeaf').digest()
@@ -336,11 +359,11 @@ def tapleaf_tagged_hash(script: object) -> bytes:
 
 def tapbranch_tagged_hash(thashed_a: bytes, thashed_b: bytes) -> bytes:
     '''Calculates the tagged hash for a tapbranch'''
-    # order - smaller left sidesort
+    # order - smaller left side
     if thashed_a < thashed_b:
-        return tagged_hash(thashed_a + thashed_b, 'TapLeaf').digest()
+        return tagged_hash(thashed_a + thashed_b, 'TapBranch').digest()
     else:
-        return tagged_hash(thashed_b + thashed_a, 'TapLeaf').digest()
+        return tagged_hash(thashed_b + thashed_a, 'TapBranch').digest()
 
 
 def negate_privkey(key: bytes) -> str:
