@@ -65,8 +65,6 @@ class PrivateKey:
         creates the transaction's digest and signs it for a particular index
         input script_pub_keys and amounts and returns the signature. By default
         it tweaks the keys but it can be disabled for tapleaf scripts.
-    get_negated_key()
-        returns the negated private key as a hexadecimal string
     get_taproot_tweak()
         returns the tweaked private key as a hexadecimal string (classmethod)
     get_public_key()
@@ -391,17 +389,14 @@ class PrivateKey:
         byte_key = None
 
         if tweak:
-            # negate the private key if necessary and then tweak it before signing 
-            #negated_key = self.get_negated_key()
-            #tweaked_key = PrivateKey.get_taproot_tweak(self.key.to_string().hex(), negated_key, script)
-            #byte_key = bytes.fromhex(tweaked_key)
             tweak_int = calculate_tweak(self.get_public_key(), scripts)
             byte_key = tweak_taproot_privkey(self.key.to_string(), tweak_int)
         else:
-            # TODO is that required, schnorr lib seems to handle that
-            # negate the private key, if necessary
-            negated_key = self.get_negated_key()
-            byte_key = bytes.fromhex(negated_key)
+            # negating the private key is not necessary since the schnorr lib
+            # is handling it
+            #negated_key = self.get_negated_key()
+            #byte_key = bytes.fromhex(negated_key)
+            byte_key = self.key.to_string()
 
         # deterministic signing nonce is random and RFC6979-like
         # it is the hash of the tx_digest and private key
@@ -421,18 +416,18 @@ class PrivateKey:
         return sig_hex 
 
 
-    def get_negated_key(self):
-        """Checks if corresponding public is has odd y and negates"""
-
-        key_secret_exponent = hex_str_to_int(self.key.to_string().hex())
-
-        pubkey = self.get_public_key()
-
-        if not pubkey.is_y_even():
-            # negate private key
-            key_secret_exponent = EcdsaParams._order - key_secret_exponent
-
-        return hex(key_secret_exponent)[2:]
+#    def get_negated_key(self):
+#        """Checks if corresponding public is has odd y and negates"""
+#
+#        key_secret_exponent = hex_str_to_int(self.key.to_string().hex())
+#
+#        pubkey = self.get_public_key()
+#
+#        if not pubkey.is_y_even():
+#            # negate private key
+#            key_secret_exponent = EcdsaParams._order - key_secret_exponent
+#
+#        return hex(key_secret_exponent)[2:]
 
 
 #    @classmethod
@@ -498,8 +493,6 @@ class PublicKey:
         returns the x coordinate only as hex string after tweaking (needed for taproot)
     is_y_even()
         returns true if y coordinate is even
-    get_negated_key()
-        returns the negated public key as a hexadecimal string
     get_taproot_tweak()
         returns the tweaked public key as a hexadecimal string (classmethod)
     to_bytes()
@@ -613,12 +606,6 @@ class PublicKey:
         """Returns the x coordinate of the public key as hex string."""
 
         key_hex = self.key.to_string().hex()
-
-        # x does not change by negation, thus only for displaying purposes 
-        # we don't need to negate, even for taproot
-        #if not self.is_y_even():
-        #    key_hex = self.get_negated_key()
-
         return key_hex[:64]
 
 
@@ -632,24 +619,13 @@ class PublicKey:
             a list of list of Scripts describing the merkle tree of scripts to commit
         """
 
-        #internal_pubkey_hex = self.key.to_string().hex()
-        #negated_key = key_hex if self.is_y_even() else self.get_negated_key()
-
-        # negated key is sent - y is required internally for ec arithmetics
-        #tweaked_key = PublicKey.get_taproot_tweak(key_hex, negated_key, script)
-
-        # public key in x form only
-        # negate again, if necessary !?!
-        #tweaked_pubkey = PublicKey('04' + tweaked_key)
-        #negated_tweaked_key = tweaked_key if tweaked_pubkey.is_y_even() else tweaked_pubkey.get_negated_key()
-        #return negated_tweaked_key[:64]
-        #return tweaked_key[:64]
+        # Tweak public key (BIP340)
+        # https://bitcoin.stackexchange.com/a/116391/31844
         tweak_int = calculate_tweak(self, scripts)
 
-        #print('PUBKEY TWEAK', tweak_int)
         # keep x-only coordinate
         pubkey = tweak_taproot_pubkey(self.key.to_string(), tweak_int)[:32]
-        #pubkey = tweak_taproot_pubkey(self.key.to_string(), script.to_bytes(), 'TapTweak')[:64]
+        
         return pubkey.hex()
 
 
@@ -663,21 +639,21 @@ class PublicKey:
         return y % 2 == 0
 
 
-    def get_negated_key(self):
-        """Returns a negated hexadecimal string of the public key or just the key if already a key with even y (i.e. key that starts with 02 pre-taproot)."""
-        
-        key_hex = self.key.to_string().hex()
-
-        x = hex_str_to_int( key_hex[:64] )
-        y = hex_str_to_int( key_hex[64:] )
-
-        # if y is odd then negate y (effectively P) to make it even and equivalent
-        # to a 02 compressed pk
-        if y % 2 != 0:
-            y = EcdsaParams._field - y
-
-        #print(f'{x:064x}{y:064x}')
-        return f'{x:064x}{y:064x}'
+#    def get_negated_key(self):
+#        """Returns a negated hexadecimal string of the public key or just the key if already a key with even y (i.e. key that starts with 02 pre-taproot)."""
+#        
+#        key_hex = self.key.to_string().hex()
+#
+#        x = hex_str_to_int( key_hex[:64] )
+#        y = hex_str_to_int( key_hex[64:] )
+#
+#        # if y is odd then negate y (effectively P) to make it even and equivalent
+#        # to a 02 compressed pk
+#        if y % 2 != 0:
+#            y = EcdsaParams._field - y
+#
+#        #print(f'{x:064x}{y:064x}')
+#        return f'{x:064x}{y:064x}'
 
 
 #    @classmethod
@@ -862,10 +838,7 @@ class PublicKey:
         tree
         """
 
-        # Tweak public key (BIP340)
-        # https://bitcoin.stackexchange.com/a/116391/31844
-        # note that taproot's even y is checked/negated during tweaking
-        pubkey = self.to_taproot_hex(scripts) #tweak_taproot_pubkey(self.key.to_string(), script, 'TapTweak')[:64]
+        pubkey = self.to_taproot_hex(scripts)
 
         return P2trAddress(witness_program=pubkey)
 
@@ -1364,65 +1337,6 @@ class P2trAddress(SegwitAddress):
     def get_type(self):
         """Returns the type of address"""
         return self.version
-
-
-# TODO clean up / handled from utils module now
-#def tweak_taproot_pubkey2(internal_pubkey: bytes, script: bytes) -> bytes:
-#    '''
-#    Tweaks the public key with the specified tweak. Required to create the
-#    taproot public key from the internal key.
-#    '''
-#
-#    internal_pubkey_obj = bitcoinutils.keys.PublicKey( '04' + internal_pubkey.hex() )
-#
-#    # calculate tweak
-#    tweak_int = calculate_tweak( internal_pubkey_obj, script )
-#
-#    # convert public key bytes to tuple Point
-#    x = hex_str_to_int( internal_pubkey[:32].hex() )
-#    y = hex_str_to_int( internal_pubkey[32:].hex() )
-#
-#    # if y is odd then negate y (effectively P) to make it even and equivalent
-#    # to a 02 compressed pk
-#    if y % 2 != 0:
-#        y = EcdsaParams._field - y 
-#    P = (x, y)
-#
-#    # calculated tweaked public key Q = P + th*G
-#    Q = point_add(P, (point_mul(G, tweak_int)))
-#    
-#    # negate Q as well before returning ?!?
-#    if Q[1] % 2 != 0:
-#        Q = ( Q[0], EcdsaParams._field - Q[1] )
-#
-#    return bytes.fromhex( f'{Q[0]:064x}{Q[1]:064x}' )
-
-
-# TODO clean up / handled from utils module now
-#def tweak_taproot_privkey2(privkey: bytes, script: bytes) -> bytes:
-#    '''
-#    Tweaks the private key before signing with it. Check if public key's y
-#    is even and negate the private key before tweaking it.
-#    '''
-#
-#    # get the public key from BIP-340 schnorr ref impl.
-#    internal_privkey = bitcoinutils.keys.PrivateKey.from_bytes(privkey)
-#    internal_pubkey = internal_privkey.get_public_key()
-#
-#    tweak_int = calculate_tweak( internal_pubkey, script )
-#
-#    # negate private key if necessary
-#    if internal_pubkey.is_y_even():
-#        negated_key = internal_privkey.to_bytes().hex()
-#    else:
-#        negated_key = internal_privkey.get_negated_key()
-#
-#    # The tweaked private key can be computed by d + hash(P || S)
-#    # where d is the normal private key, P is the normal public key
-#    # and S is the alt script, if any (empty script, if none?? TODO)
-#    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak_int) % EcdsaParams._order
-#
-#    return bytes.fromhex( f'{tweaked_privkey_int:064x}' )
 
 
 def main():

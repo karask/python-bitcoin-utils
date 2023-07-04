@@ -87,60 +87,19 @@ class ControlBlock:
         self.scripts = scripts
 
 
-    # TODO delete.. another (external) function is used
-    # tag hashed merkle root of all scripts is used to tweak the keys
-    #def get_merkle_root(self):
-    #    if not self.scripts:
-    #        # TODO raise error
-    #        return b''
-    #    # single script only
-    #    if len(self.scripts) == 1 and len(self.scripts[0]) == 1:
-    #        return tapleaf_tagged_hash(self.scripts[0][0])
-
-    # TODO delete? will get path from code that spends it...
-    # merkle path is used get all the intermediate hashes to get to the 
-    # merkle root from the script_to_spend script
-    #def get_merkle_path(self):
-    #    if not self.scripts:
-    #        return b''
-    #    else:
-    #        # will use script to get to the script of which the path we need...
-    #        pass
-
-
     def to_bytes(self):
-        # leaf version is fixed but we check if the public key required negation
-        # if negated (y is odd) add one to the leaf_version
-        #if int(self.pubkey.to_hex()[-2:], 16) % 2 == 0:
-        #    leaf_version = bytes([LEAF_VERSION_TAPSCRIPT])
-        #else:
-        #    leaf_version = bytes([LEAF_VERSION_TAPSCRIPT + 1])
         leaf_version = bytes([LEAF_VERSION_TAPSCRIPT])
 
         # x-only public key is required
         pub_key = bytes.fromhex( self.pubkey.to_x_only_hex() )
 
-        # if a single alt script no merkle path is required
-        #if len(self.scripts) == 1:
-        #    return leaf_version + pub_key 
-
         merkle_path = b''
 
         # get merkle path from scripts, if any
+        # TODO currently the manually constructed merkle path is passed
         if self.scripts:
-            #merkle_path = self.get_merkle_path()
             merkle_path = self.scripts # manually constructed path
-            #print('MANUALLY CALCED MERKLE_PATH', merkle_path.hex())
         
-        # TODO only single alternative script path for now
-        # calc the PATH with get_merkle_path and use for th
-        # script_to_spend!!
-#        script_bytes = self.scripts[0].to_bytes()
-
-        # tag hash the script
-#        th = tagged_hash(bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script_bytes), 
-#                         "TapLeaf").digest()
-
         return leaf_version + pub_key + merkle_path
         #return leaf_version + pub_key + th
 
@@ -320,10 +279,6 @@ def tagged_hash(data: bytes, tag: str) -> bytes:
     return hashlib.sha256( tag_digest + tag_digest + data )
 
 
-# TODO take scripts and construct merkle root to tweak
-# use controlblock obj to do it...
-# rename script to scripts and handle with control block obj, then get root and tweak
-# remember that leafs need TapLeaf tag, branches TapBranch tag, etc.
 def calculate_tweak(pubkey: object, scripts: object) -> int:
     '''
     Calculates the tweak to apply to the public and private key when required.
@@ -398,10 +353,6 @@ def negate_privkey(key: bytes) -> str:
 #    return f'{x:064x}{y:064x}'
 
 
-########################################################
-# Split in several methods as part of PublicKey object #
-########################################################
-# TODO takes scripts !?
 def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
     '''
     Tweaks the public key with the specified tweak. Required to create the
@@ -433,10 +384,6 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
     return bytes.fromhex( f'{Q[0]:064x}{Q[1]:064x}' )
 
 
-#########################################################
-# Split in several methods as part of PrivateKey object #
-#########################################################
-# TODO takes scripts !?
 def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     '''
     Tweaks the private key before signing with it. Check if public key's y
