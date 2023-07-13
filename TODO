@@ -42,6 +42,7 @@ DOC-related
 - segwit in documentation
 
 tests-related
+- move data inside tests - self-contained tests
 - improve test structure - look at python-bitcointx for example
 
 WINDOWS

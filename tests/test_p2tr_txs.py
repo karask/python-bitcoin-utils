@@ -129,6 +129,40 @@ class TestCreateP2trTransaction(unittest.TestCase):
         self.assertEqual(tx.get_vsize(), self.sig_65_bytes_size)
 
 
+class TestCreateP2trWithSingleTapScript(unittest.TestCase):
+
+    def setUp(self):
+        setup('testnet')
+        
+        # values for testing taproot unsigned/signed txs with privkeys that 
+        # correspond to pubkey starting with 03 and also has an alternative
+        # script spending path
+        self.from_priv = PrivateKey("cNxX8M7XU8VNa5ofd8yk1eiZxaxNrQQyb7xNpwAmsrzEhcVwtCjs")
+        self.from_pub = self.from_priv.get_public_key()
+        self.txin = TxInput('29afd65f1aeeab4e4d655b148776fe0097acc617492b0c3f3950b6a95be20f39', 0)
+        self.raw_tx = '02000000000101390fe25ba9b650393f0c2b4917c6ac9700fe7687145b654d4eabee1a5fd6af290000000000ffffffff01ac0d0000000000002251207a712853f4301a463734e7b8bf406f40ba60d484e9f6c7e9aa222d9e1d5fd50d00000000'
+
+        self.signed_tx = '02000000000101390fe25ba9b650393f0c2b4917c6ac9700fe7687145b654d4eabee1a5fd6af290000000000ffffffff01ac0d0000000000002251207a712853f4301a463734e7b8bf406f40ba60d484e9f6c7e9aa222d9e1d5fd50d01402f5348df592f3cc54f17ab4d9a3e41560cdd52475271a1e7e8196ca87d56f0b7aff50d095d8ebc80240018a98c474b871b562078f97d185093a753efeefe2faa00000000'
+
+        self.to_priv = PrivateKey('cT33CWKwcV8afBs5NYzeSzeSoGETtAB8izjDjMEuGqyqPoF7fbQR')
+        self.to_pub = self.to_priv.get_public_key()
+
+        self.from_amount = to_satoshis(0.00004)
+        self.all_amounts = [ self.from_amount ]
+
+        self.privkey_tr_script = PrivateKey('cSW2kQbqC9zkqagw8oTYKFTozKuZ214zd6CMTDs4V32cMfH3dgKa')
+        self.pubkey_tr_script = self.privkey_tr_script.get_public_key()
+        self.tr_script_p2pk = Script([self.pubkey_tr_script.to_x_only_hex(), 'OP_CHECKSIG'])
+
+        self.to_taproot_script_address = 'tb1p0fcjs5l5xqdyvde5u7ut7sr0gzaxp4yya8mv06d2ygkeu82l65xs6k4uqr'
+        
+        
+
+    # create address with single script spending path
+    def test_address_with_script_path(self):
+        to_address = self.to_pub.get_taproot_address([ self.tr_script_p2pk ])
+        self.assertEqual(to_address.to_string(), self.to_taproot_script_address)
+
 
 
 if __name__ == '__main__':

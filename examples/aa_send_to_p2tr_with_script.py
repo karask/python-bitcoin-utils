@@ -9,13 +9,11 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
-from binascii import hexlify
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
 from bitcoinutils.script import Script
-from bitcoinutils.constants import SIGHASH_SINGLE ,SIGHASH_ANYONECANPAY
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
-from bitcoinutils.keys import P2pkhAddress, PrivateKey
+from bitcoinutils.keys import PrivateKey
 from bitcoinutils.hdwallet import HDWallet
 
 def main():
@@ -33,13 +31,13 @@ def main():
     xprivkey = "tprv8ZgxMBicQKsPdQR9RuHpGGxSnNq8Jr3X4WnT6Nf2eq7FajuXyBep5KWYpYEixxx5XdTm1Ntpe84f3cVcF7mZZ7mPkntaFXLGJD2tS7YJkWU"
     path = "m/86'/1'/0'/0/6"
     hdw = HDWallet(xprivkey, path)
-    priv1 = hdw.get_private_key()
+    internal_priv1 = hdw.get_private_key()
     print('From Private key:', priv1.to_wif())
 
-    pub1 = priv1.get_public_key()
-    print('From Public key:', pub1.to_hex())
+    internal_pub1 = internal_priv1.get_public_key()
+    print('From Public key:', internal_pub1.to_hex())
 
-    fromAddress1 = pub1.get_taproot_address()
+    fromAddress1 = internal_pub1.get_taproot_address()
     print('From Taproot address:', fromAddress1.to_string())
 
     # UTXO of fromAddress
@@ -69,13 +67,7 @@ def main():
     pub2 = priv2.get_public_key()
     print('To Public key', pub2.to_hex())
 
-
     # taproot script is a simple P2PK with the following keys
-
-    # pubkey starts with 03
-    #privkey_tr_script = PrivateKey('cSW2kQbqC9zkqagw8oTYKFTozKuZ214zd6CMTDs4V32cMfH3dgKa')
-    #pubkey_tr_script = privkey_tr_script.get_public_key()
-    #tr_script_p2pk = Script([pubkey_tr_script.to_x_only_hex(), 'OP_CHECKSIG'])
 
     # pubkey starts with 02
     privkey_tr_script = PrivateKey('cQwzrJyTNWbEwhPEmQ3Qoo4jSfHdHEtdbL4kNBgHUKhirgzcQw7G')
@@ -102,7 +94,6 @@ def main():
     # to create the digest message to sign in taproot we need to
     # pass all the utxos' scriptPubKeys and their amounts
     sig1 = priv1.sign_taproot_input(tx, 0, utxos_scriptPubkeys, amounts)
-    #print(sig)
 
     tx.witnesses.append( TxWitnessInput([ sig1 ]) )
 
@@ -114,6 +105,7 @@ def main():
 
     print("\nSize:", tx.get_size())
     print("\nvSize:", tx.get_vsize())
+
 
 if __name__ == "__main__":
     main()
