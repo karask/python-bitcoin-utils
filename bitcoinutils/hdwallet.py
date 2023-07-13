@@ -47,7 +47,7 @@ class HDWallet:
     def from_mnemonic(self, mnemonic: str):
         """Set a mnemonic code for the HD Wallet"""
 
-        self.hdw.from_xprivate_key(mnemonic=mnemonic)
+        self.hdw.from_mnemonic(mnemonic=mnemonic)
 
 
     def from_xprivate_key(self, xprivate_key: str, path: str):
