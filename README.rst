@@ -3,7 +3,7 @@ python-bitcoin-utils
 
 This is a bitcoin library that provides tools/utilities to interact with the Bitcoin network. One of the primary goals of the library is to explain the low-level details of Bitcoin. The code is easy to read and properly documented explaining in detail all the thorny aspects of the implementation. It is a low-level library which assumes some high-level understanding of how Bitcoin works. In the future this might change.
 
-This is an early version of the library (v0.6.2) and currently, it supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot default key path, with all SIGHASH types. All script op codes are included. Timelocks and non-standard transactions are supported. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
+This is an early version of the library (v0.6.2) and currently, it supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot, with all SIGHASH types. All script op codes are included. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
 
 The API documentation can be build with Sphinx but is also available as a PDF for convenience. One can currently use the library for experimenting and learning the inner workings of Bitcoin. It is not meant for production yet and parts of the API might be updated with new versions.
 
@@ -70,5 +70,26 @@ Spend from a taproot address
 
 Spend a multi input that contains both taproot and legacy UTXOs
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_multi_input_p2tr_and_p2pkh.py - three inputs (two taproot and one legacy), single legacy output.
+
+Send to taproot address that contains a single script path spend
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_single_script.py - single input, single output (key path and single script path).
+
+Spend taproot from key path (has single alternative script path spend)
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_single_script_by_key_path.py - single input, single output, spend key path.
+
+Spend taproot from script path (has single alternative script path spend)
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_single_script_by_script_path.py - single input, single output, spend script path.
+
+Send to taproot address that contains two scripts path spends
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_two_scripts.py - single input, single output (key path and two script paths - A and B).
+
+Spend taproot from script path (has two alternative script path spend - A and B)
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_two_scripts_by_script_path.py - single input, single output, spend script path A.
+
+Send to taproot address that contains three scripts path spends
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_three_scripts.py - single input, single output (key path and three script paths - A, B and C).
+
+Spend taproot from script path (has three alternative script path spends - A, B and C)
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_three_scripts_by_script_path.py - single input, single output, spend script path B.
 
 Please explore the codebase or the API documentation (BitcoinUtilities.pdf) for supported functionality and other options.

@@ -1,5 +1,6 @@
 
 PRIORITIES
+- check taproot methods params and update sphinx comments/docs -- clean commented code?!
 - add test for from_mnemonic for hdwallet
 - load public key with x-only pubkey, ensure it works for several...
 - create Address object that covers ALL addresses and can convert from one to another!

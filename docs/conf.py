@@ -50,7 +50,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Bitcoin Utilities'
-copyright = u'2022, Konstantinos Karasavvas'
+copyright = u'2023, Konstantinos Karasavvas'
 author = u'Konstantinos Karasavvas'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -206,7 +206,6 @@ html_static_path = ['_static']
 htmlhelp_basename = 'BitcoinUtilitiesdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
-
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
 #'papersize': 'letterpaper',
