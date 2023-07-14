@@ -15,7 +15,7 @@ import struct
 from binascii import unhexlify, hexlify
 
 from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
-                    DEFAULT_TX_VERSION, NEGATIVE_SATOSHI, \
+                    DEFAULT_TX_VERSION, NEGATIVE_SATOSHI, LEAF_VERSION_TAPSCRIPT, \
                     EMPTY_TX_SEQUENCE, SIGHASH_ALL, SIGHASH_NONE, \
                     SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, TAPROOT_SIGHASH_ALL, \
                     ABSOLUTE_TIMELOCK_SEQUENCE, REPLACE_BY_FEE_SEQUENCE, \
@@ -767,14 +767,15 @@ class Transaction:
 
     # TODO Update doc with TAPROOT_SIGHASH_ALL
     # clean prints after finishing other sighashes
-    def get_transaction_taproot_digest(self, txin_index, script_pubkeys, amounts, ext_flag=0, sighash=TAPROOT_SIGHASH_ALL):
+    def get_transaction_taproot_digest(self, txin_index, script_pubkeys, amounts, ext_flag=0, script=Script([]), leaf_ver=LEAF_VERSION_TAPSCRIPT, sighash=TAPROOT_SIGHASH_ALL):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
            https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
            Also consult Bitcoin Core code at: https://github.com/bitcoin/bitcoin/blob/29c36f070618ea5148cd4b2da3732ee4d37af66b/src/script/interpreter.cpp#L1478
-           And: https://github.com/bitcoinops/taproot-workshop/blob/1d90851b8301fa4ac7469b9027f5ab543a67f269/test_framework/script.py#L730   (note, fields' order is old/wrong in this one)
+           And: https://github.com/bitcoin/bitcoin/blob/b5f33ac1f82aea290b4653af36ac2ad1bf1cce7b/test/functional/test_framework/script.py
 
                 |  SIGHASH types (see constants.py):
-                |      SIGHASH_ALL - signs all inputs and outputs (default)
+                |      TAPROOT_SIGHASH_ALL - signs all inputs and outputs (default)
+                |      SIGHASH_ALL - signs all inputs and outputs
                 |      SIGHASH_NONE - signs all of the inputs
                 |      SIGHASH_SINGLE - signs all inputs but only txin_index output
                 |      SIGHASH_ANYONECANPAY (only combined with one of the above)
@@ -786,14 +787,16 @@ class Transaction:
                 ----------
                 txin_index : int
                     The index of the input that we wish to sign
-                script : list (string)
-                    The scriptCode (template) that corresponds to the segwit
-                    transaction output type that we want to spend
-                amount : int/float/Decimal
-                    The amount of the UTXO to spend is included in the
-                    signature for segwit (in satoshis)
+                script_pubkeys : list (string)
+                    The scriptPubkeys that correspond to all the inputs/UTXOs
+                amounts : int/float/Decimal
+                    The amounts that correspond to all the inputs/UTXOs
                 ext_flag : int
                     Extension mechanism, default is 0; 1 is for script spending (BIP342)
+                script : Script object
+                    The script that we are spending (ext_flag=1)
+                leaf_ver : int
+                    The script version, LEAF_VERSION_TAPSCRIPT for the default tapscript
                 sighash : int
                     The type of the signature hash to be created
         """
@@ -874,6 +877,7 @@ class Transaction:
 
         # Data about this input
         spend_type = ext_flag * 2 + 0      # 0 for hard-coded - no annex_present
+
         tx_for_signing += bytes([spend_type])
 
         if anyone_can_pay:
@@ -895,6 +899,7 @@ class Transaction:
             tx_for_signing += txin_index.to_bytes(4, 'little')
 
         # TODO if annex is present it should be added here
+        # length of annex should use prepend_varint (compact_size)
 
         # Data about this output
         if sighash_single:
@@ -906,7 +911,21 @@ class Transaction:
                               script_bytes
             tx_for_signing += hashlib.sha256(hash_output).digest()
 
-        # tagged hash the digest and return
+        if ext_flag == 1:    # script spending path (Signature Message Extension BIP-342)
+            # committing the tapleaf hash - makes it safe to reuse keys for separate
+            # scripts in the same output
+            leaf_ver = LEAF_VERSION_TAPSCRIPT   # pass as a parameter if a new version comes
+            tx_for_signing += tagged_hash(bytes([leaf_ver]) + prepend_varint(script.to_bytes()),
+                                          "TapLeaf").digest()
+
+            # key version - type of public key used for this signature, currently only 0
+            tx_for_signing += bytes([0])
+
+            # code separator position - records position of when the last OP_CODESEPARATOR 
+            # was executed; not supported for now, we always use 0xffffffff
+            tx_for_signing += b'\xff\xff\xff\xff'
+
+        # tag hash the digest and return
         return tagged_hash(tx_for_signing, "TapSighash").digest()
 
 

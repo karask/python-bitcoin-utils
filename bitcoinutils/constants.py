@@ -60,6 +60,7 @@ ABSOLUTE_TIMELOCK_SEQUENCE = b'\xfe\xff\xff\xff'
 
 REPLACE_BY_FEE_SEQUENCE = b'\x01\x00\x00\x00'
 
+LEAF_VERSION_TAPSCRIPT = 0xc0
 
 # TX version 2 was introduced in BIP-68 with relative locktime -- tx v1
 # does not support relative locktime

@@ -1,10 +1,9 @@
 
-
 PRIORITIES
-- single alt spending... pass script.to_bytes in get_taproot_address() ... send some funds and then try to spend it
+- add test for from_mnemonic for hdwallet
 - load public key with x-only pubkey, ensure it works for several...
-- add single alt spending
-- add tree alt spendin
+- create Address object that covers ALL addresses and can convert from one to another!
+- clean .from_raw in the transaction object!?!
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -19,14 +18,19 @@ SEGWIT-related
   . test from_raw more
   . crean up from_raw code in general
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
+- ControlBlock does not handle sign bit for batch validation (tweak_public_key needs to return a second return value - negated)
+- ControlBlock does not automatically construct the merkle path (expects it as input)
+
 
 CLEAN UP 
 -- utils' to_bytes used in from_raw -- clean/reuse appropriate one
    . hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
+   . b'bbbb'.hex() instead of hexlify!! (remove all and binascii)
+   . create h_to_i, i_to_h, h_to_b, b_to_h, b_to_i, i_to_b ?!
 -- rename VarInt to CompactSize
 -- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
 -- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
--- sign_taproot_input takes tr_script as bytes... maybe better to pass the object - similar to the other params - and call to_bytes() internally
+-- USE type hints everywhere, make aliases to support objects, etc.
 
 IMPROVE
 - test proxy object extensively, students reports it fails sometimes...
@@ -37,6 +41,7 @@ DOC-related
 - segwit in documentation
 
 tests-related
+- move data inside tests - self-contained tests
 - improve test structure - look at python-bitcointx for example
 
 WINDOWS
@@ -48,6 +53,8 @@ OTHERLIBS-related
   . https://github.com/jgarzik/python-bitcoinrpc/pull/50
   . but not in a lib release yet
   . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
+- create HD wallet implementation - very simple - similar to the hdwallet lib that I wrap
+- create block object and allow .from_block(..) instantiation
 
 OTHER
 - reminder: update copyright in all files 2018-2022?
