@@ -14,7 +14,7 @@ import unittest
 
 from context import bitcoinutils
 from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis
+from bitcoinutils.utils import to_satoshis, ControlBlock, tapleaf_tagged_hash
 from bitcoinutils.keys import PrivateKey, P2pkhAddress
 from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_SINGLE, SIGHASH_NONE, SIGHASH_ANYONECANPAY
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
@@ -134,34 +134,154 @@ class TestCreateP2trWithSingleTapScript(unittest.TestCase):
     def setUp(self):
         setup('testnet')
         
-        # values for testing taproot unsigned/signed txs with privkeys that 
-        # correspond to pubkey starting with 03 and also has an alternative
-        # script spending path
-        self.from_priv = PrivateKey("cNxX8M7XU8VNa5ofd8yk1eiZxaxNrQQyb7xNpwAmsrzEhcVwtCjs")
-        self.from_pub = self.from_priv.get_public_key()
-        self.txin = TxInput('29afd65f1aeeab4e4d655b148776fe0097acc617492b0c3f3950b6a95be20f39', 0)
-        self.raw_tx = '02000000000101390fe25ba9b650393f0c2b4917c6ac9700fe7687145b654d4eabee1a5fd6af290000000000ffffffff01ac0d0000000000002251207a712853f4301a463734e7b8bf406f40ba60d484e9f6c7e9aa222d9e1d5fd50d00000000'
+        # 1-create address with key path and single script spending
+        self.to_priv1 = PrivateKey('cT33CWKwcV8afBs5NYzeSzeSoGETtAB8izjDjMEuGqyqPoF7fbQR')
+        self.to_pub1 = self.to_priv1.get_public_key()
 
-        self.signed_tx = '02000000000101390fe25ba9b650393f0c2b4917c6ac9700fe7687145b654d4eabee1a5fd6af290000000000ffffffff01ac0d0000000000002251207a712853f4301a463734e7b8bf406f40ba60d484e9f6c7e9aa222d9e1d5fd50d01402f5348df592f3cc54f17ab4d9a3e41560cdd52475271a1e7e8196ca87d56f0b7aff50d095d8ebc80240018a98c474b871b562078f97d185093a753efeefe2faa00000000'
 
-        self.to_priv = PrivateKey('cT33CWKwcV8afBs5NYzeSzeSoGETtAB8izjDjMEuGqyqPoF7fbQR')
-        self.to_pub = self.to_priv.get_public_key()
+        self.privkey_tr_script1 = PrivateKey('cSW2kQbqC9zkqagw8oTYKFTozKuZ214zd6CMTDs4V32cMfH3dgKa')
+        self.pubkey_tr_script1 = self.privkey_tr_script1.get_public_key()
+        self.tr_script_p2pk1 = Script([self.pubkey_tr_script1.to_x_only_hex(), 'OP_CHECKSIG'])
 
-        self.from_amount = to_satoshis(0.00004)
-        self.all_amounts = [ self.from_amount ]
+        self.to_taproot_script_address1 = 'tb1p0fcjs5l5xqdyvde5u7ut7sr0gzaxp4yya8mv06d2ygkeu82l65xs6k4uqr'
 
-        self.privkey_tr_script = PrivateKey('cSW2kQbqC9zkqagw8oTYKFTozKuZ214zd6CMTDs4V32cMfH3dgKa')
-        self.pubkey_tr_script = self.privkey_tr_script.get_public_key()
-        self.tr_script_p2pk = Script([self.pubkey_tr_script.to_x_only_hex(), 'OP_CHECKSIG'])
-
-        self.to_taproot_script_address = 'tb1p0fcjs5l5xqdyvde5u7ut7sr0gzaxp4yya8mv06d2ygkeu82l65xs6k4uqr'
         
-        
+        # 2-spend taproot from key path (has single tapleaf script for spending)
+        self.from_priv2 = PrivateKey("cT33CWKwcV8afBs5NYzeSzeSoGETtAB8izjDjMEuGqyqPoF7fbQR")
+        self.from_pub2 = self.from_priv2.get_public_key()
+        self.from_address2 = self.from_pub2.get_taproot_address([ self.tr_script_p2pk1 ])
+        self.tx_in2 = TxInput('3d4c9d73c4c65772e645ff26493590ae4913d9c37125b72398222a553b73fa66', 0)
 
-    # create address with single script spending path
+        self.to_priv2 = PrivateKey("cNxX8M7XU8VNa5ofd8yk1eiZxaxNrQQyb7xNpwAmsrzEhcVwtCjs")
+        self.to_pub2 = self.to_priv2.get_public_key()
+        self.to_address2 = self.to_pub2.get_taproot_address()
+        self.tx_out2 = TxOutput(to_satoshis(0.00003), self.to_address2.to_script_pub_key())
+
+        self.signed_tx2 = '0200000000010166fa733b552a229823b72571c3d91349ae90354926ff45e67257c6c4739d4c3d0000000000ffffffff01b80b000000000000225120d4213cd57207f22a9e905302007b99b84491534729bd5f4065bdcb42ed10fcd50140f1776ddef90a87b646a45ad4821b8dd33e01c5036cbe071a2e1e609ae0c0963685cb8749001944dbe686662dd7c95178c85c4f59c685b646ab27e34df766b7b100000000'
+
+        self.from_amount2 = to_satoshis(0.000035)
+        self.all_amounts2 = [ self.from_amount2 ]
+       
+        self.scriptPubkey2 = self.from_address2.to_script_pub_key()
+        self.all_utxos_scriptPubkeys2 = [ self.scriptPubkey2 ]
+        
+        # 3-same as 2 but now spend from tapleaf script
+        self.signed_tx3 = '0200000000010166fa733b552a229823b72571c3d91349ae90354926ff45e67257c6c4739d4c3d0000000000ffffffff01b80b000000000000225120d4213cd57207f22a9e905302007b99b84491534729bd5f4065bdcb42ed10fcd50340bf0a391574b56651923abdb256731059008a08b5a3406cd81ce10ef5e7f936c6b9f7915ec1054e2a480e4552fa177aed868dc8b28c6263476871b21584690ef8222013f523102815e9fbbe132ffb8329b0fef5a9e4836d216dce1824633287b0abc6ac21c01036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900bf401ec09c900000000'
+
+
+    # 1-create address with single script spending path
     def test_address_with_script_path(self):
-        to_address = self.to_pub.get_taproot_address([ self.tr_script_p2pk ])
-        self.assertEqual(to_address.to_string(), self.to_taproot_script_address)
+        to_address = self.to_pub1.get_taproot_address([ self.tr_script_p2pk1 ])
+        self.assertEqual(to_address.to_string(), self.to_taproot_script_address1)
+
+    # 2-spend taproot from key path (has single tapleaf script for spending)
+    def test_spend_key_path2(self):
+        tx = Transaction([self.tx_in2], [self.tx_out2], has_segwit=True)
+        sig = self.from_priv2.sign_taproot_input(tx, 0, self.all_utxos_scriptPubkeys2, self.all_amounts2, False, tapleaf_scripts=[ self.tr_script_p2pk1 ])
+        tx.witnesses.append( TxWitnessInput([ sig ]) )
+        self.assertEqual(tx.serialize(), self.signed_tx2)
+
+    # 3-spend taproot from script path (has single tapleaf script for spending)
+    def test_spend_script_path2(self):
+        tx = Transaction([self.tx_in2], [self.tx_out2], has_segwit=True)
+        sig = self.privkey_tr_script1.sign_taproot_input(tx, 0, self.all_utxos_scriptPubkeys2, self.all_amounts2, script_path=True, tapleaf_script=self.tr_script_p2pk1, tapleaf_scripts=[self.tr_script_p2pk1], tweak=False)
+        control_block = ControlBlock(self.from_pub2)
+        tx.witnesses.append( TxWitnessInput([ sig, self.tr_script_p2pk1.to_hex(), control_block.to_hex() ]) )
+        self.assertEqual(tx.serialize(), self.signed_tx3)
+
+
+
+class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
+
+    def setUp(self):
+        setup('testnet')
+        
+        # 1-spend taproot from key path (has two tapleaf script for spending)
+        self.privkey_tr_script_A = PrivateKey('cSW2kQbqC9zkqagw8oTYKFTozKuZ214zd6CMTDs4V32cMfH3dgKa')
+        self.pubkey_tr_script_A = self.privkey_tr_script_A.get_public_key()
+        self.tr_script_p2pk_A = Script([self.pubkey_tr_script_A.to_x_only_hex(), 'OP_CHECKSIG'])
+
+        self.privkey_tr_script_B = PrivateKey('cSv48xapaqy7fPs8VvoSnxNBNA2jpjcuURRqUENu3WVq6Eh4U3JU')
+        self.pubkey_tr_script_B = self.privkey_tr_script_B.get_public_key()
+        self.tr_script_p2pk_B = Script([self.pubkey_tr_script_B.to_x_only_hex(), 'OP_CHECKSIG'])
+
+        self.from_priv = PrivateKey("cT33CWKwcV8afBs5NYzeSzeSoGETtAB8izjDjMEuGqyqPoF7fbQR")
+        self.from_pub = self.from_priv.get_public_key()
+        self.from_address = self.from_pub.get_taproot_address([ self.tr_script_p2pk_A, self.tr_script_p2pk_B ])
+
+        self.tx_in = TxInput('808ec85db7b005f1292cea744b24e9d72ba4695e065e2d968ca17744b5c5c14d', 0)
+
+        self.to_priv = PrivateKey("cNxX8M7XU8VNa5ofd8yk1eiZxaxNrQQyb7xNpwAmsrzEhcVwtCjs")
+        self.to_pub = self.to_priv.get_public_key()
+        self.to_address = self.to_pub.get_taproot_address()
+        self.tx_out = TxOutput(to_satoshis(0.00003), self.to_address.to_script_pub_key())
+
+        self.from_amount = to_satoshis(0.000035)
+        self.all_amounts = [ self.from_amount ]
+       
+        self.scriptPubkey = self.from_address.to_script_pub_key()
+        self.all_utxos_scriptPubkeys = [ self.scriptPubkey ]
+        
+        self.signed_tx = '020000000001014dc1c5b54477a18c962d5e065e69a42bd7e9244b74ea2c29f105b0b75dc88e800000000000ffffffff01b80b000000000000225120d4213cd57207f22a9e905302007b99b84491534729bd5f4065bdcb42ed10fcd50340ab89d20fee5557e57b7cf85840721ef28d68e91fd162b2d520e553b71d604388ea7c4b2fcc4d946d5d3be3c12ef2d129ffb92594bc1f42cdaec8280d0c83ecc2222013f523102815e9fbbe132ffb8329b0fef5a9e4836d216dce1824633287b0abc6ac41c01036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900bf401ec09c9682f0e85d59cb20fd0e4503c035d609f127c786136f276d475e8321ec9e77e6c00000000'
+
+
+    # 1-spend taproot from first script path (A) of two (A,B)
+    def test_spend_script_path_A_from_AB(self):
+        tx = Transaction([self.tx_in], [self.tx_out], has_segwit=True)
+        sig = self.privkey_tr_script_A.sign_taproot_input(tx, 0, self.all_utxos_scriptPubkeys, self.all_amounts, script_path=True, tapleaf_script=self.tr_script_p2pk_A, tapleaf_scripts=[ self.tr_script_p2pk_A, self.tr_script_p2pk_B ], tweak=False)
+        leaf_b = tapleaf_tagged_hash(self.tr_script_p2pk_B)
+        control_block = ControlBlock(self.from_pub, scripts=leaf_b)
+        tx.witnesses.append( TxWitnessInput([ sig, self.tr_script_p2pk_A.to_hex(), control_block.to_hex() ]) )
+        self.assertEqual(tx.serialize(), self.signed_tx)
+
+
+class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
+
+    def setUp(self):
+        setup('testnet')
+        
+        # 1-spend taproot from key path (has three tapleaf script for spending)
+        self.privkey_tr_script_A = PrivateKey('cSW2kQbqC9zkqagw8oTYKFTozKuZ214zd6CMTDs4V32cMfH3dgKa')
+        self.pubkey_tr_script_A = self.privkey_tr_script_A.get_public_key()
+        self.tr_script_p2pk_A = Script([self.pubkey_tr_script_A.to_x_only_hex(), 'OP_CHECKSIG'])
+
+        self.privkey_tr_script_B = PrivateKey('cSv48xapaqy7fPs8VvoSnxNBNA2jpjcuURRqUENu3WVq6Eh4U3JU')
+        self.pubkey_tr_script_B = self.privkey_tr_script_B.get_public_key()
+        self.tr_script_p2pk_B = Script([self.pubkey_tr_script_B.to_x_only_hex(), 'OP_CHECKSIG'])
+
+        self.privkey_tr_script_C = PrivateKey('cRkZPNnn3jdr64o3PDxNHG68eowDfuCdcyL6nVL4n3czvunuvryC')
+        self.pubkey_tr_script_C = self.privkey_tr_script_C.get_public_key()
+        self.tr_script_p2pk_C = Script([self.pubkey_tr_script_C.to_x_only_hex(), 'OP_CHECKSIG'])
+
+        self.from_priv = PrivateKey("cT33CWKwcV8afBs5NYzeSzeSoGETtAB8izjDjMEuGqyqPoF7fbQR")
+        self.from_pub = self.from_priv.get_public_key()
+        self.from_address = self.from_pub.get_taproot_address([ [self.tr_script_p2pk_A, self.tr_script_p2pk_B ], self.tr_script_p2pk_C ])
+
+        self.tx_in = TxInput('9b8a01d0f333b2440d4d305d26641e14e0e1932ebc3c4f04387c0820fada87d3', 0)
+
+        self.to_priv = PrivateKey("cNxX8M7XU8VNa5ofd8yk1eiZxaxNrQQyb7xNpwAmsrzEhcVwtCjs")
+        self.to_pub = self.to_priv.get_public_key()
+        self.to_address = self.to_pub.get_taproot_address()
+        self.tx_out = TxOutput(to_satoshis(0.00003), self.to_address.to_script_pub_key())
+
+        self.from_amount = to_satoshis(0.000035)
+        self.all_amounts = [ self.from_amount ]
+       
+        self.scriptPubkey = self.from_address.to_script_pub_key()
+        self.all_utxos_scriptPubkeys = [ self.scriptPubkey ]
+        
+        self.signed_tx = '02000000000101d387dafa20087c38044f3cbc2e93e1e0141e64265d304d0d44b233f3d0018a9b0000000000ffffffff01b80b000000000000225120d4213cd57207f22a9e905302007b99b84491534729bd5f4065bdcb42ed10fcd50340644e392f5fd88d812bad30e73ff9900cdcf7f260ecbc862819542fd4683fa9879546613be4e2fc762203e45715df1a42c65497a63edce5f1dfe5caea5170273f2220e808f1396f12a253cf00efdf841e01c8376b616fb785c39595285c30f2817e71ac61c01036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900bf401ec09c9ed9f1b2b0090138e31e11a31c1aea790928b7ce89112a706e5caa703ff7e0ab928109f92c2781611bb5de791137cbd40a5482a4a23fd0ffe50ee4de9d5790dd100000000'
+
+
+    # 1-spend taproot from second script path (B) of three ((A,B),C)
+    def test_spend_script_path_A_from_AB(self):
+        tx = Transaction([self.tx_in], [self.tx_out], has_segwit=True)
+        sig = self.privkey_tr_script_B.sign_taproot_input(tx, 0, self.all_utxos_scriptPubkeys, self.all_amounts, script_path=True, tapleaf_script=self.tr_script_p2pk_B, tapleaf_scripts=[ [self.tr_script_p2pk_A, self.tr_script_p2pk_B], self.tr_script_p2pk_C ], tweak=False)
+        leaf_a = tapleaf_tagged_hash(self.tr_script_p2pk_A)
+        leaf_c = tapleaf_tagged_hash(self.tr_script_p2pk_C)
+        control_block = ControlBlock(self.from_pub, scripts=leaf_a+leaf_c)
+        tx.witnesses.append( TxWitnessInput([ sig, self.tr_script_p2pk_B.to_hex(), control_block.to_hex() ]) )
+        self.assertEqual(tx.serialize(), self.signed_tx)
 
 
 

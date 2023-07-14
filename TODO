@@ -1,9 +1,6 @@
 
 PRIORITIES
-- clean all my scripts/examples
-- add add more examples (my tests) for complex scripts
-- add tree alt spendin
-  . separate method that constructs merkle path from ControlBlock ??!?
+- add test for from_mnemonic for hdwallet
 - load public key with x-only pubkey, ensure it works for several...
 - create Address object that covers ALL addresses and can convert from one to another!
 - clean .from_raw in the transaction object!?!
@@ -22,6 +19,8 @@ SEGWIT-related
   . crean up from_raw code in general
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
 - ControlBlock does not handle sign bit for batch validation (tweak_public_key needs to return a second return value - negated)
+- ControlBlock does not automatically construct the merkle path (expects it as input)
+
 
 CLEAN UP 
 -- utils' to_bytes used in from_raw -- clean/reuse appropriate one

@@ -77,12 +77,14 @@ class ControlBlock:
         ----------
         pubkey : PublicKey
             the internal public key object
-        script_to_spend : Script
+        script_to_spend : Script (ignored for now)
             the tapscript leaf that we want to spend
-        scripts : list[ list[Script] ]
-            a list of list of Scripts describing the merkle tree of scripts to commit
+        scripts : bytes
+            concatenated path (leafs/branches) hashes in bytes
         '''
         self.pubkey = pubkey
+        # script_to_spend is ignored for now - needed for automatically
+        # constructing the merkle path
         self.script_to_spend = script_to_spend
         self.scripts = scripts
 
@@ -101,7 +103,6 @@ class ControlBlock:
             merkle_path = self.scripts # manually constructed path
         
         return leaf_version + pub_key + merkle_path
-        #return leaf_version + pub_key + th
 
 
     def to_hex(self):
