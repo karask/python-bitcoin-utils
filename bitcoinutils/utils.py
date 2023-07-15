@@ -115,7 +115,8 @@ def get_tag_hashed_merkle_root(scripts):
     '''Tag hashed merkle root of all scripts - tag hashes tapleafs and branches
     as needed.
 
-    scripts is a list of list of Scripts describing the merkle tree of scripts to commit
+    Scripts is a list of list of Scripts describing the merkle tree of scripts to commit
+    Example of scripts' list:  [ [A, B], C ] 
     '''
     # TODO raise errors
 
@@ -285,8 +286,6 @@ def calculate_tweak(pubkey: object, scripts: object) -> int:
     Calculates the tweak to apply to the public and private key when required.
     '''
 
-    # TODO use script [ [A, B], C ] to get all scripts to construct the m.tree
-    # and calc the root that is used as tweak...
     # only the x coordinate is tagged_hash'ed
     key_x = pubkey.to_bytes()[:32]
 
@@ -295,11 +294,7 @@ def calculate_tweak(pubkey: object, scripts: object) -> int:
     else:
         # if also script spending this should include the tapleaf of the versioned script!
         merkle_root = get_tag_hashed_merkle_root(scripts)
-        #print('CALC MERKLE_ROOT for TWEAK', merkle_root.hex())
         tweak = tagged_hash(key_x + merkle_root, 'TapTweak')
-        #script_th_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script.to_bytes())
-        #th_script = tagged_hash(script_th_part, 'TapLeaf').digest()
-        #th_final = tagged_hash(key_x + th_script, 'TapTweak')
 
     # we convert to int for later elliptic curve  arithmetics
     tweak_int = hex_str_to_int( tweak.hexdigest() )
