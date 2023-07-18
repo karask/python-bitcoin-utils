@@ -16,6 +16,7 @@ from bitcoinutils.setup import setup
 from bitcoinutils.keys import PrivateKey, PublicKey, P2pkhAddress, \
         P2shAddress, P2wpkhAddress, P2wshAddress
 from bitcoinutils.script import Script
+from bitcoinutils.hdwallet import HDWallet
 
 class TestPrivateKeys(unittest.TestCase):
     def setUp(self):
@@ -213,6 +214,25 @@ class TestP2trAddresses(unittest.TestCase):
         addr = pubkey.get_taproot_address()
         self.assertTrue(addr.to_witness_program(), self.correct_odd_tweaked_pk)
 
+
+class TestHDWallet(unittest.TestCase):
+    def setUp(self):
+        setup('testnet')
+        self.mnemonic = 'addict weather world sense idle purity rich wagon ankle fall cheese spatial'
+        self.xprivkey = 'tprv8ZgxMBicQKsPez3VhGkU7wmGPqihEoCVeSmytmPTnZcpP4kmZXr7oFy9aVUGkXQynGuJMWWDXs5MwhHHpbj8pEBThBdt1bGGmZQKrDS8Xxg'
+        self.privkey_m_44h_1h_0h_0_1 = 'cPSitUzA63SJL7oAbN1oNDrUbmmqzc23bAL2QuF4cSBc3FXCg1Ax'
+        self.legacy_address_m_44_1h_0h_0_3 = 'mz63brMnFrXP4ZF9V75d9VrkKPM5gUyS9H'
+
+    def test_legacy_address_from_xprivkey(self):
+        hdw = HDWallet(xprivate_key=self.xprivkey, path="m/44'/1'/0'/0/1")
+        self.assertTrue(hdw.get_private_key(), self.privkey_m_44h_1h_0h_0_1)
+
+
+    def test_legacy_address_from_mnemonic(self):
+        hdw = HDWallet(mnemonic=self.mnemonic)
+        hdw.from_path("m/44'/1'/0'/0/3")
+        address = hdw.get_private_key().get_public_key().get_address()
+        self.assertTrue(address.to_string(), self.legacy_address_m_44_1h_0h_0_3)
 
 
 if __name__ == '__main__':

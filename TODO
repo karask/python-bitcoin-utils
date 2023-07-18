@@ -1,10 +1,12 @@
 
 PRIORITIES
 - check taproot methods params and update sphinx comments/docs -- clean commented code?!
-- add test for from_mnemonic for hdwallet
 - load public key with x-only pubkey, ensure it works for several...
-- create Address object that covers ALL addresses and can convert from one to another!
+- create Address object that covers all addresses and can convert from one to another!
 - clean .from_raw in the transaction object!?!
+  . add Taproot to Transaction.from_raw
+  . test from_raw more
+  . crean up from_raw code in general
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -15,9 +17,6 @@ SEGWIT-related
   . add more segwit txs tests including nested ones
 - segwit v0 and v1 address object instantiates from address, witness program and script
   . are all used? test?
-- add Taproot to Transaction.from_raw
-  . test from_raw more
-  . crean up from_raw code in general
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
 - ControlBlock does not handle sign bit for batch validation (tweak_public_key needs to return a second return value - negated)
 - ControlBlock does not automatically construct the merkle path (expects it as input)
@@ -29,9 +28,8 @@ CLEAN UP
    . b'bbbb'.hex() instead of hexlify!! (remove all and binascii)
    . create h_to_i, i_to_h, h_to_b, b_to_h, b_to_i, i_to_b ?!
 -- rename VarInt to CompactSize
--- utils tests a lot for even with y % 2 !=0 - shall we make a utils method?
 -- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
--- USE type hints everywhere, make aliases to support objects, etc.
+-- Use type hints everywhere, make aliases to support objects, etc.
 
 IMPROVE
 - test proxy object extensively, students reports it fails sometimes...
@@ -42,8 +40,7 @@ DOC-related
 - segwit in documentation
 
 tests-related
-- move data inside tests - self-contained tests
-- improve test structure - look at python-bitcointx for example
+- improve test structure - similar to Bitcoin core 
 
 WINDOWS
 - it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy

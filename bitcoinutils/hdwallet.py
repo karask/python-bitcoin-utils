@@ -28,7 +28,7 @@ class HDWallet:
     def __init__(self, xprivate_key=None, path=None, mnemonic=None):
         """Instantiate a hdwallet object using the corresponding library with BTC"""
 
-        symbo = None
+        symbol = None
         if is_mainnet():
             symbol = BTC
         else:
@@ -43,13 +43,14 @@ class HDWallet:
             self.from_xprivate_key(xprivate_key, path)
 
 
-
+    # TODO make this a class method, return cls(mnemonic=)
     def from_mnemonic(self, mnemonic: str):
         """Set a mnemonic code for the HD Wallet"""
 
         self.hdw.from_mnemonic(mnemonic=mnemonic)
 
 
+    # TODO make this a class method, return cls(xprivate_key=, path=)
     def from_xprivate_key(self, xprivate_key: str, path: str):
         """Set an extended private key and optionally the path for the HD Wallet"""
 
