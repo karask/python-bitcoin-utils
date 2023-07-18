@@ -12,7 +12,7 @@
 import struct
 import copy
 import hashlib
-from bitcoinutils.utils import prepend_varint, to_bytes, vi_to_int
+from bitcoinutils.utils import to_bytes, vi_to_int
 from binascii import unhexlify, hexlify
 
 import bitcoinutils.keys

@@ -23,13 +23,11 @@ from sympy.ntheory import sqrt_mod
 from bitcoinutils.constants import NETWORK_WIF_PREFIXES, \
         NETWORK_P2PKH_PREFIXES, NETWORK_P2SH_PREFIXES, SIGHASH_ALL, \
         P2PKH_ADDRESS, P2SH_ADDRESS, P2WPKH_ADDRESS_V0, P2WSH_ADDRESS_V0, \
-        P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES, TAPROOT_SIGHASH_ALL, \
-        LEAF_VERSION_TAPSCRIPT
+        P2TR_ADDRESS_V1, NETWORK_SEGWIT_PREFIXES, TAPROOT_SIGHASH_ALL
 from bitcoinutils.setup import get_network
 from bitcoinutils.ripemd160 import ripemd160
-from bitcoinutils.schnorr import schnorr_sign, point_add, point_mul, G, full_pubkey_gen
-from bitcoinutils.utils import EcdsaParams, prepend_varint, tagged_hash, calculate_tweak, \
-                               bytes32_from_int, encode_varint, add_magic_prefix, \
+from bitcoinutils.schnorr import schnorr_sign
+from bitcoinutils.utils import EcdsaParams, calculate_tweak, bytes32_from_int, add_magic_prefix, \
                                hex_str_to_int, tweak_taproot_pubkey, tweak_taproot_privkey
 import bitcoinutils.script
 import bitcoinutils.bech32

@@ -10,7 +10,7 @@
 # LICENSE file.
 
 import hashlib
-from binascii import hexlify, unhexlify
+from binascii import hexlify
 from ecdsa import ellipticcurve
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G

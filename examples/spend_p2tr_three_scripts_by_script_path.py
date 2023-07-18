@@ -9,13 +9,11 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
-from binascii import hexlify
 from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis, ControlBlock, tagged_hash, \
-                               tapleaf_tagged_hash, tapbranch_tagged_hash
+from bitcoinutils.utils import to_satoshis, ControlBlock, tapleaf_tagged_hash
 from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
-from bitcoinutils.keys import P2pkhAddress, PrivateKey
+from bitcoinutils.keys import PrivateKey
 from bitcoinutils.hdwallet import HDWallet
 
 def main():

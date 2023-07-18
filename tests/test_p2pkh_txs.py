@@ -12,7 +12,6 @@
 
 import unittest
 
-from context import bitcoinutils
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
 from bitcoinutils.keys import PrivateKey, P2pkhAddress

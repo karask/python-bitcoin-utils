@@ -20,7 +20,7 @@ from bitcoinutils.constants import DEFAULT_TX_SEQUENCE, DEFAULT_TX_LOCKTIME, \
                     SIGHASH_SINGLE, SIGHASH_ANYONECANPAY, TAPROOT_SIGHASH_ALL, \
                     ABSOLUTE_TIMELOCK_SEQUENCE, REPLACE_BY_FEE_SEQUENCE, \
                     TYPE_ABSOLUTE_TIMELOCK, TYPE_RELATIVE_TIMELOCK, \
-                    TYPE_REPLACE_BY_FEE, SATOSHIS_PER_BITCOIN
+                    TYPE_REPLACE_BY_FEE
 from bitcoinutils.script import Script
 from bitcoinutils.utils import to_bytes, vi_to_int, encode_varint, \
         tagged_hash, prepend_varint

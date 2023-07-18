@@ -12,8 +12,7 @@
 
 import unittest
 
-from context import bitcoinutils
-from bitcoinutils.setup import setup, get_network
+from bitcoinutils.setup import setup
 from bitcoinutils.keys import PrivateKey, PublicKey, P2pkhAddress, \
         P2shAddress, P2wpkhAddress, P2wshAddress
 from bitcoinutils.script import Script

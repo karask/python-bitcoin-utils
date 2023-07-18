@@ -10,17 +10,13 @@
 # in the LICENSE file.
 
 
-import hashlib
 import unittest
-from binascii import hexlify, unhexlify
 
-from context import bitcoinutils
 from bitcoinutils.setup import setup
-from bitcoinutils.keys import PrivateKey, P2pkhAddress, P2shAddress, P2wpkhAddress
+from bitcoinutils.keys import PrivateKey
 from bitcoinutils.constants import SIGHASH_ALL, SIGHASH_NONE, SIGHASH_SINGLE, \
-        SIGHASH_ANYONECANPAY, TYPE_RELATIVE_TIMELOCK
-from bitcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence, \
-        TxWitnessInput
+        SIGHASH_ANYONECANPAY
+from bitcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessInput
 from bitcoinutils.script import Script
 from bitcoinutils.utils import to_satoshis
 

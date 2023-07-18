@@ -9,9 +9,9 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
-
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bitcoinutils')))
 
 import bitcoinutils
+
