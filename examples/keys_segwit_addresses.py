@@ -12,14 +12,15 @@
 
 from bitcoinutils.setup import setup
 from bitcoinutils.script import Script
-from bitcoinutils.keys import P2wpkhAddress, P2wshAddress, P2shAddress, PrivateKey, PublicKey
+from bitcoinutils.keys import P2wpkhAddress, P2wshAddress, P2shAddress, PrivateKey
+
 
 def main():
     # always remember to setup the network
-    setup('testnet')
+    setup("testnet")
 
     # could also instantiate from existing WIF key
-    priv = PrivateKey.from_wif('cVdte9ei2xsVjmZSPtyucG43YZgNkmKTqhwiUA8M4Fc3LdPJxPmZ')
+    priv = PrivateKey.from_wif("cVdte9ei2xsVjmZSPtyucG43YZgNkmKTqhwiUA8M4Fc3LdPJxPmZ")
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif(compressed=True))
@@ -49,7 +50,11 @@ def main():
     #
 
     # create segwit address
-    addr3 = PrivateKey.from_wif('cTmyBsxMQ3vyh4J3jCKYn2Au7AhTKvqeYuxxkinsg6Rz3BBPrYKK').get_public_key().get_segwit_address()
+    addr3 = (
+        PrivateKey.from_wif("cTmyBsxMQ3vyh4J3jCKYn2Au7AhTKvqeYuxxkinsg6Rz3BBPrYKK")
+        .get_public_key()
+        .get_segwit_address()
+    )
     # wrap in P2SH address
     addr4 = P2shAddress.from_script(addr3.to_script_pub_key())
     print("P2SH(P2WPKH):", addr4.to_string())
@@ -57,10 +62,14 @@ def main():
     #
     # display P2WSH
     #
-    p2wpkh_key = PrivateKey.from_wif('cNn8itYxAng4xR4eMtrPsrPpDpTdVNuw7Jb6kfhFYZ8DLSZBCg37')
-    script = Script(['OP_1', p2wpkh_key.get_public_key().to_hex(), 'OP_1', 'OP_CHECKMULTISIG'])
+    p2wpkh_key = PrivateKey.from_wif(
+        "cNn8itYxAng4xR4eMtrPsrPpDpTdVNuw7Jb6kfhFYZ8DLSZBCg37"
+    )
+    script = Script(
+        ["OP_1", p2wpkh_key.get_public_key().to_hex(), "OP_1", "OP_CHECKMULTISIG"]
+    )
     p2wsh_addr = P2wshAddress.from_script(script)
-    print("P2WSH of P2PK:", p2wsh_addr.to_string() )
+    print("P2WSH of P2PK:", p2wsh_addr.to_string())
 
     #
     # display P2SH-P2WSH
@@ -71,4 +80,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -16,24 +16,31 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress, PrivateKey
 from bitcoinutils.script import Script
 
+
 def main():
     # always remember to setup the network
-    setup('testnet')
+    setup("testnet")
 
     # create transaction input from tx id of UTXO (contained 0.4 tBTC)
-    txin = TxInput('fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c', 0)
+    txin = TxInput(
+        "fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c", 0
+    )
 
     # create transaction output using P2PKH scriptPubKey (locking script)
-    addr = P2pkhAddress('n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR')
-    txout = TxOutput(to_satoshis(0.1), Script(['OP_DUP', 'OP_HASH160', addr.to_hash160(),
-                                  'OP_EQUALVERIFY', 'OP_CHECKSIG']) )
+    addr = P2pkhAddress("n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR")
+    txout = TxOutput(
+        to_satoshis(0.1),
+        Script(
+            ["OP_DUP", "OP_HASH160", addr.to_hash160(), "OP_EQUALVERIFY", "OP_CHECKSIG"]
+        ),
+    )
 
     # create another output to get the change - remaining 0.01 is tx fees
     # note that this time we used to_script_pub_key() to create the P2PKH
     # script
-    change_addr = P2pkhAddress('mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w')
+    change_addr = P2pkhAddress("mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w")
     change_txout = TxOutput(to_satoshis(0.29), change_addr.to_script_pub_key())
-    #change_txout = TxOutput(to_satoshis(0.29), Script(['OP_DUP', 'OP_HASH160',
+    # change_txout = TxOutput(to_satoshis(0.29), Script(['OP_DUP', 'OP_HASH160',
     #                                     change_addr.to_hash160(),
     #                                     'OP_EQUALVERIFY', 'OP_CHECKSIG']))
 
@@ -45,16 +52,26 @@ def main():
 
     # use the private key corresponding to the address that contains the
     # UTXO we are trying to spend to sign the input
-    sk = PrivateKey('cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9')
+    sk = PrivateKey("cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9")
 
     # note that we pass the scriptPubkey as one of the inputs of sign_input
     # because it is used to replace the scriptSig of the UTXO we are trying to
     # spend when creating the transaction digest
-    from_addr = P2pkhAddress('myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e')
-    sig = sk.sign_input( tx, 0, Script(['OP_DUP', 'OP_HASH160',
-                                       from_addr.to_hash160(), 'OP_EQUALVERIFY',
-                                       'OP_CHECKSIG']) )
-    #print(sig)
+    from_addr = P2pkhAddress("myPAE9HwPeKHh8FjKwBNBaHnemApo3dw6e")
+    sig = sk.sign_input(
+        tx,
+        0,
+        Script(
+            [
+                "OP_DUP",
+                "OP_HASH160",
+                from_addr.to_hash160(),
+                "OP_EQUALVERIFY",
+                "OP_CHECKSIG",
+            ]
+        ),
+    )
+    # print(sig)
 
     # get public key as hex
     pk = sk.get_public_key().to_hex()
@@ -72,4 +89,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

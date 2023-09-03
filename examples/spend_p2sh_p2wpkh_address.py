@@ -11,30 +11,30 @@
 
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
-from bitcoinutils.keys import PrivateKey, P2pkhAddress, P2shAddress
+from bitcoinutils.keys import PrivateKey, P2pkhAddress
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from bitcoinutils.script import Script
 
+
 def main():
     # always remember to setup the network
-    setup('testnet')
+    setup("testnet")
 
     # the key that corresponds to the P2WPKH address
-    priv = PrivateKey('cNho8fw3bPfLKT4jPzpANTsxTsP8aTdVBD6cXksBEXt4KhBN7uVk')
+    priv = PrivateKey("cNho8fw3bPfLKT4jPzpANTsxTsP8aTdVBD6cXksBEXt4KhBN7uVk")
     pub = priv.get_public_key()
 
     # the p2sh script and the corresponding address
     redeem_script = pub.get_segwit_address().to_script_pub_key()
-    p2sh_addr = P2shAddress.from_script(redeem_script)
 
     # the UTXO of the P2SH-P2WPKH that we are trying to spend
-    inp = TxInput('95c5cac558a8b47436a3306ba300c8d7af4cd1d1523d35da3874153c66d99b09', 0)
+    inp = TxInput("95c5cac558a8b47436a3306ba300c8d7af4cd1d1523d35da3874153c66d99b09", 0)
 
     # exact amount of UTXO we try to spent
     amount = 0.0014
 
     # the address to send funds to
-    to_addr = P2pkhAddress('mvBGdiYC8jLumpJ142ghePYuY8kecQgeqS')
+    to_addr = P2pkhAddress("mvBGdiYC8jLumpJ142ghePYuY8kecQgeqS")
 
     # the output sending 0.001 -- 0.0004 goes to miners as fee -- no change
     out = TxOutput(to_satoshis(0.001), to_addr.to_script_pub_key())
@@ -60,6 +60,7 @@ def main():
 
     # print raw signed transaction ready to be broadcasted
     print("\nRaw signed transaction:\n" + tx.serialize())
+
 
 if __name__ == "__main__":
     main()

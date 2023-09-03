@@ -10,16 +10,15 @@
 # in the LICENSE file.
 
 from bitcoinutils.setup import setup
-from bitcoinutils.script import Script
-from bitcoinutils.keys import P2trAddress, PrivateKey, PublicKey
+from bitcoinutils.keys import P2trAddress, PrivateKey
 
 
 def main():
     # always remember to setup the network
-    setup('testnet')
+    setup("testnet")
 
     # could also instantiate from existing WIF key
-    priv = PrivateKey.from_wif('cRPxBiKrJsH94FLugmiL4xnezMyoFqGcf4kdgNXGuypNERhMK6AT')
+    priv = PrivateKey.from_wif("cRPxBiKrJsH94FLugmiL4xnezMyoFqGcf4kdgNXGuypNERhMK6AT")
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif())
@@ -45,9 +44,15 @@ def main():
     print("Created P2trAddress from public key and calculate address:")
     print("Native Address:", addr2.to_string())
 
-    assert(address.to_string() == 'tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq')
-    assert(addr2.to_string() == 'tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq')
+    assert (
+        address.to_string()
+        == "tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq"
+    )
+    assert (
+        addr2.to_string()
+        == "tb1pdr8q4tuqqeglxxhkxl3trxt0dy5jrnaqvg0ddwu7plraxvntp8dqv8kvyq"
+    )
+
 
 if __name__ == "__main__":
     main()
-
