@@ -29,6 +29,8 @@ CLEAN UP
    . create h_to_i, i_to_h, h_to_b, b_to_h, b_to_i, i_to_b ?!
 -- rename VarInt to CompactSize
 -- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
+-- 88 max lines (black default - not PEP8 but better looking...
+-- all ' to " ..auto formating from black
 -- Use type hints everywhere, make aliases to support objects, etc.
 
 IMPROVE
