@@ -11,30 +11,40 @@
 
 # TODO organise constants in sections
 
-NETWORK_DEFAULT_PORTS = { 'mainnet': 8332,
-                          'signet' : 38332,
-                          'testnet': 18332,
-                          'regtest': 18443 }
+NETWORK_DEFAULT_PORTS = {
+    "mainnet": 8332,
+    "signet": 38332,
+    "testnet": 18332,
+    "regtest": 18443,
+}
 
-NETWORK_WIF_PREFIXES = { 'mainnet': b'\x80',
-                         'signet' : b'\xef',
-                         'testnet': b'\xef',
-                         'regtest': b'\xef' }
+NETWORK_WIF_PREFIXES = {
+    "mainnet": b"\x80",
+    "signet": b"\xef",
+    "testnet": b"\xef",
+    "regtest": b"\xef",
+}
 
-NETWORK_P2PKH_PREFIXES = { 'mainnet': b'\x00',
-                           'signet' : b'\x6f',
-                           'testnet': b'\x6f',
-                           'regtest': b'\x6f' }
+NETWORK_P2PKH_PREFIXES = {
+    "mainnet": b"\x00",
+    "signet": b"\x6f",
+    "testnet": b"\x6f",
+    "regtest": b"\x6f",
+}
 
-NETWORK_P2SH_PREFIXES = { 'mainnet': b'\x05',
-                          'signet' : b'\xc4',
-                          'testnet': b'\xc4',
-                          'regtest': b'\xc4' }
+NETWORK_P2SH_PREFIXES = {
+    "mainnet": b"\x05",
+    "signet": b"\xc4",
+    "testnet": b"\xc4",
+    "regtest": b"\xc4",
+}
 
-NETWORK_SEGWIT_PREFIXES = { 'mainnet' : 'bc',
-                            'signet'  : 'tb',
-                            'testnet' : 'tb',
-                            'regtest' : 'bcrt' }
+NETWORK_SEGWIT_PREFIXES = {
+    "mainnet": "bc",
+    "signet": "tb",
+    "testnet": "tb",
+    "regtest": "bcrt",
+}
 
 P2PKH_ADDRESS = "p2pkh"
 P2SH_ADDRESS = "p2sh"
@@ -50,22 +60,21 @@ SIGHASH_ANYONECANPAY = 0x80
 
 TYPE_ABSOLUTE_TIMELOCK = 0x101
 TYPE_RELATIVE_TIMELOCK = 0x201
-TYPE_REPLACE_BY_FEE    = 0x301
+TYPE_REPLACE_BY_FEE = 0x301
 
-DEFAULT_TX_LOCKTIME = b'\x00\x00\x00\x00'
+DEFAULT_TX_LOCKTIME = b"\x00\x00\x00\x00"
 
-EMPTY_TX_SEQUENCE = b'\x00\x00\x00\x00'
-DEFAULT_TX_SEQUENCE = b'\xff\xff\xff\xff'
-ABSOLUTE_TIMELOCK_SEQUENCE = b'\xfe\xff\xff\xff'
+EMPTY_TX_SEQUENCE = b"\x00\x00\x00\x00"
+DEFAULT_TX_SEQUENCE = b"\xff\xff\xff\xff"
+ABSOLUTE_TIMELOCK_SEQUENCE = b"\xfe\xff\xff\xff"
 
-REPLACE_BY_FEE_SEQUENCE = b'\x01\x00\x00\x00'
+REPLACE_BY_FEE_SEQUENCE = b"\x01\x00\x00\x00"
 
-LEAF_VERSION_TAPSCRIPT = 0xc0
+LEAF_VERSION_TAPSCRIPT = 0xC0
 
 # TX version 2 was introduced in BIP-68 with relative locktime -- tx v1
 # does not support relative locktime
-DEFAULT_TX_VERSION  = b'\x02\x00\x00\x00'
+DEFAULT_TX_VERSION = b"\x02\x00\x00\x00"
 
 SATOSHIS_PER_BITCOIN = 100000000
 NEGATIVE_SATOSHI = -1
-

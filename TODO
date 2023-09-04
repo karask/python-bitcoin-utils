@@ -32,6 +32,8 @@ CLEAN UP
 -- 88 max lines (black default - not PEP8 but better looking...
 -- all ' to " ..auto formating from black
 -- Use type hints everywhere, make aliases to support objects, etc.
+-- use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
+-- python.analysis.useLibraryCodeForTypes is set to true for pyright to not auto-deduce types for external libraries that do not use hint stubs / mypy)
 
 IMPROVE
 - test proxy object extensively, students reports it fails sometimes...
