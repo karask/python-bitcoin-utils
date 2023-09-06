@@ -36,9 +36,11 @@ def main():
     vout = 0
 
     seq = Sequence(TYPE_RELATIVE_TIMELOCK, relative_blocks)
+    seq_for_n_seq = seq.for_input_sequence()
+    assert seq_for_n_seq is not None
 
     # create transaction input from tx id of UTXO (contained 11.1 tBTC)
-    txin = TxInput(txid, vout, sequence=seq.for_input_sequence())
+    txin = TxInput(txid, vout, sequence=seq_for_n_seq)
 
     # secret key needed to spend P2PKH that is wrapped by P2SH
     p2pkh_sk = PrivateKey("cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9")

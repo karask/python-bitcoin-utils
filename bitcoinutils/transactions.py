@@ -67,6 +67,8 @@ class TxInput:
         serializes TxInput to bytes
     copy()
         creates a copy of the object (classmethod)
+    from_raw()
+        instantiates object from raw hex input (classmethod)
     """
 
     def __init__(
@@ -74,8 +76,8 @@ class TxInput:
         txid: str,
         txout_index: int,
         script_sig=Script([]),
-        sequence: Optional[bytes] = DEFAULT_TX_SEQUENCE,
-    ):
+        sequence: str | bytes = DEFAULT_TX_SEQUENCE,
+    ) -> None:
         """See TxInput description"""
 
         # expected in the format used for displaying Bitcoin hashes
@@ -84,12 +86,12 @@ class TxInput:
         self.script_sig = script_sig
 
         # if user provided a sequence it would be as string (for now...)
-        if type(sequence) is str:
+        if isinstance(sequence, str):
             self.sequence = unhexlify(sequence)
         else:
             self.sequence = sequence
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         """Serializes to bytes"""
 
         # Internally Bitcoin uses little-endian byte order as it improves
@@ -126,7 +128,7 @@ class TxInput:
         return self.__str__()
 
     @staticmethod
-    def from_raw(txinputraw, cursor=0, has_segwit=False):
+    def from_raw(txinputrawhex: str, cursor: int = 0, has_segwit: bool = False):
         """
         Imports a TxInput from a Transaction's hexadecimal data
 
@@ -139,7 +141,7 @@ class TxInput:
         has_segwit : boolean
             Is the Tx Input segwit or not
         """
-        txinputraw = to_bytes(txinputraw)
+        txinputraw = to_bytes(txinputrawhex)
 
         # read the 32 bytes of TxInput ID
         inp_hash = txinputraw[cursor : cursor + 32][::-1]
@@ -151,8 +153,8 @@ class TxInput:
         output_n = txinputraw[cursor + 32 : cursor + 36][::-1]
         cursor += 36
 
-        # read the size (bytes length) of the integer representing the size of the Script's raw
-        # data and the size of the Script's raw data
+        # read the size (bytes length) of the integer representing the size of
+        # the Script's raw data and the size of the Script's raw data
         unlocking_script_size, size = vi_to_int(txinputraw[cursor : cursor + 9])
         cursor += size
         unlocking_script = txinputraw[cursor : cursor + unlocking_script_size]
@@ -163,14 +165,16 @@ class TxInput:
             TxInput(
                 txid=inp_hash.hex(),
                 txout_index=int(output_n.hex(), 16),
-                script_sig=Script.from_raw(unlocking_script, has_segwit=has_segwit),
+                script_sig=Script.from_raw(
+                    unlocking_script.hex(), has_segwit=has_segwit
+                ),
                 sequence=sequence_number,
             ),
             cursor,
         )
 
     @classmethod
-    def copy(cls, txin):
+    def copy(cls, txin: "TxInput") -> "TxInput":
         """Deep copy of TxInput"""
 
         return cls(txin.txid, txin.txout_index, txin.script_sig, txin.sequence)
@@ -193,12 +197,12 @@ class TxWitnessInput:
         creates a copy of the object (classmethod)
     """
 
-    def __init__(self, stack):
+    def __init__(self, stack: list[str | bytes]) -> None:
         """See description"""
 
         self.stack = stack
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         """Converts to bytes"""
         stack_bytes = b""
         for item in self.stack:
@@ -209,19 +213,19 @@ class TxWitnessInput:
         return stack_bytes
 
     @classmethod
-    def copy(cls, txwin):
+    def copy(cls, txwin: "TxWitnessInput") -> "TxWitnessInput":
         """Deep copy of TxWitnessInput"""
 
         return cls(txwin.stack)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(
             {
                 "witness_items": self.stack,
             }
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
 
@@ -230,9 +234,9 @@ class TxOutput:
 
     Attributes
     ----------
-    amount : int/float/Decimal
+    amount : int
         the value we want to send to this output in satoshis
-    script_pubkey : list (string)
+    script_pubkey : Script
         the script that will lock this amount
 
     Methods
@@ -241,9 +245,11 @@ class TxOutput:
         serializes TxInput to bytes
     copy()
         creates a copy of the object (classmethod)
+    from_raw()
+        instantiates object from raw hex output (classmethod)
     """
 
-    def __init__(self, amount, script_pubkey):
+    def __init__(self, amount: int, script_pubkey: Script) -> None:
         """See TxOutput description"""
 
         if not isinstance(amount, int):
@@ -252,7 +258,7 @@ class TxOutput:
         self.amount = amount
         self.script_pubkey = script_pubkey
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes:
         """Serializes to bytes"""
 
         # internally all little-endian except hashes
@@ -264,7 +270,7 @@ class TxOutput:
         return data
 
     @staticmethod
-    def from_raw(txoutputraw, cursor=0, has_segwit=False):
+    def from_raw(txoutputrawhex: str, cursor: int = 0, has_segwit: bool = False):
         """
         Imports a TxOutput from a Transaction's hexadecimal data
 
@@ -277,14 +283,14 @@ class TxOutput:
         has_segwit : boolean
             Is the Tx Output segwit or not
         """
-        txoutputraw = to_bytes(txoutputraw)
+        txoutputraw = to_bytes(txoutputrawhex)
 
         # read the amount of the TxOutput
         value = int.from_bytes(txoutputraw[cursor : cursor + 8][::-1], "big")
         cursor += 8
 
-        # read the size (bytes length) of the integer representing the size of the locking
-        # Script's raw data and the size of the locking Script's raw data
+        # read the size (bytes length) of the integer representing the size of the
+        # locking Script's raw data and the size of the locking Script's raw data
         lock_script_size, size = vi_to_int(txoutputraw[cursor : cursor + 9])
         cursor += size
         lock_script = txoutputraw[cursor : cursor + lock_script_size]
@@ -292,19 +298,19 @@ class TxOutput:
         return (
             TxOutput(
                 amount=value,
-                script_pubkey=Script.from_raw(lock_script, has_segwit=has_segwit),
+                script_pubkey=Script.from_raw(lock_script.hex(), has_segwit=has_segwit),
             ),
             cursor,
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str({"amount": self.amount, "script_pubkey": self.script_pubkey})
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
     @classmethod
-    def copy(cls, txout):
+    def copy(cls, txout: "TxOutput") -> "TxOutput":
         """Deep copy of TxOutput"""
 
         return cls(txout.amount, txout.script_pubkey)
@@ -338,7 +344,7 @@ class Sequence:
         if the value is not within range of 2 bytes.
     """
 
-    def __init__(self, seq_type, value, is_type_block=True):
+    def __init__(self, seq_type: int, value: int, is_type_block: bool = True) -> None:
         self.seq_type = seq_type
         self.value = value
 
@@ -350,16 +356,16 @@ class Sequence:
             raise ValueError("Sequence should be between 1 and 65535")
         self.is_type_block = is_type_block
 
-    def for_input_sequence(self) -> Optional[bytes]:
+    def for_input_sequence(self) -> Optional[str | bytes]:
         """Creates a relative timelock sequence value as expected from
         TxInput sequence attribute"""
         if self.seq_type == TYPE_ABSOLUTE_TIMELOCK:
             return ABSOLUTE_TIMELOCK_SEQUENCE
 
-        if self.seq_type == TYPE_REPLACE_BY_FEE:
+        elif self.seq_type == TYPE_REPLACE_BY_FEE:
             return REPLACE_BY_FEE_SEQUENCE
 
-        if self.seq_type == TYPE_RELATIVE_TIMELOCK:
+        elif self.seq_type == TYPE_RELATIVE_TIMELOCK:
             # most significant bit is already 0 so relative timelocks are enabled
             seq = 0
             # if not block height type set 23 bit
@@ -372,7 +378,7 @@ class Sequence:
 
         return None
 
-    def for_script(self):
+    def for_script(self) -> int:
         """Creates a relative/absolute timelock sequence value as expected in scripts"""
         if self.seq_type == TYPE_REPLACE_BY_FEE:
             raise ValueError("RBF is not to be included in a script.")
@@ -406,10 +412,10 @@ class Locktime:
         if the value is not within range of 2 bytes.
     """
 
-    def __init__(self, value):
+    def __init__(self, value: int) -> None:
         self.value = value
 
-    def for_transaction(self):
+    def for_transaction(self) -> bytes:
         """Creates a timelock as expected from Transaction"""
 
         locktime_bytes = self.value.to_bytes(4, byteorder="little")
@@ -447,8 +453,6 @@ class Transaction:
         Instantiates a Transaction from serialized raw hexadacimal data (classmethod)
     get_txid()
         Calculates txid and returns it
-    get_hash()
-        Calculates tx hash (wtxid) and returns it
     get_wtxid()
         Calculates tx hash (wtxid) and returns it
     get_size()
@@ -462,17 +466,21 @@ class Transaction:
     get_transaction_segwit_digest(txin_index, script, amount, sighash)
         returns the transaction input's segwit digest that is to be signed
         according to sighash
+    get_transaction_taproot_digest(txin_index, script_pubkeys, amounts, ext_flag,
+            script, leaf_ver, sighash)
+        returns the transaction input's taproot digest that is to be signed
+        according to sighash
     """
 
     def __init__(
         self,
-        inputs=None,
-        outputs=None,
-        locktime=DEFAULT_TX_LOCKTIME,
-        version=DEFAULT_TX_VERSION,
-        has_segwit=False,
-        witnesses=None,
-    ):
+        inputs: Optional[list[TxInput]] = None,
+        outputs: Optional[list[TxOutput]] = None,
+        locktime: str | bytes = DEFAULT_TX_LOCKTIME,
+        version: bytes = DEFAULT_TX_VERSION,
+        has_segwit: bool = False,
+        witnesses: Optional[list[TxWitnessInput]] = None,
+    ) -> None:
         """See Transaction description"""
 
         # make sure default argument for inputs, outputs and witnesses is an empty list
@@ -489,7 +497,7 @@ class Transaction:
         self.witnesses = witnesses
 
         # if user provided a locktime it would be as string (for now...)
-        if type(locktime) is str:
+        if isinstance(locktime, str):
             self.locktime = unhexlify(locktime)
         else:
             self.locktime = locktime
@@ -497,7 +505,7 @@ class Transaction:
         self.version = version
 
     @staticmethod
-    def from_raw(txraw):
+    def from_raw(rawtxhex: str):
         """
         Imports a Transaction from hexadecimal data
 
@@ -510,7 +518,7 @@ class Transaction:
         has_segwit : boolean
             Is the Tx Input segwit or not
         """
-        rawtx = to_bytes(txraw)
+        rawtx = to_bytes(rawtxhex)
 
         # read version
         version = rawtx[0:4][::-1]
@@ -523,8 +531,8 @@ class Transaction:
                 has_segwit = True
             cursor += 2
 
-        # read the size (bytes length) of the integer representing the size of the inputs
-        # number and the inputs number
+        # read the size (bytes length) of the integer representing the size of
+        # the inputs number and the inputs number
 
         n_inputs, size = vi_to_int(rawtx[cursor : cursor + 9])
         cursor += size
@@ -532,12 +540,14 @@ class Transaction:
 
         # iterate n_inputs times to read the inputs from raw
         for index in range(0, n_inputs):
-            inp, cursor = TxInput.from_raw(rawtx, cursor=cursor, has_segwit=has_segwit)
+            inp, cursor = TxInput.from_raw(
+                rawtxhex, cursor=cursor, has_segwit=has_segwit
+            )
             inputs.append(inp)
 
         outputs = []
-        # read the size (bytes length) of the integer representing the size of the outputs
-        # number and the the outputs number
+        # read the size (bytes length) of the integer representing the size
+        # of the outputs number and the the outputs number
         n_outputs, size = vi_to_int(rawtx[cursor : cursor + 9])
         cursor += size
         output_total = 0
@@ -545,17 +555,17 @@ class Transaction:
         # iterate n_outputs times to read the inputs from raw
         for index in range(0, n_outputs):
             output, cursor = TxOutput.from_raw(
-                rawtx, cursor=cursor, has_segwit=has_segwit
+                rawtxhex, cursor=cursor, has_segwit=has_segwit
             )
             outputs.append(output)
 
         witnesses = []
-        if has_segwit == True:
+        if has_segwit is True:
             # iterate to read the witnesses for every input
             for n in range(0, len(inputs)):
                 n_items, size = vi_to_int(rawtx[cursor : cursor + 9])
                 cursor += size
-                witnesses_tmp = []
+                witnesses_tmp: list[str | bytes] = []
                 for m in range(0, n_items):
                     witness = b"\0"
                     item_size, size = vi_to_int(rawtx[cursor : cursor + 9])
@@ -569,7 +579,7 @@ class Transaction:
             inputs=inputs, outputs=outputs, has_segwit=has_segwit, witnesses=witnesses
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(
             {
                 "inputs": self.inputs,
@@ -581,11 +591,11 @@ class Transaction:
             }
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
     @classmethod
-    def copy(cls, tx):
+    def copy(cls, tx: "Transaction") -> "Transaction":
         """Deep copy of Transaction"""
 
         ins = [TxInput.copy(txin) for txin in tx.inputs]
@@ -593,7 +603,9 @@ class Transaction:
         wits = [TxWitnessInput.copy(witness) for witness in tx.witnesses]
         return cls(ins, outs, tx.locktime, tx.version, tx.has_segwit, wits)
 
-    def get_transaction_digest(self, txin_index, script, sighash=SIGHASH_ALL):
+    def get_transaction_digest(
+        self, txin_index: int, script: Script, sighash: int = SIGHASH_ALL
+    ):
         """Returns the transaction's digest for signing.
         https://en.bitcoin.it/wiki/OP_CHECKSIG
 
@@ -697,7 +709,7 @@ class Transaction:
         return tx_digest
 
     def get_transaction_segwit_digest(
-        self, txin_index, script, amount, sighash=SIGHASH_ALL
+        self, txin_index: int, script: Script, amount: int, sighash: int = SIGHASH_ALL
     ):
         """Returns the segwit v0 transaction's digest for signing.
         https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki
@@ -726,7 +738,8 @@ class Transaction:
         """
 
         # clone transaction to modify without messing up the real transaction
-        # TODO tmp_tx is not really used for its to_bytes() - we can access self directly
+        # TODO tmp_tx is not really used for its to_bytes() - we can access
+        # self directly
         tmp_tx = Transaction.copy(self)
 
         # defaults for BIP143
@@ -824,8 +837,8 @@ class Transaction:
     # clean prints after finishing other sighashes
     def get_transaction_taproot_digest(
         self,
-        txin_index,
-        script_pubkeys,
+        txin_index: int,
+        script_pubkeys: list[Script],
         amounts,
         ext_flag=0,
         script=Script([]),
@@ -851,7 +864,7 @@ class Transaction:
              ----------
              txin_index : int
                  The index of the input that we wish to sign
-             script_pubkeys : list (string)
+             script_pubkeys : list(Script)
                  The scriptPubkeys that correspond to all the inputs/UTXOs
              amounts : int/float/Decimal
                  The amounts that correspond to all the inputs/UTXOs
@@ -913,8 +926,8 @@ class Transaction:
             tx_for_signing += hash_amounts
 
             # the SHA256 of all spent outputs' scriptPubKeys
-            for s in script_pubkeys:
-                s = s.to_hex()
+            for scr in script_pubkeys:
+                s = scr.to_hex()
                 script_len = int(len(s) / 2)
                 hash_script_pubkeys += bytes([script_len]) + unhexlify(s)
             hash_script_pubkeys = hashlib.sha256(hash_script_pubkeys).digest()
@@ -983,19 +996,20 @@ class Transaction:
             )
             tx_for_signing += tagged_hash(
                 bytes([leaf_ver]) + prepend_varint(script.to_bytes()), "TapLeaf"
-            ).digest()
+            )
 
             # key version - type of public key used for this signature, currently only 0
             tx_for_signing += bytes([0])
 
-            # code separator position - records position of when the last OP_CODESEPARATOR
-            # was executed; not supported for now, we always use 0xffffffff
+            # code separator position - records position of when the last
+            # OP_CODESEPARATOR was executed; not supported for now, we always
+            # use 0xffffffff
             tx_for_signing += b"\xff\xff\xff\xff"
 
         # tag hash the digest and return
-        return tagged_hash(tx_for_signing, "TapSighash").digest()
+        return tagged_hash(tx_for_signing, "TapSighash")
 
-    def to_bytes(self, has_segwit):
+    def to_bytes(self, has_segwit: bool) -> bytes:
         """Serializes to bytes"""
 
         data = self.version
@@ -1025,7 +1039,7 @@ class Transaction:
         data += self.locktime
         return data
 
-    def get_txid(self):
+    def get_txid(self) -> str:
         """Hashes the serialized (bytes) tx to get a unique id"""
 
         data = self.to_bytes(False)
@@ -1033,12 +1047,12 @@ class Transaction:
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode("utf-8")
 
-    def get_wtxid(self):
+    def get_wtxid(self) -> str:
         """Hashes the serialized (bytes) tx including segwit marker and witnesses"""
 
-        return self.get_hash()
+        return self._get_hash()
 
-    def get_hash(self):
+    def _get_hash(self) -> str:
         """Hashes the serialized (bytes) tx including segwit marker and witnesses"""
 
         data = self.to_bytes(self.has_segwit)
@@ -1046,12 +1060,12 @@ class Transaction:
         # note that we reverse the hash for display purposes
         return hexlify(hash[::-1]).decode("utf-8")
 
-    def get_size(self):
+    def get_size(self) -> int:
         """Gets the size of the transaction"""
 
         return len(self.to_bytes(self.has_segwit))
 
-    def get_vsize(self):
+    def get_vsize(self) -> int:
         """Gets the virtual size of the transaction.
 
         For non-segwit txs this is identical to get_size(). For segwit txs the
@@ -1083,12 +1097,12 @@ class Transaction:
 
         return int(math.ceil(vsize))
 
-    def to_hex(self):
+    def to_hex(self) -> str:
         """Converts object to hexadecimal string"""
 
         return hexlify(self.to_bytes(self.has_segwit)).decode("utf-8")
 
-    def serialize(self):
+    def serialize(self) -> str:
         """Converts object to hexadecimal string"""
 
         return self.to_hex()

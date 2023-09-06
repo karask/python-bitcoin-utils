@@ -214,7 +214,7 @@ class PrivateKey:
 
         return wif.decode("utf-8")
 
-    def sign_message(self, message: str, compressed: bool = True):
+    def sign_message(self, message: str, compressed: bool = True) -> Optional[str]:
         """Signs the message with the private key (deterministically)
 
         Bitcoin uses a compact format for message signatures (for tx sigs it
@@ -262,8 +262,10 @@ class PrivateKey:
             try:
                 if PublicKey.verify_message(address, sig, message):
                     return sig
-            except:
+            except ValueError:
                 continue
+
+        return None
 
     def sign_input(
         self, tx: Transaction, txin_index: int, script: Script, sighash=SIGHASH_ALL
@@ -294,7 +296,7 @@ class PrivateKey:
         amounts: list[int],
         script_path: bool = False,
         tapleaf_script: Script = Script([]),
-        tapleaf_scripts: Optional[list[Script]] = None,
+        tapleaf_scripts: Optional[Script | list[Script] | list[list[Script]]] = None,
         sighash: int = TAPROOT_SIGHASH_ALL,
         tweak: bool = True,
     ):
@@ -429,7 +431,7 @@ class PrivateKey:
         self,
         tx_digest: bytes,
         sighash: int = SIGHASH_ALL,
-        scripts: Optional[list[Script]] = None,
+        scripts: Optional[Script | list[Script] | list[list[Script]]] = None,
         tweak: bool = True,
     ):
         """Signs a taproot transaction input with the private key
@@ -621,7 +623,9 @@ class PublicKey:
         key_hex = self.key.to_string().hex()
         return key_hex[:64]
 
-    def to_taproot_hex(self, scripts: Optional[list[Script]] = None) -> str:
+    def to_taproot_hex(
+        self, scripts: Optional[Script | list[Script] | list[list[Script]]] = None
+    ) -> str:
         """Returns the tweaked x coordinate of the public key as a hex string.
 
         Parameters
@@ -792,7 +796,7 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
     def get_taproot_address(
-        self, scripts: Optional[list[Script]] = None
+        self, scripts: Optional[Script | list[Script] | list[list[Script]]] = None
     ) -> P2trAddress:
         """Returns the corresponding P2TR address
 
@@ -1011,6 +1015,10 @@ class Address(ABC):
 
         return address_bytes.decode("utf-8")
 
+    def to_script_pub_key(self) -> Script:
+        """Overriden from subclasses"""
+        return Script([])
+
 
 class P2pkhAddress(Address):
     """Encapsulates a P2PKH address.
@@ -1184,7 +1192,7 @@ class SegwitAddress(ABC):
         Uses a segwit's python reference implementation for now. (TODO)
         """
 
-        witness_version, witness_int_array = bitcoinutils.bech32.decode(
+        witness_version, witness_int_array = bitcoinutils.bech32.decode(  # type: ignore
             NETWORK_SEGWIT_PREFIXES[get_network()], address
         )
         if witness_version is None:
@@ -1221,6 +1229,10 @@ class SegwitAddress(ABC):
             self.segwit_num_version,
             witness_int_array,
         )
+
+    def to_script_pub_key(self) -> Script:
+        """Overriden from subclasses"""
+        return Script([])
 
 
 class P2wpkhAddress(SegwitAddress):

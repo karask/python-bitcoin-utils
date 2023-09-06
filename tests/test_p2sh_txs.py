@@ -66,10 +66,12 @@ class TestCreateP2shTransaction(unittest.TestCase):
             "cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9"
         )
         self.seq = Sequence(TYPE_RELATIVE_TIMELOCK, 200)
+        self.seq_for_n_seq = self.seq.for_input_sequence()
+        assert self.seq_for_n_seq is not None
         self.txin_seq = TxInput(
             "f557c623e55f0affc696b742630770df2342c4aac395e0ed470923247bc51b95",
             0,
-            sequence=self.seq.for_input_sequence(),
+            sequence=self.seq_for_n_seq,
         )
         self.another_addr = P2pkhAddress("n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR")
         self.spend_p2sh_csv_p2pkh_result = (

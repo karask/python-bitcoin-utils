@@ -422,9 +422,11 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
             "cT33CWKwcV8afBs5NYzeSzeSoGETtAB8izjDjMEuGqyqPoF7fbQR"
         )
         self.from_pub = self.from_priv.get_public_key()
-        self.from_address = self.from_pub.get_taproot_address(
-            [[self.tr_script_p2pk_A, self.tr_script_p2pk_B], self.tr_script_p2pk_C]
-        )
+        self.scripts = [
+            [self.tr_script_p2pk_A, self.tr_script_p2pk_B],
+            self.tr_script_p2pk_C,
+        ]
+        self.from_address = self.from_pub.get_taproot_address(self.scripts)
 
         self.tx_in = TxInput(
             "9b8a01d0f333b2440d4d305d26641e14e0e1932ebc3c4f04387c0820fada87d3", 0
@@ -459,6 +461,10 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
     # 1-spend taproot from second script path (B) of three ((A,B),C)
     def test_spend_script_path_A_from_AB(self):
         tx = Transaction([self.tx_in], [self.tx_out], has_segwit=True)
+        scripts = [
+            [self.pubkey_tr_script_A, self.tr_script_p2pk_B],
+            self.tr_script_p2pk_C,
+        ]
         sig = self.privkey_tr_script_B.sign_taproot_input(
             tx,
             0,
@@ -466,10 +472,7 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
             self.all_amounts,
             script_path=True,
             tapleaf_script=self.tr_script_p2pk_B,
-            tapleaf_scripts=[
-                [self.tr_script_p2pk_A, self.tr_script_p2pk_B],
-                self.tr_script_p2pk_C,
-            ],
+            tapleaf_scripts=scripts,
             tweak=False,
         )
         leaf_a = tapleaf_tagged_hash(self.tr_script_p2pk_A)

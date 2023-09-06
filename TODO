@@ -5,8 +5,10 @@ PRIORITIES
 - create Address object that covers all addresses and can convert from one to another!
 - clean .from_raw in the transaction object!?!
   . add Taproot to Transaction.from_raw
-  . test from_raw more
-  . crean up from_raw code in general
+  . add from_raw to TxInputWitness 
+  . add tests for from_raw more
+  . simple from_raw in examples has an error
+  . clean up from_raw code in general
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -29,9 +31,6 @@ CLEAN UP
    . create h_to_i, i_to_h, h_to_b, b_to_h, b_to_i, i_to_b ?!
 -- rename VarInt to CompactSize
 -- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
--- 88 max lines (black default - not PEP8 but better looking...
--- all ' to " ..auto formating from black
--- Use type hints everywhere, make aliases to support objects, etc.
 -- use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
 -- python.analysis.useLibraryCodeForTypes is set to true for pyright to not auto-deduce types for external libraries that do not use hint stubs / mypy)
 

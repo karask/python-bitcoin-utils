@@ -45,6 +45,7 @@ def main():
     # sign a message with the private key and verify it
     message = "The test!"
     signature = priv.sign_message(message)
+    assert signature is not None
     print("The message to sign:", message)
     print("The signature is:", signature)
 

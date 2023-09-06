@@ -1,5 +1,7 @@
 from typing import Tuple, Optional, Any
 import hashlib
+import inspect  # used only for debugging
+
 
 # This is a slightly modified version of the python reference implementation
 # for schnorr signatures by the BIP-340 authors, from
@@ -183,9 +185,6 @@ def schnorr_verify(msg: bytes, pubkey: bytes, sig: bytes) -> bool:
 #
 # The following code is only used for debugging
 #
-import inspect
-
-
 def pretty(v: Any) -> Any:
     if isinstance(v, bytes):
         return "0x" + v.hex()

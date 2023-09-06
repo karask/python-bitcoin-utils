@@ -140,6 +140,7 @@ class TestSignAndVerify(unittest.TestCase):
 
     def test_sign_and_verify(self):
         signature = self.priv.sign_message(self.message)
+        assert signature is not None
         self.assertEqual(signature, self.deterministic_signature)
         self.assertTrue(PublicKey.verify_message(self.address, signature, self.message))
 

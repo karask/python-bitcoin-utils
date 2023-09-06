@@ -18,6 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+# type: ignore
+# ignores all type hint errors
+
 """Reference implementation for Bech32/Bech32m and segwit addresses."""
 
 
