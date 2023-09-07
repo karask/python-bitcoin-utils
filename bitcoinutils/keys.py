@@ -15,7 +15,6 @@ import struct
 import hashlib
 from abc import ABC, abstractmethod
 from base64 import b64encode, b64decode
-from binascii import unhexlify, hexlify
 from typing import Optional
 from base58check import b58encode, b58decode  # type: ignore
 from ecdsa import (  # type: ignore
@@ -50,7 +49,11 @@ from bitcoinutils.utils import (
     calculate_tweak,
     bytes32_from_int,
     add_magic_prefix,
-    hex_str_to_int,
+    h_to_i,
+    b_to_h,
+    h_to_b,
+    b_to_i,
+    i_to_b32,
     tweak_taproot_pubkey,
     tweak_taproot_privkey,
 )
@@ -318,7 +321,7 @@ class PrivateKey:
             )
         return self._sign_taproot_input(tx_digest, sighash, tapleaf_scripts, tweak)
 
-    def _sign_input(self, tx_digest: bytes, sighash: int = SIGHASH_ALL):
+    def _sign_input(self, tx_digest: bytes, sighash: int = SIGHASH_ALL) -> str:
         """Signs a transaction input with the private key
 
         Bitcoin uses the normal DER format for transactions. Each input is
@@ -393,7 +396,7 @@ class PrivateKey:
         R = signature[4 : 4 + length_r]
         length_s = signature[5 + length_r]
         S = signature[5 + length_r + 1 :]
-        S_as_bigint = int(hexlify(S).decode("utf-8"), 16)
+        S_as_bigint = b_to_i(S)
 
         # update S -- Low S standardness rule
 
@@ -401,8 +404,8 @@ class PrivateKey:
         if length_s == 33:
             new_S_as_bigint = EcdsaParams._order - S_as_bigint
             # convert bigint to bytes
-            # TODO maybe use f'{new_S_as_bigint:064x}' - make sure zfill pads the same
-            new_S = unhexlify(format(new_S_as_bigint, "x").zfill(64))
+            # new_S = h_to_b(i_to_h64(new_S_as_bigint))
+            new_S = i_to_b32(new_S_as_bigint)
             # new value should be 32 bytes
             assert len(new_S) == 0x20
             # reduce appropriate lengths
@@ -424,7 +427,7 @@ class PrivateKey:
 
         # note that this is the final sig that needs to be added in the
         # script_sig (i.e. the DER signature plus the sighash)
-        return hexlify(signature).decode("utf-8")
+        return b_to_h(signature)
 
     # TODO add all_scripts to proper tweaking
     def _sign_taproot_input(
@@ -433,7 +436,7 @@ class PrivateKey:
         sighash: int = SIGHASH_ALL,
         scripts: Optional[Script | list[Script] | list[list[Script]]] = None,
         tweak: bool = True,
-    ):
+    ) -> str:
         """Signs a taproot transaction input with the private key
 
         Taproot uses Schnorr signatures. The format is just R and S so only
@@ -471,15 +474,13 @@ class PrivateKey:
         if sighash != TAPROOT_SIGHASH_ALL:
             sig += sighash.to_bytes(1, "big")
 
-        sig_hex = hexlify(sig)
-
-        return sig_hex
+        return b_to_h(sig)
 
     def get_public_key(self) -> PublicKey:
         """Returns the corresponding PublicKey"""
 
-        verifying_key = hexlify(self.key.get_verifying_key().to_string())
-        return PublicKey("04" + verifying_key.decode("utf-8"))
+        verifying_key = b_to_h(self.key.get_verifying_key().to_string())
+        return PublicKey("04" + verifying_key)
 
 
 class PublicKey:
@@ -539,7 +540,8 @@ class PublicKey:
 
         # expects key as hex string - SEC format
         first_byte_in_hex = hex_str[:2]  # 2 hex chars = 1 byte
-        hex_bytes = unhexlify(hex_str)
+        hex_bytes = h_to_b(hex_str)
+
         # TODO needed?? - see flag below
         taproot = False
 
@@ -583,9 +585,8 @@ class PublicKey:
             else:
                 raise TypeError("Invalid SEC compressed format")
 
-            # TODO use f'{x_coord:064x}{y_coord:064x}' instead
-            uncompressed_hex = "%0.64X%0.64X" % (x_coord, y_coord)
-            uncompressed_hex_bytes = unhexlify(uncompressed_hex)
+            uncompressed_hex = f"{x_coord:064x}{y_coord:064x}"
+            uncompressed_hex_bytes = h_to_b(uncompressed_hex)
             self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
 
     @classmethod
@@ -603,19 +604,19 @@ class PublicKey:
         """Returns public key as a hex string (SEC format - compressed by
         default)"""
 
-        key_hex = hexlify(self.key.to_string())
+        key_hex = b_to_h(self.key.to_string())
 
         if compressed:
             # check if y is even or odd (02 even, 03 odd)
-            if int(key_hex[-2:], 16) % 2 == 0:
-                key_str = b"02" + key_hex[:64]
+            if h_to_i(key_hex[-2:]) % 2 == 0:
+                key_str = "02" + key_hex[:64]
             else:
-                key_str = b"03" + key_hex[:64]
+                key_str = "03" + key_hex[:64]
         else:
             # uncompressed starts with 04
-            key_str = b"04" + key_hex
+            key_str = "04" + key_hex
 
-        return key_str.decode("utf-8")
+        return key_str
 
     def to_x_only_hex(self) -> str:
         """Returns the x coordinate of the public key as hex string."""
@@ -649,7 +650,7 @@ class PublicKey:
 
         key_hex = self.key.to_string().hex()
 
-        y = hex_str_to_int(key_hex[64:])
+        y = h_to_i(key_hex[64:])
 
         return y % 2 == 0
 
@@ -724,8 +725,8 @@ class PublicKey:
         # get R (recovered ephemeral key) from x,y
         R = ellipticcurve.Point(EcdsaParams._curve, x, y, EcdsaParams._order)
 
-        # get e (hash of message encoded as big integer)
-        e = int(hexlify(message_digest), 16)
+        # get e (encoded message hash as big integer)
+        e = b_to_i(message_digest)
 
         # compute public key Q = r^-1 (sR - eG)
         # because Point substraction is not defined we will instead use:
@@ -736,7 +737,7 @@ class PublicKey:
 
         # instantiate the public key and verify message
         public_key = VerifyingKey.from_public_point(Q, curve=SECP256k1)
-        key_hex = hexlify(public_key.to_string()).decode("utf-8")
+        key_hex = b_to_h(public_key.to_string())
         pubkey = PublicKey.from_hex("04" + key_hex)
         if not pubkey.verify(signature, message):
             return False
@@ -768,7 +769,7 @@ class PublicKey:
     def _to_hash160(self, compressed: bool = True) -> bytes:
         """Returns the RIPEMD( SHA256( ) ) of the public key in bytes"""
 
-        pubkey = unhexlify(self.to_hex(compressed))
+        pubkey = h_to_b(self.to_hex(compressed))
         hashsha256 = hashlib.sha256(pubkey).digest()
         hash160 = ripemd160(hashsha256)
         return hash160
@@ -776,13 +777,13 @@ class PublicKey:
     def to_hash160(self, compressed: bool = True) -> str:
         """Returns the RIPEMD( SHA256( ) ) of the public key in hex"""
 
-        return hexlify(self._to_hash160(compressed)).decode("utf-8")
+        return b_to_h(self._to_hash160(compressed))
 
     def get_address(self, compressed: bool = True) -> P2pkhAddress:
         """Returns the corresponding P2PKH Address (default compressed)"""
 
         hash160 = self._to_hash160(compressed)
-        addr_string_hex = hexlify(hash160).decode("utf-8")
+        addr_string_hex = b_to_h(hash160)
         return P2pkhAddress(hash160=addr_string_hex)
 
     def get_segwit_address(self) -> P2wpkhAddress:
@@ -792,7 +793,7 @@ class PublicKey:
         address.
         """
         hash160 = self._to_hash160(True)
-        addr_string_hex = hexlify(hash160).decode("utf-8")
+        addr_string_hex = b_to_h(hash160)
         return P2wpkhAddress(witness_program=addr_string_hex)
 
     def get_taproot_address(
@@ -916,7 +917,7 @@ class Address(ABC):
         # network_prefix = data_checksum[:1]
         data = data_checksum[1:-4]
         # checksum = data_checksum[-4:]
-        return hexlify(data).decode("utf-8")
+        return b_to_h(data)
 
     def _script_to_hash160(self, script: Script) -> str:
         """Converts a script to it's hash160 equivalent
@@ -927,7 +928,7 @@ class Address(ABC):
         script_bytes = script.to_bytes()
         hashsha256 = hashlib.sha256(script_bytes).digest()
         hash160 = ripemd160(hashsha256)
-        return hexlify(hash160).decode("utf-8")
+        return b_to_h(hash160)
 
     def _is_hash160_valid(self, hash160: str) -> bool:
         """Checks is a hash160 hex string is valid"""
@@ -1000,8 +1001,7 @@ class Address(ABC):
         |      checksum = (first 4 bytes of data_hash)
         |      address_bytes = Base58CheckEncode( data + checksum )
         """
-        hash160_encoded = self.hash160.encode("utf-8")
-        hash160_bytes = unhexlify(hash160_encoded)
+        hash160_bytes = h_to_b(self.hash160)
 
         data = b""
         if self.get_type() == P2PKH_ADDRESS:
@@ -1201,14 +1201,14 @@ class SegwitAddress(ABC):
             raise TypeError("Invalid segwit version.")
 
         assert witness_int_array is not None
-        return hexlify(bytes(witness_int_array)).decode("utf-8")
+        return b_to_h(bytes(witness_int_array))
 
     def _script_to_hash(self, script: Script) -> str:
         """Converts a script to it's hash equivalent"""
 
         script_bytes = script.to_bytes()
         hashsha256 = hashlib.sha256(script_bytes).digest()
-        return hexlify(hashsha256).decode("utf-8")
+        return b_to_h(hashsha256)
 
     def to_witness_program(self) -> str:
         """Returns witness program as hex string"""
@@ -1221,7 +1221,7 @@ class SegwitAddress(ABC):
         Uses a segwit's python reference implementation for now. (TODO)
         """
 
-        hash_bytes = unhexlify(self.witness_program.encode("utf-8"))
+        hash_bytes = h_to_b(self.witness_program)
         witness_int_array = memoryview(hash_bytes).tolist()
 
         return bitcoinutils.bech32.encode(  # type: ignore

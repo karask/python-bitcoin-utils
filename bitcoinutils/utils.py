@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from typing import Tuple
 
 import hashlib
-from binascii import hexlify
 from ecdsa import ellipticcurve  # type: ignore
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
@@ -113,7 +112,7 @@ class ControlBlock:
     def to_hex(self):
         """Converts object to hexadecimal string"""
 
-        return hexlify(self.to_bytes()).decode("utf-8")
+        return b_to_h(self.to_bytes())
 
 
 def get_tag_hashed_merkle_root(
@@ -333,9 +332,9 @@ def negate_privkey(key: bytes) -> str:
 
     # negate private key if necessary
     if int(pubkey_hex[64:], 16) % 2 == 0:
-        negated_key = hex_str_to_int(key.hex())
+        negated_key = h_to_i(key.hex())
     else:
-        key_secret_exponent = hex_str_to_int(key.hex())
+        key_secret_exponent = h_to_i(key.hex())
         # negate private key
         negated_key = EcdsaParams._order - key_secret_exponent
 
@@ -346,8 +345,8 @@ def negate_privkey(key: bytes) -> str:
 #    '''Negate public key, if necessary'''
 #
 #    # convert public key bytes to tuple Point
-#    x = hex_str_to_int( key[:32].hex() )
-#    y = hex_str_to_int( key[32:].hex() )
+#    x = h_to_i( key[:32].hex() )
+#    y = h_to_i( key[32:].hex() )
 #
 #    # negate public key if necessary
 #    if y % 2 != 0:
@@ -366,8 +365,8 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
     # tweak_int = calculate_tweak( internal_pubkey, script )
 
     # convert public key bytes to tuple Point
-    x = hex_str_to_int(internal_pubkey[:32].hex())
-    y = hex_str_to_int(internal_pubkey[32:].hex())
+    x = h_to_i(internal_pubkey[:32].hex())
+    y = h_to_i(internal_pubkey[32:].hex())
 
     # if y is odd then negate y (effectively P) to make it even and equivalent
     # to a 02 compressed pk
@@ -408,26 +407,50 @@ def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     # The tweaked private key can be computed by d + hash(P || S)
     # where d is the normal private key, P is the normal public key
     # and S is the alt script, if any (empty script, if none?? TODO)
-    tweaked_privkey_int = (hex_str_to_int(negated_key) + tweak) % EcdsaParams._order
+    tweaked_privkey_int = (h_to_i(negated_key) + tweak) % EcdsaParams._order
 
     # print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
     return bytes.fromhex(f"{tweaked_privkey_int:064x}")
 
 
-# TODO are these required - maybe bytestoint and inttobytes are only required?!?
-def hex_str_to_int(hex_str: str) -> int:
+#
+# Basic conversions between bytes (b), hexadecimal (h) and integer (i)
+# Some were trivial but included for consistency.
+#
+def b_to_h(b: bytes) -> str:
+    """Converts bytes to hexadecimal string"""
+    return b.hex()
+
+
+def h_to_b(h: str) -> bytes:
+    """Converts bytes to hexadecimal string"""
+    return bytes.fromhex(h)
+
+
+def h_to_i(hex_str: str) -> int:
     """Converts a string hexadecimal to a number"""
     return int(hex_str, base=16)
 
 
+def i_to_h64(i: int) -> str:
+    """Converts an int to a string hexadecimal (padded to 64 hex chars)"""
+    return f"{i:064x}"
+
+
+# def i_to_h(i: int) -> str:
+#    """Converts an int to a string hexadecimal (no padding)"""
+#    return f"{i:x}"
+
+
 # to convert hashes to ints we need byteorder BIG...
 def b_to_i(b: bytes) -> int:
-    """Converts a string hexadecimal to a number"""
+    """Converts a bytes to a number"""
     return int.from_bytes(b, byteorder="big")
 
 
-# def int_to_hex_str(i: int) -> str:
-#    '''
-#    Converts an int to a string hexadecimal to a number (starting with 0x)
-#    '''
-#    return f'{i:064x}'
+def i_to_b32(i: int) -> bytes:
+    """Converts a integer to bytes"""
+    return i.to_bytes(32, byteorder="big")
+
+
+# TODO are these required - maybe bytestoint and inttobytes are only required?!?

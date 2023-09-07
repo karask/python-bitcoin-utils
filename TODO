@@ -26,9 +26,6 @@ SEGWIT-related
 
 CLEAN UP 
 -- utils' to_bytes used in from_raw -- clean/reuse appropriate one
-   . hex -> bytes use bytes.fromhex(he_str) instead of unhexlify??
-   . b'bbbb'.hex() instead of hexlify!! (remove all and binascii)
-   . create h_to_i, i_to_h, h_to_b, b_to_h, b_to_i, i_to_b ?!
 -- rename VarInt to CompactSize
 -- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
 -- use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)

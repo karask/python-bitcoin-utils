@@ -13,9 +13,10 @@ import struct
 import copy
 import hashlib
 from typing import Any
-from binascii import unhexlify, hexlify
-from bitcoinutils.utils import to_bytes, vi_to_int
+
+from bitcoinutils.utils import to_bytes, vi_to_int, h_to_b, b_to_h
 from bitcoinutils.ripemd160 import ripemd160
+
 
 # import bitcoinutils.keys
 
@@ -285,7 +286,7 @@ class Script:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def _op_push_data(self, data: str | bytes) -> bytes:
+    def _op_push_data(self, data: str) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
 
         0x01-0x4b           -> just length plus data bytes
@@ -300,7 +301,7 @@ class Script:
         # expects data in hexadecimal characters and converts appropriately
         # TODO maybe, for convenience, also accept objects for public keys,
         # addresses, etc. and use isinstance and convert manually
-        data_bytes = unhexlify(data)
+        data_bytes = h_to_b(data)
 
         if len(data_bytes) < 0x4C:
             return chr(len(data_bytes)).encode() + data_bytes
@@ -333,7 +334,7 @@ class Script:
         if integer & (1 << number_of_bytes * 8 - 1):
             integer_bytes += b"\x00"
 
-        return self._op_push_data(hexlify(integer_bytes))
+        return self._op_push_data(b_to_h(integer_bytes))
 
     def to_bytes(self) -> bytes:
         """Converts the script to bytes
@@ -362,7 +363,7 @@ class Script:
 
     def to_hex(self) -> str:
         """Converts the script to hexadecimal"""
-        return hexlify(self.to_bytes()).decode("utf-8")
+        return b_to_h(self.to_bytes())
 
     @staticmethod
     def from_raw(scriptrawhex: str, has_segwit: bool = False):
@@ -421,7 +422,7 @@ class Script:
         """
 
         script_hash160 = ripemd160(hashlib.sha256(self.to_bytes()).digest())
-        hex_hash160 = hexlify(script_hash160).decode("utf-8")
+        hex_hash160 = b_to_h(script_hash160)
         return Script(["OP_HASH160", hex_hash160, "OP_EQUAL"])
 
     def to_p2wsh_script_pub_key(self) -> "Script":
@@ -430,4 +431,4 @@ class Script:
         Calculates the sha256 of the script and uses it to construct a P2WSH script.
         """
         sha256 = hashlib.sha256(self.to_bytes()).digest()
-        return Script(["OP_0", hexlify(sha256).decode("utf-8")])
+        return Script(["OP_0", b_to_h(sha256)])
