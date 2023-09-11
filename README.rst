@@ -72,6 +72,12 @@ Transaction to pay to a P2WPKH
 Spend from a P2SH(P2WPKH) nested segwit address
    http://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2sh_p2wpkh_address.py - spend a P2WPKH that is nested into a P2SH for old client compatibility
 
+Transaction to pay to a P2SH(P2WSH(P2PK))
+  http://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2sh_p2wsh_p2pk_address.py - send coins from a P2PKH UTXO to a P2SH(P2WSH(P2PK))
+
+Spend from a P2SH(P2WPKH) nested segwit address
+   http://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_from_p2sh_p2wsh_p2pk_address.py - spend a P2WSH with a P2PK as witness script that is nested into a P2SH for old client compatibility
+
 
 Timelock Transactions
 ^^^^^^^^^^^^^^^^^^^^^

@@ -1,14 +1,14 @@
 
 PRIORITIES
-- check taproot methods params and update sphinx comments/docs -- clean commented code?!
 - load public key with x-only pubkey, ensure it works for several...
-- create Address object that covers all addresses and can convert from one to another!
+- create Address object that covers all addresses and can convert from one to another
 - clean .from_raw in the transaction object!?!
   . add Taproot to Transaction.from_raw
   . add from_raw to TxInputWitness 
   . add tests for from_raw more
   . simple from_raw in examples has an error
   . clean up from_raw code in general
+-- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -23,27 +23,24 @@ SEGWIT-related
 - ControlBlock does not handle sign bit for batch validation (tweak_public_key needs to return a second return value - negated)
 - ControlBlock does not automatically construct the merkle path (expects it as input)
 
-
 CLEAN UP 
 -- utils' to_bytes used in from_raw -- clean/reuse appropriate one
 -- rename VarInt to CompactSize
--- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
 -- use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
 -- python.analysis.useLibraryCodeForTypes is set to true for pyright to not auto-deduce types for external libraries that do not use hint stubs / mypy)
 
 IMPROVE
-- test proxy object extensively, students reports it fails sometimes...
+- test proxy object extensively, students reports it fails sometimes
 
 DOC-related
 - add explicit documentation for each module before members...
 - commit docs/usage/proxy.rst
 - segwit in documentation
+- create jupyter notebooks instead of above documentation?
 
 tests-related
 - improve test structure - similar to Bitcoin core 
 
-WINDOWS
-- it seems that the default port does not work on windows; need to specify the port explicitly in NodeProxy
 
 OTHERLIBS-related
 - add to bitcoin-rpc lib option to ignore invalid ssl cert
