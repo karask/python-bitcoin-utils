@@ -73,6 +73,15 @@ def main():
     addr3 = pubkey.get_taproot_address()
     print("Taproot address:", addr3.to_string())
 
+    # get an HDWallet wrapper object by extended private key and path
+    mnemonic = (
+        "addict weather world sense idle purity rich wagon ankle fall cheese spatial"
+    )
+    hdw_from_mnemonic = HDWallet(mnemonic=mnemonic)
+    hdw_from_mnemonic.from_path("m/44'/1'/0'/0/3")
+    address = hdw_from_mnemonic.get_private_key().get_public_key().get_address()
+    print("Legacy address from mnemonic", address.to_string())
+
 
 if __name__ == "__main__":
     main()
