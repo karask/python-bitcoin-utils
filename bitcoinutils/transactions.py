@@ -122,6 +122,7 @@ class TxInput:
                 "txid": self.txid,
                 "txout_index": self.txout_index,
                 "script_sig": self.script_sig,
+                "sequence": self.sequence.hex(),
             }
         )
 
@@ -574,7 +575,8 @@ class Transaction:
                         witness = rawtx[cursor + size : cursor + item_size + size]
                     cursor += item_size + size
                     witnesses_tmp.append(witness.hex())
-                witnesses.append(TxWitnessInput(stack=witnesses_tmp))
+                if witnesses_tmp:
+                    witnesses.append(TxWitnessInput(stack=witnesses_tmp))
 
         return Transaction(
             inputs=inputs, outputs=outputs, has_segwit=has_segwit, witnesses=witnesses

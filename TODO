@@ -1,22 +1,13 @@
 
-PRIORITIES
-- load public key with x-only pubkey, ensure it works for several...
+SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
-- clean .from_raw in the transaction object!?!
-  . add Taproot to Transaction.from_raw
-  . add from_raw to TxInputWitness 
-  . add tests for from_raw more
-  . simple from_raw in examples has an error
-  . clean up from_raw code in general
--- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj.
+- load public key with x-only pubkey, ensure it works for several...
+- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
   . currently adding it manually works fine (see 3 inputs 1 output example)
   . think of clean way of automating this (auto-magically adding them could confuse users!)
-- explain get_transaction_segwit_digest() better and test further
-- clean and comment the segwit examples !
-  . add more segwit txs tests including nested ones
 - segwit v0 and v1 address object instantiates from address, witness program and script
   . are all used? test?
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
@@ -24,10 +15,12 @@ SEGWIT-related
 - ControlBlock does not automatically construct the merkle path (expects it as input)
 
 CLEAN UP 
--- utils' to_bytes used in from_raw -- clean/reuse appropriate one
--- rename VarInt to CompactSize
--- use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
--- python.analysis.useLibraryCodeForTypes is set to true for pyright to not auto-deduce types for external libraries that do not use hint stubs / mypy)
+- utils' to_bytes used in from_raw -- clean/reuse appropriate one
+- rename VarInt to CompactSize
+- from_raw code
+- segwit examples and get_transaction_segwit_digest 
+- use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
+- python.analysis.useLibraryCodeForTypes is set to false for pyright to not auto-deduce types for external libraries that do not use hint stubs / mypy)
 
 IMPROVE
 - test proxy object extensively, students reports it fails sometimes
@@ -49,14 +42,13 @@ OTHERLIBS-related
   . but not in a lib release yet
   . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
 - create HD wallet implementation - very simple - similar to the hdwallet lib that I wrap
-- create block object and allow .from_block(..) instantiation
+- create block object and impl. .from_raw(..) instantiation
 
 OTHER
 - reminder: update copyright in all files 2018-2022?
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
 - create test with 260 outputs (inputs too much trouble) - file: test_extreme_txs.py
 - create test with script of 260 and another with 66000 commands
-- make test of send to P2WPKH transaction example
 - maybe make RBF the default from now on (like Bitcoin Core)
   . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
 
