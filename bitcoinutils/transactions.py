@@ -519,7 +519,7 @@ class Transaction:
         rawtx = to_bytes(rawtxhex)
 
         # read version
-        version = rawtx[0:4][::-1]
+        version = rawtx[0:4]
         flag = None
         has_segwit = False
         cursor = 4
@@ -549,7 +549,6 @@ class Transaction:
         n_outputs, size = vi_to_int(rawtx[cursor : cursor + 9])
         cursor += size
         output_total = 0
-
         # iterate n_outputs times to read the inputs from raw
         for index in range(0, n_outputs):
             output, cursor = TxOutput.from_raw(
@@ -574,8 +573,15 @@ class Transaction:
                 if witnesses_tmp:
                     witnesses.append(TxWitnessInput(stack=witnesses_tmp))
 
+        locktime = rawtx[cursor : cursor + 4]
+
         return Transaction(
-            inputs=inputs, outputs=outputs, has_segwit=has_segwit, witnesses=witnesses
+            inputs=inputs,
+            outputs=outputs,
+            version=version,
+            locktime=locktime,
+            has_segwit=has_segwit,
+            witnesses=witnesses,
         )
 
     def __str__(self) -> str:

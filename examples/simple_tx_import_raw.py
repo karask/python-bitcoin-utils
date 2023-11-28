@@ -44,8 +44,8 @@ def test_non_segwit():
     #                                     change_addr.to_hash160(),
     #                                     'OP_EQUALVERIFY', 'OP_CHECKSIG']))
 
-    # create transaction from inputs/outputs -- default locktime is used
-    tx = Transaction([txin], [txout, change_txout])
+    # create transaction from inputs/outputs/locktime
+    tx = Transaction([txin], [txout, change_txout], bytes.fromhex("6df3e920"))
 
     print("\nUnsigned transaction:", tx)
     # print raw transaction
@@ -145,7 +145,7 @@ def test_segwit():
 
     # create transaction without change output - if at least a single input is
     # segwit we need to set has_segwit=True
-    tx = Transaction([txin], [txOut], has_segwit=True)
+    tx = Transaction([txin], [txOut], bytes.fromhex("6df3e920"), has_segwit=True)
 
     print("\nUnsigned transaction:", tx)
     # print raw transaction
