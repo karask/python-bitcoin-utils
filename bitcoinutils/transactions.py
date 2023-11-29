@@ -136,7 +136,7 @@ class TxInput:
 
         Attributes
         ----------
-        txinputraw : string (hex)
+        txinputrawhex : string (hex)
             The hexadecimal raw string of the Transaction
         cursor : int
             The cursor of which the algorithm will start to read the data
@@ -278,7 +278,7 @@ class TxOutput:
 
         Attributes
         ----------
-        txinputraw : string (hex)
+        txoutputrawhex : string (hex)
             The hexadecimal raw string of the Transaction
         cursor : int
             The cursor of which the algorithm will start to read the data
@@ -513,12 +513,8 @@ class Transaction:
 
         Attributes
         ----------
-        txinputraw : string (hex)
+        rawtxhex : string (hex)
             The hexadecimal raw string of the Transaction
-        cursor : int
-            The cursor of which the algorithm will start to read the data
-        has_segwit : boolean
-            Is the Tx Input segwit or not
         """
         rawtx = to_bytes(rawtxhex)
 
