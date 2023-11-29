@@ -12,7 +12,13 @@
 
 from bitcoinutils.setup import setup
 from bitcoinutils.utils import to_satoshis
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
+from bitcoinutils.transactions import (
+    Transaction,
+    TxInput,
+    TxOutput,
+    TxWitnessInput,
+    Locktime,
+)
 from bitcoinutils.keys import P2pkhAddress, PrivateKey
 from bitcoinutils.script import Script
 
@@ -45,7 +51,9 @@ def test_non_segwit():
     #                                     'OP_EQUALVERIFY', 'OP_CHECKSIG']))
 
     # create transaction from inputs/outputs/locktime
-    tx = Transaction([txin], [txout, change_txout], bytes.fromhex("6df3e920"))
+    tx = Transaction(
+        [txin], [txout, change_txout], Locktime(552203117).for_transaction()
+    )
 
     print("\nUnsigned transaction:", tx)
     # print raw transaction
@@ -145,7 +153,11 @@ def test_segwit():
 
     # create transaction without change output - if at least a single input is
     # segwit we need to set has_segwit=True
-    tx = Transaction([txin], [txOut], bytes.fromhex("6df3e920"), has_segwit=True)
+    tx = Transaction(
+        [txin],
+        [txOut],
+        Locktime(552203117).for_transaction(),
+    )
 
     print("\nUnsigned transaction:", tx)
     # print raw transaction
@@ -168,6 +180,7 @@ def test_segwit():
 
     # note that TxWitnessInput gets a list of witness items (not script opcodes)
     tx.witnesses.append(TxWitnessInput([sig, pub.to_hex()]))
+    tx.has_segwit = True
 
     # print raw signed transaction ready to be broadcasted
     print("\nSigned transaction:", tx)
