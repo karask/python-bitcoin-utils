@@ -18,6 +18,11 @@ from bitcoinutils.setup import is_mainnet
 from bitcoinutils.keys import PrivateKey
 
 
+# class HDW:
+#    """Implements mnemonic codes (BIP-39) and hierarchical deterministic
+#    wallet (BIP-32)"""
+
+
 class HDWallet:
     """Wraps the python hdwallet library to provide basic HD wallet functionality
 
