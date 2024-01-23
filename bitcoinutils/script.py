@@ -403,7 +403,7 @@ class Script:
                 commands.append(scriptraw[index : index + bytes_to_read].hex())
                 index = index + bytes_to_read
             else:
-                data_size, size = vi_to_int(scriptraw[index : index + 9])
+                data_size, size = vi_to_int(scriptraw[index : index + 8])
                 commands.append(
                     scriptraw[index + size : index + size + data_size].hex()
                 )

@@ -41,6 +41,7 @@ from bitcoinutils.utils import (
     prepend_varint,
     h_to_b,
     b_to_h,
+    i_to_b,
 )
 
 
@@ -106,7 +107,18 @@ class TxInput:
         # - note that python's struct uses little-endian by default
         txid_bytes = h_to_b(self.txid)[::-1]
         txout_bytes = struct.pack("<L", self.txout_index)
-        script_sig_bytes = self.script_sig.to_bytes()
+
+        # check if coinbase input add manually to avoid adding the script size,
+        # pushdata, etc since it is just raw data used by the miner (extra nonce,
+        # mining pool, etc.)
+        if self.txid == 64 * "0":
+            script_sig_bytes = h_to_b(
+                self.script_sig.script[0]
+            )  # coinbase has a single element as script_sig
+        # normal input
+        else:
+            script_sig_bytes = self.script_sig.to_bytes()
+
         data = (
             txid_bytes
             + txout_bytes
@@ -157,12 +169,27 @@ class TxInput:
 
         # read the size (bytes length) of the integer representing the size of
         # the Script's raw data and the size of the Script's raw data
-        unlocking_script_size, size = vi_to_int(txinputraw[cursor : cursor + 9])
+        unlocking_script_size, size = vi_to_int(txinputraw[cursor : cursor + 8])
         cursor += size
         unlocking_script = txinputraw[cursor : cursor + unlocking_script_size]
         cursor += unlocking_script_size
         sequence_number = txinputraw[cursor : cursor + 4]
         cursor += 4
+
+        # check if coinbase input (utxo will be all zeros). If it is then do not
+        # parse the script_sig; just pass it as one element (the string miners provided,
+        # typically includes the extra nonce, miner pool, etc.)
+        if inp_hash.hex() == 64 * "0":
+            return (
+                TxInput(
+                    txid=inp_hash.hex(),
+                    txout_index=int(output_n.hex(), 16),
+                    script_sig=Script([unlocking_script.hex()]),
+                    sequence=sequence_number,
+                ),
+                cursor,
+            )
+
         return (
             TxInput(
                 txid=inp_hash.hex(),

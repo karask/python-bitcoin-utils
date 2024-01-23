@@ -1,4 +1,3 @@
-
 SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - load public key with x-only pubkey, ensure it works for several...
@@ -16,6 +15,7 @@ SEGWIT-related
 
 CLEAN UP 
 - utils' to_bytes used in from_raw -- clean/reuse appropriate one
+- i_to_b32 exists but also bytes32_from_int (confirm they are the same and use i_to_b32)
 - rename VarInt to CompactSize
 - from_raw code
 - segwit examples and get_transaction_segwit_digest 

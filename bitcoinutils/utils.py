@@ -453,4 +453,12 @@ def i_to_b32(i: int) -> bytes:
     return i.to_bytes(32, byteorder="big")
 
 
+def i_to_b(i: int) -> bytes:
+    """Converts a integer to bytes"""
+
+    # determine the number of bytes required to represent the integer
+    byte_length = (i.bit_length() + 7) // 8
+    return i.to_bytes(byte_length, "big")
+
+
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?
