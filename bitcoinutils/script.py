@@ -304,9 +304,9 @@ class Script:
         data_bytes = h_to_b(data)
 
         if len(data_bytes) < 0x4C:
-            return chr(len(data_bytes)).encode() + data_bytes
+            return bytes([len(data_bytes)]) + data_bytes
         elif len(data_bytes) < 0xFF:
-            return b"\x4c" + chr(len(data_bytes)).encode() + data_bytes
+            return b"\x4c" + bytes([len(data_bytes)]) + data_bytes
         elif len(data_bytes) < 0xFFFF:
             return b"\x4d" + struct.pack("<H", len(data_bytes)) + data_bytes
         elif len(data_bytes) < 0xFFFFFFFF:
