@@ -9,14 +9,13 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-import struct
 import copy
 import hashlib
+import struct
 from typing import Any
 
-from bitcoinutils.utils import to_bytes, vi_to_int, h_to_b, b_to_h
 from bitcoinutils.ripemd160 import ripemd160
-
+from bitcoinutils.utils import b_to_h, h_to_b, to_bytes, vi_to_int
 
 # import bitcoinutils.keys
 
@@ -280,12 +279,6 @@ class Script:
         scripts = copy.deepcopy(script.script)
         return cls(scripts)
 
-    def __str__(self) -> str:
-        return str(self.script)
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
     def _op_push_data(self, data: str) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
 
@@ -432,3 +425,14 @@ class Script:
         """
         sha256 = hashlib.sha256(self.to_bytes()).digest()
         return Script(["OP_0", b_to_h(sha256)])
+
+    def __str__(self) -> str:
+        return str(self.script)
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __eq__(self, _other: object) -> bool:
+        if not isinstance(_other, Script):
+            return False
+        return self.script == _other.script
