@@ -77,7 +77,7 @@ class ControlBlock:
     """
 
     # TODO TEMP scripts is just the top root th_branch manually calculated!
-    def __init__(self, pubkey: PublicKey, script_to_spend=None, scripts=None):
+    def __init__(self, pubkey: PublicKey, script_to_spend=None, scripts=None, is_odd = False):
         """
         Parameters
         ----------
@@ -93,9 +93,10 @@ class ControlBlock:
         # constructing the merkle path
         self.script_to_spend = script_to_spend
         self.scripts = scripts
+        self.is_odd = is_odd
 
     def to_bytes(self) -> bytes:
-        leaf_version = bytes([LEAF_VERSION_TAPSCRIPT])
+        leaf_version = bytes([ (1 if self.is_odd else 0) + LEAF_VERSION_TAPSCRIPT])
 
         # x-only public key is required
         pub_key = bytes.fromhex(self.pubkey.to_x_only_hex())
@@ -355,7 +356,7 @@ def negate_privkey(key: bytes) -> str:
 #    return f'{x:064x}{y:064x}'
 
 
-def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
+def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, bool]:
     """
     Tweaks the public key with the specified tweak. Required to create the
     taproot public key from the internal key.
@@ -377,12 +378,16 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> bytes:
     # apply tweak to public key (Q = P + th*G)
     Q = point_add(P, (point_mul(G, tweak)))
 
+    # stores if it's odd to correct the control block bit
+    is_odd = False
+
     # negate Q as well before returning ?!?
     if Q[1] % 2 != 0:  # type: ignore
+        is_odd = True
         Q = (Q[0], EcdsaParams._field - Q[1])  # type: ignore
 
     # print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
-    return bytes.fromhex(f"{Q[0]:064x}{Q[1]:064x}")  # type: ignore
+    return bytes.fromhex(f"{Q[0]:064x}{Q[1]:064x}"), is_odd # type: ignore
 
 
 def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
