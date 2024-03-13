@@ -10,7 +10,6 @@ SEGWIT-related
 - segwit v0 and v1 address object instantiates from address, witness program and script
   . are all used? test?
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
-- ControlBlock does not handle sign bit for batch validation (tweak_public_key needs to return a second return value - negated)
 - ControlBlock does not automatically construct the merkle path (expects it as input)
 
 CLEAN UP 
@@ -34,6 +33,8 @@ DOC-related
 tests-related
 - improve test structure - similar to Bitcoin core 
 
+SECURITY
+- check https://github.com/advisories/GHSA-wj6h-64fc-37mp and if/how it applies 
 
 OTHERLIBS-related
 - add to bitcoin-rpc lib option to ignore invalid ssl cert
