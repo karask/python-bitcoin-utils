@@ -10,6 +10,11 @@
 # LICENSE file.
 
 from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Tuple
+
 import re
 import struct
 import hashlib
@@ -626,7 +631,7 @@ class PublicKey:
 
     def to_taproot_hex(
         self, scripts: Optional[Script | list[Script] | list[list[Script]]] = None
-    ) -> str:
+    ) -> Tuple[str, bool]:
         """Returns the tweaked x coordinate of the public key as a hex string.
 
         Parameters
@@ -640,9 +645,11 @@ class PublicKey:
         tweak_int = calculate_tweak(self, scripts)
 
         # keep x-only coordinate
-        pubkey = tweak_taproot_pubkey(self.key.to_string(), tweak_int)[:32]
+        tweak_and_odd = tweak_taproot_pubkey(self.key.to_string(), tweak_int) 
+        pubkey = tweak_and_odd[0][:32]
+        is_odd = tweak_and_odd[1]
 
-        return pubkey.hex()
+        return pubkey.hex(), is_odd
 
     def is_y_even(self) -> bool:
         """Returns True if the y coordinate of the public key is even and
@@ -808,9 +815,11 @@ class PublicKey:
         tree
         """
 
-        pubkey = self.to_taproot_hex(scripts)
+        pubkey_and_is_odd = self.to_taproot_hex(scripts)
+        pubkey = pubkey_and_is_odd[0]
+        is_odd = pubkey_and_is_odd[1]
 
-        return P2trAddress(witness_program=pubkey)
+        return P2trAddress(witness_program=pubkey, is_odd=is_odd)
 
 
 class Address(ABC):
@@ -1325,8 +1334,11 @@ class P2trAddress(SegwitAddress):
         address: Optional[str] = None,
         witness_program: Optional[str] = None,  # script=None, ?
         version: str = P2TR_ADDRESS_V1,
+        is_odd: bool = False,
     ) -> None:
         """Allow creation only from witness program"""
+
+        self.odd = is_odd
 
         super().__init__(
             address=address,
@@ -1341,6 +1353,12 @@ class P2trAddress(SegwitAddress):
     def get_type(self) -> str:
         """Returns the type of address"""
         return self.version
+
+    def is_odd(self) -> bool:
+        """Returns True if the y coordinate of the public key is odd and
+        False otherwise."""
+
+        return self.odd
 
 
 def main():

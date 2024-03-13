@@ -38,7 +38,7 @@ class TestCreateP2trTransaction(unittest.TestCase):
             "7b6412a0eed56338731e83c606f13ebb7a3756b3e4e1dbbe43a7db8d09106e56", 1
         )
         self.amount02 = to_satoshis(0.00005)
-        self.script_pubkey02 = Script(["OP_1", self.pub02.to_taproot_hex()])
+        self.script_pubkey02 = Script(["OP_1", self.pub02.to_taproot_hex()[0]])
         # same for 03
         self.toAddress02 = P2pkhAddress("mtVHHCqCECGwiMbMoZe8ayhJHuTdDbYWdJ")
         # same for 03
@@ -69,7 +69,7 @@ class TestCreateP2trTransaction(unittest.TestCase):
             "2a28f8bd8ba0518a86a390da310073a30b7df863d04b42a9c487edf3a8b113af", 1
         )
         self.amount02 = to_satoshis(0.00005)
-        self.script_pubkey03 = Script(["OP_1", self.pub03.to_taproot_hex()])
+        self.script_pubkey03 = Script(["OP_1", self.pub03.to_taproot_hex()[0]])
 
         self.raw_unsigned03 = (
             "02000000000101af13b1a8f3ed87c4a9424bd063f87d0ba3730031da90a3868a51a08bbdf8"
@@ -264,7 +264,7 @@ class TestCreateP2trWithSingleTapScript(unittest.TestCase):
             "99b84491534729bd5f4065bdcb42ed10fcd50340bf0a391574b56651923abdb25673105900"
             "8a08b5a3406cd81ce10ef5e7f936c6b9f7915ec1054e2a480e4552fa177aed868dc8b28c62"
             "63476871b21584690ef8222013f523102815e9fbbe132ffb8329b0fef5a9e4836d216dce18"
-            "24633287b0abc6ac21c01036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900b"
+            "24633287b0abc6ac21c11036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900b"
             "f401ec09c900000000"
         )
 
@@ -300,7 +300,7 @@ class TestCreateP2trWithSingleTapScript(unittest.TestCase):
             tapleaf_scripts=[self.tr_script_p2pk1],
             tweak=False,
         )
-        control_block = ControlBlock(self.from_pub2)
+        control_block = ControlBlock(self.from_pub2, is_odd=self.to_address2.is_odd())
         tx.witnesses.append(
             TxWitnessInput([sig, self.tr_script_p2pk1.to_hex(), control_block.to_hex()])
         )
@@ -361,7 +361,7 @@ class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
             "99b84491534729bd5f4065bdcb42ed10fcd50340ab89d20fee5557e57b7cf85840721ef28d"
             "68e91fd162b2d520e553b71d604388ea7c4b2fcc4d946d5d3be3c12ef2d129ffb92594bc1f"
             "42cdaec8280d0c83ecc2222013f523102815e9fbbe132ffb8329b0fef5a9e4836d216dce18"
-            "24633287b0abc6ac41c01036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900b"
+            "24633287b0abc6ac41c11036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900b"
             "f401ec09c9682f0e85d59cb20fd0e4503c035d609f127c786136f276d475e8321ec9e77e6c"
             "00000000"
         )
@@ -380,7 +380,7 @@ class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
             tweak=False,
         )
         leaf_b = tapleaf_tagged_hash(self.tr_script_p2pk_B)
-        control_block = ControlBlock(self.from_pub, scripts=leaf_b)
+        control_block = ControlBlock(self.from_pub, scripts=leaf_b, is_odd=self.to_address.is_odd())
         tx.witnesses.append(
             TxWitnessInput(
                 [sig, self.tr_script_p2pk_A.to_hex(), control_block.to_hex()]
@@ -453,7 +453,7 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
             "99b84491534729bd5f4065bdcb42ed10fcd50340644e392f5fd88d812bad30e73ff9900cdc"
             "f7f260ecbc862819542fd4683fa9879546613be4e2fc762203e45715df1a42c65497a63edc"
             "e5f1dfe5caea5170273f2220e808f1396f12a253cf00efdf841e01c8376b616fb785c39595"
-            "285c30f2817e71ac61c01036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900b"
+            "285c30f2817e71ac61c11036a7ed8d24eac9057e114f22342ebf20c16d37f0d25cfd2c900b"
             "f401ec09c9ed9f1b2b0090138e31e11a31c1aea790928b7ce89112a706e5caa703ff7e0ab9"
             "28109f92c2781611bb5de791137cbd40a5482a4a23fd0ffe50ee4de9d5790dd100000000"
         )
@@ -477,7 +477,7 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
         )
         leaf_a = tapleaf_tagged_hash(self.tr_script_p2pk_A)
         leaf_c = tapleaf_tagged_hash(self.tr_script_p2pk_C)
-        control_block = ControlBlock(self.from_pub, scripts=leaf_a + leaf_c)
+        control_block = ControlBlock(self.from_pub, scripts=leaf_a + leaf_c, is_odd=self.to_address.is_odd())
         tx.witnesses.append(
             TxWitnessInput(
                 [sig, self.tr_script_p2pk_B.to_hex(), control_block.to_hex()]
