@@ -15,7 +15,7 @@ import struct
 from typing import Any
 
 from bitcoinutils.ripemd160 import ripemd160
-from bitcoinutils.utils import b_to_h, h_to_b, to_bytes, vi_to_int
+from bitcoinutils.utils import b_to_h, h_to_b, hex_to_bytes, vi_to_int
 
 # import bitcoinutils.keys
 
@@ -369,7 +369,7 @@ class Script:
             has_segwit : boolean
                 Is the Tx Input segwit or not
         """
-        scriptraw = to_bytes(scriptrawhex)
+        scriptraw = hex_to_bytes(scriptrawhex)
         commands = []
         index = 0
 

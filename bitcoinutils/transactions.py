@@ -34,7 +34,7 @@ from bitcoinutils.constants import (
 )
 from bitcoinutils.script import Script
 from bitcoinutils.utils import (
-    to_bytes,
+    hex_to_bytes,
     vi_to_int,
     encode_varint,
     tagged_hash,
@@ -155,7 +155,7 @@ class TxInput:
         has_segwit : boolean
             Is the Tx Input segwit or not
         """
-        txinputraw = to_bytes(txinputrawhex)
+        txinputraw = hex_to_bytes(txinputrawhex)
 
         # read the 32 bytes of TxInput ID
         inp_hash = txinputraw[cursor : cursor + 32][::-1]
@@ -312,7 +312,7 @@ class TxOutput:
         has_segwit : boolean
             Is the Tx Output segwit or not
         """
-        txoutputraw = to_bytes(txoutputrawhex)
+        txoutputraw = hex_to_bytes(txoutputrawhex)
 
         # read the amount of the TxOutput
         value = int.from_bytes(txoutputraw[cursor : cursor + 8][::-1], "big")
@@ -543,7 +543,7 @@ class Transaction:
         rawtxhex : string (hex)
             The hexadecimal raw string of the Transaction
         """
-        rawtx = to_bytes(rawtxhex)
+        rawtx = hex_to_bytes(rawtxhex)
 
         # read version
         version = rawtx[0:4]

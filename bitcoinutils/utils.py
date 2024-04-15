@@ -192,13 +192,23 @@ def encode_varint(i: int) -> bytes:
 def is_address_bech32(address: str) -> bool:
     """
     Returns if an address (string) is bech32 or not
-    TODO improve by checking if valid, etc.
     """
-    if address.startswith("bc") or address.startswith("tb"):
-        return True
-
-    return False
-
+    if not address:
+        return False
+    
+    CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+    # Check if the string has valid characters
+    for char in address:
+        if char.lower() not in CHARSET:
+            return False
+    try:
+        hrp, data = address.lower().split("1")
+    except ValueError:
+        return False
+    # Check if the human-readable part (hrp) and data part are of appropriate lengths
+    if len(hrp) < 1 or len(data) < 6:
+        return False
+    return True
 
 def vi_to_int(byteint: bytes) -> Tuple[int, int]:
     """
@@ -216,12 +226,11 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
         size = 4
     else:  # integer of 8 bytes
         size = 8
-
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
 
 
 # TODO name hex_to_bytes ??
-def to_bytes(string: str, unhexlify: bool = True) -> bytes:
+def hex_to_bytes(string: str, unhexlify: bool = True) -> bytes:
     """
     Converts a hex string to bytes
     """
@@ -246,14 +255,6 @@ def bytes32_from_int(x: int) -> bytes:
     Converts int to 32 big-endian bytes
     """
     return x.to_bytes(32, byteorder="big")
-
-
-# TODO REMOVE --- NOT USED
-# def int_from_bytes(b: bytes) -> int:
-#    '''
-#    Converts int to bytes
-#    '''
-#    return int.from_bytes(b, byteorder="big")
 
 
 def add_magic_prefix(message: str) -> bytes:
