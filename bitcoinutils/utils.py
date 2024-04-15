@@ -23,8 +23,7 @@ from ecdsa import ellipticcurve  # type: ignore
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 
-
-# TODO rename to Secp256k1Params and clean whatever is not used!
+# clean whatever is not used!
 class Secp256k1Params:
     # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
     # This is done modulo p which (secp256k1) is:
@@ -76,7 +75,6 @@ class ControlBlock:
         returns the control block as a hexadecimal string
     """
 
-    # TODO TEMP scripts is just the top root th_branch manually calculated!
     def __init__(self, pubkey: PublicKey, script_to_spend=None, scripts=None, is_odd = False):
         """
         Parameters
@@ -89,20 +87,18 @@ class ControlBlock:
             concatenated path (leafs/branches) hashes in bytes
         """
         self.pubkey = pubkey
-        # script_to_spend is ignored for now - needed for automatically
-        # constructing the merkle path
+        self.script_to_spend = script_to_spend
         self.script_to_spend = script_to_spend
         self.scripts = scripts
         self.is_odd = is_odd
+        if script_to_spend is not None:
+            self.scripts = self._construct_merkle_path(script_to_spend) 
 
     def to_bytes(self) -> bytes:
         leaf_version = bytes([ (1 if self.is_odd else 0) + LEAF_VERSION_TAPSCRIPT])
-
         # x-only public key is required
         pub_key = bytes.fromhex(self.pubkey.to_x_only_hex())
-
         merkle_path = b""
-
         # get merkle path from scripts, if any
         # TODO currently the manually constructed merkle path is passed
         if self.scripts:
@@ -114,6 +110,40 @@ class ControlBlock:
         """Converts object to hexadecimal string"""
 
         return b_to_h(self.to_bytes())
+
+def _construct_merkle_path(self, script_to_spend):
+        """
+        Constructs the Merkle path to the given script_to_spend.
+
+        Parameters
+        ----------
+        script_to_spend : Script
+            The tapscript leaf that we want to spend
+
+        Returns
+        -------
+        bytes
+            Concatenated path (leafs/branches) hashes in bytes
+        """
+        path = []
+        current_hash = hashlib.sha256(script_to_spend).digest()
+        path.append(current_hash)
+        # Iterate through the tree to calculate the path hashes
+        while len(current_hash) > 1:
+            # Determine if the current hash is a left or right child
+            is_left = (current_hash[-1] & 1) == 0
+            # Simulate the parent node by hashing the current hash with its sibling
+            if is_left:
+                sibling_hash = hashlib.sha256(current_hash + path[-1]).digest()
+            else:
+                sibling_hash = hashlib.sha256(path[-1] + current_hash).digest()
+            path.append(sibling_hash)
+            # Move up the tree to the parent node
+            current_hash = sibling_hash
+        # Reverse the path to get the correct order
+        path.reverse()
+        # Concatenate the path hashes into a single bytes object
+        return b''.join(path)
 
 
 def get_tag_hashed_merkle_root(
@@ -227,7 +257,6 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
     else:  # integer of 8 bytes
         size = 8
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
-
 
 def hex_to_bytes(string: str, unhexlify: bool = True) -> bytes:
     """
