@@ -25,7 +25,7 @@ from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 
 
 # TODO rename to Secp256k1Params and clean whatever is not used!
-class EcdsaParams:
+class Secp256k1Params:
     # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
     # This is done modulo p which (secp256k1) is:
     # p is the finite field prime number and is equal to:
@@ -337,7 +337,7 @@ def negate_privkey(key: bytes) -> str:
     else:
         key_secret_exponent = h_to_i(key.hex())
         # negate private key
-        negated_key = EcdsaParams._order - key_secret_exponent
+        negated_key = Secp256k1Params._order - key_secret_exponent
 
     return f"{negated_key:064x}"
 
@@ -351,7 +351,7 @@ def negate_privkey(key: bytes) -> str:
 #
 #    # negate public key if necessary
 #    if y % 2 != 0:
-#        y = EcdsaParams._field - y
+#        y = Secp256k1Params._field - y
 #
 #    return f'{x:064x}{y:064x}'
 
@@ -372,7 +372,7 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, boo
     # if y is odd then negate y (effectively P) to make it even and equivalent
     # to a 02 compressed pk
     if y % 2 != 0:
-        y = EcdsaParams._field - y
+        y = Secp256k1Params._field - y
     P = (x, y)
 
     # apply tweak to public key (Q = P + th*G)
@@ -384,7 +384,7 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, boo
     # negate Q as well before returning ?!?
     if Q[1] % 2 != 0:  # type: ignore
         is_odd = True
-        Q = (Q[0], EcdsaParams._field - Q[1])  # type: ignore
+        Q = (Q[0], Secp256k1Params._field - Q[1])  # type: ignore
 
     # print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
     return bytes.fromhex(f"{Q[0]:064x}{Q[1]:064x}"), is_odd # type: ignore
@@ -412,7 +412,7 @@ def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     # The tweaked private key can be computed by d + hash(P || S)
     # where d is the normal private key, P is the normal public key
     # and S is the alt script, if any (empty script, if none?? TODO)
-    tweaked_privkey_int = (h_to_i(negated_key) + tweak) % EcdsaParams._order
+    tweaked_privkey_int = (h_to_i(negated_key) + tweak) % Secp256k1Params._order
 
     # print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
     return bytes.fromhex(f"{tweaked_privkey_int:064x}")
