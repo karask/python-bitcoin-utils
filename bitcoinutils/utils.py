@@ -229,7 +229,6 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
 
 
-# TODO name hex_to_bytes ??
 def hex_to_bytes(string: str, unhexlify: bool = True) -> bytes:
     """
     Converts a hex string to bytes
