@@ -125,7 +125,6 @@ def get_tag_hashed_merkle_root(
     Scripts is a list of list of Scripts describing the merkle tree of scripts to commit
     Example of scripts' list:  [ [A, B], C ]
     """
-
     # empty scripts or empty list
     if not scripts:
         return b""
@@ -238,21 +237,6 @@ def to_bytes(string: str, unhexlify: bool = True) -> bytes:
         return string
     else:
         return bytes(string, "utf8")
-
-
-def bytes32_from_int(x: int) -> bytes:
-    """
-    Converts int to 32 big-endian bytes
-    """
-    return x.to_bytes(32, byteorder="big")
-
-
-# TODO REMOVE --- NOT USED
-# def int_from_bytes(b: bytes) -> int:
-#    '''
-#    Converts int to bytes
-#    '''
-#    return int.from_bytes(b, byteorder="big")
 
 
 def add_magic_prefix(message: str) -> bytes:
