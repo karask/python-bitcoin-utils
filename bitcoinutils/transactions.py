@@ -769,10 +769,7 @@ class Transaction:
                  The type of the signature hash to be created
         """
 
-        # clone transaction to modify without messing up the real transaction
-        # TODO tmp_tx is not really used for its to_bytes() - we can access
-        # self directly
-        tmp_tx = Transaction.copy(self)
+
 
         # defaults for BIP143
         hash_prevouts = b"\x00" * 32
@@ -789,12 +786,10 @@ class Transaction:
         # Hash all input
         if not anyone_can_pay:
             hash_prevouts = b""
-            for txin in tmp_tx.inputs:
-                # TODO ? <L is 8 bytes, should be 4 bytes <I instead
-                hash_prevouts += h_to_b(txin.txid)[::-1] + struct.pack(
-                    "<L",
-                    txin.txout_index,
-                )
+            for txin in self.inputs:
+                
+                hash_prevouts += h_to_b(txin.txid)[::-1] + struct.pack("<I", txin.txout_index)
+
             hash_prevouts = hashlib.sha256(
                 hashlib.sha256(hash_prevouts).digest()
             ).digest()
@@ -802,7 +797,7 @@ class Transaction:
         # Hash all input sequence
         if not anyone_can_pay and sign_all:
             hash_sequence = b""
-            for txin in tmp_tx.inputs:
+            for txin in self.inputs:
                 hash_sequence += txin.sequence
             hash_sequence = hashlib.sha256(
                 hashlib.sha256(hash_sequence).digest()
@@ -811,7 +806,7 @@ class Transaction:
         if sign_all:
             # Hash all output
             hash_outputs = b""
-            for txout in tmp_tx.outputs:
+            for txout in self.outputs:
                 amount_bytes = struct.pack("<q", txout.amount)
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += (
@@ -820,9 +815,9 @@ class Transaction:
             hash_outputs = hashlib.sha256(
                 hashlib.sha256(hash_outputs).digest()
             ).digest()
-        elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(tmp_tx.outputs):
+        elif basic_sig_hash_type == SIGHASH_SINGLE and txin_index < len(self.outputs):
             # Hash one output
-            txout = tmp_tx.outputs[txin_index]
+            txout = self.outputs[txin_index]
             amount_bytes = struct.pack("<q", txout.amount)
             script_bytes = txout.script_pubkey.to_bytes()
             hash_outputs = (
@@ -839,12 +834,9 @@ class Transaction:
         tx_for_signing += hash_prevouts + hash_sequence
 
         # add tx outpoint (utxo txid + index)
-        # TODO <L is 8 bytes, should be 4 bytes <I instead
+        # Correcting the struct.pack usage from "<L" to "<I" for explicit 4-byte packing
         txin = self.inputs[txin_index]
-        tx_for_signing += h_to_b(txin.txid)[::-1] + struct.pack(
-            "<L",
-            txin.txout_index,
-        )
+        tx_for_signing += h_to_b(txin.txid)[::-1] + struct.pack("<I", txin.txout_index)
 
         # add tx script code
         tx_for_signing += struct.pack("B", len(script.to_bytes()))
