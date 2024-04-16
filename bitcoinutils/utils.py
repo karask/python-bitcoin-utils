@@ -162,7 +162,7 @@ def to_satoshis(num: int | float | Decimal):
     return int(round(num * SATOSHIS_PER_BITCOIN))
 
 
-def prepend_varint(data: bytes) -> bytes:
+def compact_size(data: bytes) -> bytes:
     """
     Counts bytes and returns them with their varint (or compact size) prepended.
     """
@@ -311,7 +311,7 @@ def calculate_tweak(
 
 def tapleaf_tagged_hash(script: Script) -> bytes:
     """Calculates the tagged hash for a tapleaf"""
-    script_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_varint(script.to_bytes())
+    script_part = bytes([LEAF_VERSION_TAPSCRIPT]) + compact_size(script.to_bytes())
     return tagged_hash(script_part, "TapLeaf")
 
 
