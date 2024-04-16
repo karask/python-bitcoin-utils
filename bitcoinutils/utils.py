@@ -103,23 +103,19 @@ class ControlBlock:
         # TODO currently the manually constructed merkle path is passed
         if self.scripts:
             merkle_path = self.scripts  # manually constructed path
-
         return leaf_version + pub_key + merkle_path
 
     def to_hex(self):
         """Converts object to hexadecimal string"""
-
         return b_to_h(self.to_bytes())
 
 def _construct_merkle_path(self, script_to_spend):
         """
         Constructs the Merkle path to the given script_to_spend.
-
         Parameters
         ----------
         script_to_spend : Script
             The tapscript leaf that we want to spend
-
         Returns
         -------
         bytes
@@ -257,26 +253,6 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
     else:  # integer of 8 bytes
         size = 8
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
-
-def hex_to_bytes(string: str, unhexlify: bool = True) -> bytes:
-    """
-    Converts a hex string to bytes
-    """
-    if not string:
-        return b""
-    if unhexlify:
-        try:
-            if isinstance(string, bytes):
-                string = string.decode()
-            s = bytes.fromhex(string)
-            return s
-        except (TypeError, ValueError):
-            pass
-    if isinstance(string, bytes):
-        return string
-    else:
-        return bytes(string, "utf8")
-
 
 def bytes32_from_int(x: int) -> bytes:
     """
