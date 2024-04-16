@@ -15,7 +15,6 @@ SEGWIT-related
 CLEAN UP 
 - utils' to_bytes used in from_raw -- clean/reuse appropriate one
 - i_to_b32 exists but also bytes32_from_int (confirm they are the same and use i_to_b32)
-- rename VarInt to CompactSize
 - from_raw code
 - segwit examples and get_transaction_segwit_digest 
 - use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
