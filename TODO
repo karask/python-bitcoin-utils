@@ -2,6 +2,7 @@ SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - load public key with x-only pubkey, ensure it works for several...
 - TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj
+- Check and fix potential vulnerabilities: https://github.com/karask/python-bitcoin-utils/security/dependabot
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
