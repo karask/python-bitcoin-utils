@@ -41,7 +41,6 @@ from bitcoinutils.utils import (
     prepend_varint,
     h_to_b,
     b_to_h,
-    i_to_b,
 )
 
 
@@ -769,8 +768,6 @@ class Transaction:
                  The type of the signature hash to be created
         """
 
-
-
         # defaults for BIP143
         hash_prevouts = b"\x00" * 32
         hash_sequence = b"\x00" * 32
@@ -787,8 +784,9 @@ class Transaction:
         if not anyone_can_pay:
             hash_prevouts = b""
             for txin in self.inputs:
-                
-                hash_prevouts += h_to_b(txin.txid)[::-1] + struct.pack("<I", txin.txout_index)
+                hash_prevouts += h_to_b(txin.txid)[::-1] + struct.pack(
+                    "<I", txin.txout_index
+                )
 
             hash_prevouts = hashlib.sha256(
                 hashlib.sha256(hash_prevouts).digest()
