@@ -2,6 +2,7 @@ SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - load public key with x-only pubkey, ensure it works for several...
 - TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj
+- Check and fix potential vulnerabilities: https://github.com/karask/python-bitcoin-utils/security/dependabot
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -14,7 +15,7 @@ SEGWIT-related
 
 CLEAN UP 
 - utils' to_bytes used in from_raw -- clean/reuse appropriate one
-- i_to_b32 exists but also bytes32_from_int (confirm they are the same and use i_to_b32)
+
 - from_raw code
 - segwit examples and get_transaction_segwit_digest 
 - use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
