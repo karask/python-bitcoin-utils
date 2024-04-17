@@ -23,9 +23,8 @@ from ecdsa import ellipticcurve  # type: ignore
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 
-
-# TODO rename to Secp256k1Params and clean whatever is not used!
-class EcdsaParams:
+# clean whatever is not used!
+class Secp256k1Params:
     # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
     # This is done modulo p which (secp256k1) is:
     # p is the finite field prime number and is equal to:
@@ -76,7 +75,6 @@ class ControlBlock:
         returns the control block as a hexadecimal string
     """
 
-    # TODO TEMP scripts is just the top root th_branch manually calculated!
     def __init__(self, pubkey: PublicKey, script_to_spend=None, scripts=None, is_odd = False):
         """
         Parameters
@@ -88,33 +86,27 @@ class ControlBlock:
         scripts : bytes
             concatenated path (leafs/branches) hashes in bytes
         """
-        self.pubkey = pubkey
         # script_to_spend is ignored for now - needed for automatically
         # constructing the merkle path
+        self.pubkey = pubkey
         self.script_to_spend = script_to_spend
         self.scripts = scripts
         self.is_odd = is_odd
 
     def to_bytes(self) -> bytes:
         leaf_version = bytes([ (1 if self.is_odd else 0) + LEAF_VERSION_TAPSCRIPT])
-
         # x-only public key is required
         pub_key = bytes.fromhex(self.pubkey.to_x_only_hex())
-
         merkle_path = b""
-
         # get merkle path from scripts, if any
         # TODO currently the manually constructed merkle path is passed
         if self.scripts:
             merkle_path = self.scripts  # manually constructed path
-
         return leaf_version + pub_key + merkle_path
 
     def to_hex(self):
         """Converts object to hexadecimal string"""
-
         return b_to_h(self.to_bytes())
-
 
 def get_tag_hashed_merkle_root(
     scripts: None | Script | list[Script] | list[list[Script]],
@@ -190,13 +182,23 @@ def encode_varint(i: int) -> bytes:
 def is_address_bech32(address: str) -> bool:
     """
     Returns if an address (string) is bech32 or not
-    TODO improve by checking if valid, etc.
     """
-    if address.startswith("bc") or address.startswith("tb"):
-        return True
-
-    return False
-
+    if not address:
+        return False
+    
+    CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+    # Check if the string has valid characters
+    for char in address:
+        if char.lower() not in CHARSET:
+            return False
+    try:
+        hrp, data = address.lower().split("1")
+    except ValueError:
+        return False
+    # Check if the human-readable part (hrp) and data part are of appropriate lengths
+    if len(hrp) < 1 or len(data) < 6:
+        return False
+    return True
 
 def vi_to_int(byteint: bytes) -> Tuple[int, int]:
     """
@@ -214,29 +216,7 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
         size = 4
     else:  # integer of 8 bytes
         size = 8
-
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
-
-
-# TODO name hex_to_bytes ??
-def to_bytes(string: str, unhexlify: bool = True) -> bytes:
-    """
-    Converts a hex string to bytes
-    """
-    if not string:
-        return b""
-    if unhexlify:
-        try:
-            if isinstance(string, bytes):
-                string = string.decode()
-            s = bytes.fromhex(string)
-            return s
-        except (TypeError, ValueError):
-            pass
-    if isinstance(string, bytes):
-        return string
-    else:
-        return bytes(string, "utf8")
 
 
 def add_magic_prefix(message: str) -> bytes:
@@ -320,7 +300,7 @@ def negate_privkey(key: bytes) -> str:
     else:
         key_secret_exponent = h_to_i(key.hex())
         # negate private key
-        negated_key = EcdsaParams._order - key_secret_exponent
+        negated_key = Secp256k1Params._order - key_secret_exponent
 
     return f"{negated_key:064x}"
 
@@ -334,7 +314,7 @@ def negate_privkey(key: bytes) -> str:
 #
 #    # negate public key if necessary
 #    if y % 2 != 0:
-#        y = EcdsaParams._field - y
+#        y = Secp256k1Params._field - y
 #
 #    return f'{x:064x}{y:064x}'
 
@@ -355,7 +335,7 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, boo
     # if y is odd then negate y (effectively P) to make it even and equivalent
     # to a 02 compressed pk
     if y % 2 != 0:
-        y = EcdsaParams._field - y
+        y = Secp256k1Params._field - y
     P = (x, y)
 
     # apply tweak to public key (Q = P + th*G)
@@ -367,7 +347,7 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, boo
     # negate Q as well before returning ?!?
     if Q[1] % 2 != 0:  # type: ignore
         is_odd = True
-        Q = (Q[0], EcdsaParams._field - Q[1])  # type: ignore
+        Q = (Q[0], Secp256k1Params._field - Q[1])  # type: ignore
 
     # print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
     return bytes.fromhex(f"{Q[0]:064x}{Q[1]:064x}"), is_odd # type: ignore
@@ -395,7 +375,7 @@ def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     # The tweaked private key can be computed by d + hash(P || S)
     # where d is the normal private key, P is the normal public key
     # and S is the alt script, if any (empty script, if none?? TODO)
-    tweaked_privkey_int = (h_to_i(negated_key) + tweak) % EcdsaParams._order
+    tweaked_privkey_int = (h_to_i(negated_key) + tweak) % Secp256k1Params._order
 
     # print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
     return bytes.fromhex(f"{tweaked_privkey_int:064x}")
@@ -435,18 +415,14 @@ def b_to_i(b: bytes) -> int:
     """Converts a bytes to a number"""
     return int.from_bytes(b, byteorder="big")
 
-
 def i_to_b32(i: int) -> bytes:
     """Converts a integer to bytes"""
     return i.to_bytes(32, byteorder="big")
 
-
 def i_to_b(i: int) -> bytes:
     """Converts a integer to bytes"""
-
     # determine the number of bytes required to represent the integer
     byte_length = (i.bit_length() + 7) // 8
     return i.to_bytes(byte_length, "big")
-
 
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?

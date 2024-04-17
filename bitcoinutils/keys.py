@@ -50,9 +50,8 @@ from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.schnorr import schnorr_sign
 from bitcoinutils.transactions import Transaction
 from bitcoinutils.utils import (
-    EcdsaParams,
+    Secp256k1Params,
     calculate_tweak,
-    bytes32_from_int,
     add_magic_prefix,
     h_to_i,
     b_to_h,
@@ -367,7 +366,7 @@ class PrivateKey:
         while length_r == 33:
             signature = self.key.sign_digest_deterministic(
                 tx_digest,
-                extra_entropy=bytes32_from_int(attempt),
+                extra_entropy=i_to_b32(attempt),
                 sigencode=sigencode_der,
                 hashfunc=hashlib.sha256,
             )
@@ -408,7 +407,7 @@ class PrivateKey:
 
         # if length is 33 bytes then it contains a sign and thus is high S
         if length_s == 33:
-            new_S_as_bigint = EcdsaParams._order - S_as_bigint
+            new_S_as_bigint = Secp256k1Params._order - S_as_bigint
             # convert bigint to bytes
             # new_S = h_to_b(i_to_h64(new_S_as_bigint))
             new_S = i_to_b32(new_S_as_bigint)
@@ -571,7 +570,7 @@ class PublicKey:
 
             # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
             y_values = sqrt_mod(
-                (x_coord**3 + 7) % EcdsaParams._p, EcdsaParams._p, True
+                (x_coord**3 + 7) % Secp256k1Params._p, Secp256k1Params._p, True
             )
 
             assert y_values is not None
@@ -718,20 +717,20 @@ class PublicKey:
         #
 
         # get signature's r and s
-        r, s = sigdecode_string(sig[1:], EcdsaParams._order)
+        r, s = sigdecode_string(sig[1:], Secp256k1Params._order)
 
         # ger R's x coordinate
-        x = r + (recid // 2) * EcdsaParams._order
+        x = r + (recid // 2) * Secp256k1Params._order
 
         # get R's y coordinate (y**2 = x**3 + 7)
-        y_values = sqrt_mod((x**3 + 7) % EcdsaParams._p, EcdsaParams._p, True)
+        y_values = sqrt_mod((x**3 + 7) % Secp256k1Params._p, Secp256k1Params._p, True)
         if (y_values[0] - recid) % 2 == 0:  # type: ignore
             y = y_values[0]  # type: ignore
         else:
             y = y_values[1]  # type: ignore
 
         # get R (recovered ephemeral key) from x,y
-        R = ellipticcurve.Point(EcdsaParams._curve, x, y, EcdsaParams._order)
+        R = ellipticcurve.Point(Secp256k1Params._curve, x, y, Secp256k1Params._order)
 
         # get e (encoded message hash as big integer)
         e = b_to_i(message_digest)
@@ -739,9 +738,9 @@ class PublicKey:
         # compute public key Q = r^-1 (sR - eG)
         # because Point substraction is not defined we will instead use:
         # Q = r^-1 (sR + (-eG) )
-        minus_e = -e % EcdsaParams._order
-        inv_r = numbertheory.inverse_mod(r, EcdsaParams._order)
-        Q = inv_r * (s * R + minus_e * EcdsaParams._G)
+        minus_e = -e % Secp256k1Params._order
+        inv_r = numbertheory.inverse_mod(r, Secp256k1Params._order)
+        Q = inv_r * (s * R + minus_e * Secp256k1Params._G)
 
         # instantiate the public key and verify message
         public_key = VerifyingKey.from_public_point(Q, curve=SECP256k1)
