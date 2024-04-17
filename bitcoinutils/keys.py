@@ -153,7 +153,8 @@ class PrivateKey:
     def _from_bytes(self, b: bytes):
         """Creates a key directly from 32 raw bytes"""
 
-        # TODO check if b is len 32 and raise error
+        if len(b) != 32:
+            raise ValueError("Invalid key length: must be exactly 32 bytes.")
         self.key = SigningKey.from_string(b, curve=SECP256k1)
 
     # expects wif in hex string
