@@ -37,7 +37,7 @@ from bitcoinutils.utils import (
     vi_to_int,
     encode_varint,
     tagged_hash,
-    compact_size,
+    prepend_compact_size,
     h_to_b,
     b_to_h,
 )
@@ -234,7 +234,7 @@ class TxWitnessInput:
         stack_bytes = b""
         for item in self.stack:
             # witness items can only be data items (hex str)
-            item_bytes = compact_size(h_to_b(item))
+            item_bytes = prepend_compact_size(h_to_b(item))
             stack_bytes += item_bytes
 
         return stack_bytes
@@ -1020,7 +1020,7 @@ class Transaction:
                 LEAF_VERSION_TAPSCRIPT  # pass as a parameter if a new version comes
             )
             tx_for_signing += tagged_hash(
-                bytes([leaf_ver]) + compact_size(script.to_bytes()), "TapLeaf"
+                bytes([leaf_ver]) + prepend_compact_size(script.to_bytes()), "TapLeaf"
             )
 
             # key version - type of public key used for this signature, currently only 0
