@@ -220,13 +220,6 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
         size = 8
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
 
-def bytes32_from_int(x: int) -> bytes:
-    """
-    Converts int to 32 big-endian bytes
-    """
-    return x.to_bytes(32, byteorder="big")
-
-
 def add_magic_prefix(message: str) -> bytes:
     """
     Required prefix when signing a message
@@ -423,18 +416,14 @@ def b_to_i(b: bytes) -> int:
     """Converts a bytes to a number"""
     return int.from_bytes(b, byteorder="big")
 
-
 def i_to_b32(i: int) -> bytes:
     """Converts a integer to bytes"""
     return i.to_bytes(32, byteorder="big")
 
-
 def i_to_b(i: int) -> bytes:
     """Converts a integer to bytes"""
-
     # determine the number of bytes required to represent the integer
     byte_length = (i.bit_length() + 7) // 8
     return i.to_bytes(byte_length, "big")
-
 
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?

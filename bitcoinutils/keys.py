@@ -52,7 +52,6 @@ from bitcoinutils.transactions import Transaction
 from bitcoinutils.utils import (
     Secp256k1Params,
     calculate_tweak,
-    bytes32_from_int,
     add_magic_prefix,
     h_to_i,
     b_to_h,
@@ -366,7 +365,7 @@ class PrivateKey:
         while length_r == 33:
             signature = self.key.sign_digest_deterministic(
                 tx_digest,
-                extra_entropy=bytes32_from_int(attempt),
+                extra_entropy=i_to_b32(attempt),
                 sigencode=sigencode_der,
                 hashfunc=hashlib.sha256,
             )
