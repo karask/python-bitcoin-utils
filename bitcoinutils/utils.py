@@ -86,13 +86,12 @@ class ControlBlock:
         scripts : bytes
             concatenated path (leafs/branches) hashes in bytes
         """
+        # script_to_spend is ignored for now - needed for automatically
+        # constructing the merkle path
         self.pubkey = pubkey
-        self.script_to_spend = script_to_spend
         self.script_to_spend = script_to_spend
         self.scripts = scripts
         self.is_odd = is_odd
-        if script_to_spend is not None:
-            self.scripts = self._construct_merkle_path(script_to_spend) 
 
     def to_bytes(self) -> bytes:
         leaf_version = bytes([ (1 if self.is_odd else 0) + LEAF_VERSION_TAPSCRIPT])
@@ -108,39 +107,6 @@ class ControlBlock:
     def to_hex(self):
         """Converts object to hexadecimal string"""
         return b_to_h(self.to_bytes())
-
-def _construct_merkle_path(self, script_to_spend):
-        """
-        Constructs the Merkle path to the given script_to_spend.
-        Parameters
-        ----------
-        script_to_spend : Script
-            The tapscript leaf that we want to spend
-        Returns
-        -------
-        bytes
-            Concatenated path (leafs/branches) hashes in bytes
-        """
-        path = []
-        current_hash = hashlib.sha256(script_to_spend).digest()
-        path.append(current_hash)
-        # Iterate through the tree to calculate the path hashes
-        while len(current_hash) > 1:
-            # Determine if the current hash is a left or right child
-            is_left = (current_hash[-1] & 1) == 0
-            # Simulate the parent node by hashing the current hash with its sibling
-            if is_left:
-                sibling_hash = hashlib.sha256(current_hash + path[-1]).digest()
-            else:
-                sibling_hash = hashlib.sha256(path[-1] + current_hash).digest()
-            path.append(sibling_hash)
-            # Move up the tree to the parent node
-            current_hash = sibling_hash
-        # Reverse the path to get the correct order
-        path.reverse()
-        # Concatenate the path hashes into a single bytes object
-        return b''.join(path)
-
 
 def get_tag_hashed_merkle_root(
     scripts: None | Script | list[Script] | list[list[Script]],
