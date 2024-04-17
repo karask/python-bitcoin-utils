@@ -50,7 +50,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Bitcoin Utilities"
-copyright = "2023, Konstantinos Karasavvas"
+copyright = "2022, Konstantinos Karasavvas"
 author = "Konstantinos Karasavvas"
 
 # The version info for the project you're documenting, acts as replacement for
