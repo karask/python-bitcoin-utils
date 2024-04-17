@@ -117,8 +117,6 @@ def get_tag_hashed_merkle_root(
     Scripts is a list of list of Scripts describing the merkle tree of scripts to commit
     Example of scripts' list:  [ [A, B], C ]
     """
-    # TODO raise errors
-
     # empty scripts or empty list
     if not scripts:
         return b""
@@ -141,8 +139,8 @@ def get_tag_hashed_merkle_root(
             right = get_tag_hashed_merkle_root(scripts[1])
             return tapbranch_tagged_hash(left, right)
         else:
-            # TODO throw exception
-            exit("List cannot have more than 2 branches.")
+            # Raise an error if a branch node contains more than two elements
+            raise ValueError("Invalid Merkle branch: List cannot have more than 2 branches.")
 
 
 def to_satoshis(num: int | float | Decimal):
@@ -219,6 +217,7 @@ def vi_to_int(byteint: bytes) -> Tuple[int, int]:
     else:  # integer of 8 bytes
         size = 8
     return int.from_bytes(byteint[1 : 1 + size][::-1], "big"), size + 1
+
 
 def add_magic_prefix(message: str) -> bytes:
     """
