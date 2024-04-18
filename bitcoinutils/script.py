@@ -281,7 +281,7 @@ class Script:
         scripts = copy.deepcopy(script.script)
         return cls(scripts)
 
-    def _op_push_data(self, data: str) -> bytes:
+    def _op_push_data(self, data) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
 
         0x01-0x4b           -> just length plus data bytes
