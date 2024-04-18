@@ -10,6 +10,8 @@
 # LICENSE file.
 
 from typing import Optional
+import ssl
+from configparser import ConfigParser
 from bitcoinrpc.authproxy import AuthServiceProxy  # type: ignore
 
 from bitcoinutils.setup import get_network
@@ -60,10 +62,24 @@ class NodeProxy:
         if not port:
             port = NETWORK_DEFAULT_PORTS[get_network()]
 
+        self.config = ConfigParser()
+        self.config.read('config.ini')
+        self.ignore_ssl_cert = self.config.getboolean('bitcoin', 'ignore_ssl_cert', fallback=False)
         self.proxy = AuthServiceProxy(
-            "http://{}:{}@{}:{}".format(rpcuser, rpcpassword, host, port)
+            "http://{}:{}@{}:{}".format(rpcuser, rpcpassword, host, port),
+            ssl_context=self._get_ssl_context()
         )
+    
+    def _get_ssl_context(self) -> ssl.SSLContext:
+        """Returns SSL context based on config"""
+        if self.ignore_ssl_cert:
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            return ssl_context
 
+        return None
+    
     def get_proxy(self) -> "NodeProxy":
         """Returns bitcoinrpc AuthServiceProxy object"""
         return self.proxy
