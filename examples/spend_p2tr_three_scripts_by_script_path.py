@@ -136,7 +136,7 @@ def main():
     leaf_c = tapleaf_tagged_hash(tr_script_p2pk_C)
 
     # we need to provide the merkle path (in bytes)
-    control_block = ControlBlock(internal_pub, scripts=leaf_a + leaf_c, is_odd=to_address.is_odd())
+    control_block = ControlBlock(internal_pub, all_leafs, b"".join([leaf_a, leaf_c]), is_odd=to_address.is_odd())
 
     tx.witnesses.append(
         TxWitnessInput([sig, tr_script_p2pk_B.to_hex(), control_block.to_hex()])

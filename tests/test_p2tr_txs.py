@@ -300,7 +300,8 @@ class TestCreateP2trWithSingleTapScript(unittest.TestCase):
             tapleaf_scripts=[self.tr_script_p2pk1],
             tweak=False,
         )
-        control_block = ControlBlock(self.from_pub2, is_odd=self.to_address2.is_odd())
+        merkle_path = b""
+        control_block = ControlBlock(self.from_pub2, scripts=None, merkle_path=merkle_path, is_odd=self.to_address2.is_odd())
         tx.witnesses.append(
             TxWitnessInput([sig, self.tr_script_p2pk1.to_hex(), control_block.to_hex()])
         )
@@ -380,7 +381,8 @@ class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
             tweak=False,
         )
         leaf_b = tapleaf_tagged_hash(self.tr_script_p2pk_B)
-        control_block = ControlBlock(self.from_pub, scripts=leaf_b, is_odd=self.to_address.is_odd())
+
+        control_block = ControlBlock(self.from_pub, [self.tr_script_p2pk_B], merkle_path=leaf_b, is_odd=self.to_address.is_odd())
         tx.witnesses.append(
             TxWitnessInput(
                 [sig, self.tr_script_p2pk_A.to_hex(), control_block.to_hex()]
@@ -477,7 +479,7 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
         )
         leaf_a = tapleaf_tagged_hash(self.tr_script_p2pk_A)
         leaf_c = tapleaf_tagged_hash(self.tr_script_p2pk_C)
-        control_block = ControlBlock(self.from_pub, scripts=leaf_a + leaf_c, is_odd=self.to_address.is_odd())
+        control_block = ControlBlock(self.from_pub, scripts, b"".join([leaf_a, leaf_c]), is_odd=self.to_address.is_odd())
         tx.witnesses.append(
             TxWitnessInput(
                 [sig, self.tr_script_p2pk_B.to_hex(), control_block.to_hex()]

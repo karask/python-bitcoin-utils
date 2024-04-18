@@ -111,7 +111,8 @@ def main():
     )
 
     # we spend a single script - no merkle path is required
-    control_block = ControlBlock(internal_pub, is_odd=to_address.is_odd())
+    merkle_path = b""  # Add the pre-calculated merkle path here
+    control_block = ControlBlock(internal_pub, scripts=None, merkle_path=merkle_path, is_odd=to_address.is_odd())
 
     tx.witnesses.append(
         TxWitnessInput([sig, tr_script_p2pk.to_hex(), control_block.to_hex()])
