@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2023 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
