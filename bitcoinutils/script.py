@@ -16,8 +16,6 @@ from typing import Any
 
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
-from bitcoinutils.keys import Address
-from bitcoinutils.keys import PublicKey
 
 # import bitcoinutils.keys
 
@@ -281,7 +279,7 @@ class Script:
         scripts = copy.deepcopy(script.script)
         return cls(scripts)
 
-    def _op_push_data(self, data) -> bytes:
+    def _op_push_data(self, data: str) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
 
         0x01-0x4b           -> just length plus data bytes
@@ -292,15 +290,8 @@ class Script:
         Also note that according to standarardness rules (BIP-62) the minimum
         possible PUSHDATA operator must be used!
         """
-
-        if isinstance(data,str):
-            data_bytes = h_to_b(data) # Assuming string is hexadecimal
-        elif isinstance(data, PublicKey):
-            data_bytes = data.to_bytes() #using to_byes method of class PublicKey
-        elif isinstance(data,Address):
-            data_bytes = bytes.fromhex(data.to_hash160())  # Convert Address to hash160 bytes
-        else:
-            raise TypeError("Unsupported data type for script operation.")
+        
+        data_bytes = h_to_b(data) # Assuming string is hexadecimal
 
         if len(data_bytes) < 0x4C:
             return bytes([len(data_bytes)]) + data_bytes
