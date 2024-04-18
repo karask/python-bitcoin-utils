@@ -291,10 +291,14 @@ class Script:
         possible PUSHDATA operator must be used!
         """
 
-        # expects data in hexadecimal characters and converts appropriately
-        # TODO maybe, for convenience, also accept objects for public keys,
-        # addresses, etc. and use isinstance and convert manually
-        data_bytes = h_to_b(data)
+        if isinstance(data,str):
+            data_bytes = h_to_b(data) # Assuming string is hexadecimal
+        elif isinstance(data, PublicKey):
+            data_bytes = data.to_bytes() #using to_byes method of class PublicKey
+        elif isinstance(data,Address):
+            data_bytes = bytes.fromhex(data.to_hash160())  # Convert Address to hash160 bytes
+        else:
+            raise TypeError("Unsupported data type for script operation.")
 
         if len(data_bytes) < 0x4C:
             return bytes([len(data_bytes)]) + data_bytes
