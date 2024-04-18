@@ -551,6 +551,8 @@ class PublicKey:
         first_byte_in_hex = hex_str[:2]  # 2 hex chars = 1 byte
         hex_bytes = h_to_b(hex_str)
 
+        taproot = False
+
         # check if compressed or not
         if len(hex_bytes) > 33:
             # uncompressed - SEC format: 0x04 + x + y coordinates (x,y are 32 byte
@@ -560,6 +562,10 @@ class PublicKey:
             self.key = VerifyingKey.from_string(hex_bytes[1:], curve=SECP256k1)
         elif len(hex_bytes) > 31:
             # key is either compressed or in x-only taproot format
+
+            # taproot public keys are exactly 32 bytes
+            if len(hex_bytes) == 32:
+                taproot = True
 
             # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
             # is even else y is odd. Calculate y and then instantiate the ecdsa key
@@ -572,7 +578,7 @@ class PublicKey:
 
             assert y_values is not None
             # check SEC format's first byte to determine which of the 2 values to use
-            if first_byte_in_hex == "02" or len(hex_bytes) == 32:
+            if first_byte_in_hex == "02" or taproot:
                 # y is the even value
                 if y_values[0] % 2 == 0:  # type: ignore
                     y_coord = y_values[0]  # type: ignore
