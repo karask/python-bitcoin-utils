@@ -541,13 +541,16 @@ class PublicKey:
             If first byte of public key (corresponding to SEC format) is
             invalid.
         """
-        # TODO accepts hex str in any format and handle here!
+        hex_str = hex_str.strip()
+
+        # Normalize hex string by removing '0x' prefix and any whitespace
+        if hex_str.lower().startswith('0x'):
+            hex_str = hex_str[2:]
 
         # expects key as hex string - SEC format
         first_byte_in_hex = hex_str[:2]  # 2 hex chars = 1 byte
         hex_bytes = h_to_b(hex_str)
 
-        # TODO needed?? - see flag below
         taproot = False
 
         # check if compressed or not
@@ -560,7 +563,7 @@ class PublicKey:
         elif len(hex_bytes) > 31:
             # key is either compressed or in x-only taproot format
 
-            # taproot is 32 bytes and it should always be prefixed with 0x02
+            # taproot public keys are exactly 32 bytes
             if len(hex_bytes) == 32:
                 taproot = True
 

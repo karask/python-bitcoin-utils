@@ -49,25 +49,24 @@ class HDWallet:
         self.hdw = ext_HDWallet(symbol)
 
         if mnemonic:
-            self.from_mnemonic(mnemonic)
+            self.hdw.from_mnemonic(mnemonic=mnemonic)
 
-        if xprivate_key:
-            assert path is not None
-            self.from_xprivate_key(xprivate_key, path)
-
-    # TODO make this a class method, return cls(mnemonic=)
-    def from_mnemonic(self, mnemonic: str):
-        """Set a mnemonic code for the HD Wallet"""
-
-        self.hdw.from_mnemonic(mnemonic=mnemonic)
-
-    # TODO make this a class method, return cls(xprivate_key=, path=)
-    def from_xprivate_key(self, xprivate_key: str, path: Optional[str] = None):
-        """Set an extended private key and optionally the path for the HD Wallet"""
-
-        self.hdw.from_xprivate_key(xprivate_key=xprivate_key)
-        if path:
+        if xprivate_key and path:
+            self.hdw.from_xprivate_key(xprivate_key=xprivate_key)
             self.hdw.from_path(path=path)
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str):
+        """Class method to instantiate from a mnemonic code for the HD Wallet"""
+        return cls(mnemonic=mnemonic)
+
+    @classmethod
+    def from_xprivate_key(cls, xprivate_key: str, path: Optional[str] = None):
+        """Class method to instantiate from an extended private key and optionally the path for the HD Wallet"""
+        # Assert to ensure path is not None if xprivate_key is provided
+        assert path is not None, "Path must be provided with xprivate key"
+        # Create an instance directly using the xprivate key and path
+        return cls(xprivate_key=xprivate_key, path=path)
 
     def from_path(self, path: str):
         """Set/update the path"""
