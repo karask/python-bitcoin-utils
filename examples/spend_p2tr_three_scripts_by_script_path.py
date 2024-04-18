@@ -10,7 +10,7 @@
 # in the LICENSE file.
 
 from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis, ControlBlock, tapleaf_tagged_hash
+from bitcoinutils.utils import to_satoshis, ControlBlock
 from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from bitcoinutils.keys import PrivateKey
@@ -131,12 +131,8 @@ def main():
         tweak=False,
     )
 
-    # tagged hashes of leafs
-    leaf_a = tapleaf_tagged_hash(tr_script_p2pk_A)
-    leaf_c = tapleaf_tagged_hash(tr_script_p2pk_C)
-
     # we need to provide the merkle path (in bytes)
-    control_block = ControlBlock(internal_pub, all_leafs, b"".join([leaf_a, leaf_c]), is_odd=to_address.is_odd())
+    control_block = ControlBlock(internal_pub, all_leafs, 1, is_odd=to_address.is_odd())
 
     tx.witnesses.append(
         TxWitnessInput([sig, tr_script_p2pk_B.to_hex(), control_block.to_hex()])

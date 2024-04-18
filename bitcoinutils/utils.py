@@ -75,7 +75,7 @@ class ControlBlock:
         returns the control block as a hexadecimal string
     """
 
-    def __init__(self, pubkey: PublicKey, scripts: None | list[list[Script]], merkle_path: bytes, is_odd=False):
+    def __init__(self, pubkey: PublicKey, scripts: None | list[list[Script]], index: int, is_odd=False):
         """
         Parameters
         ----------
@@ -83,12 +83,12 @@ class ControlBlock:
             the internal public key object
         scripts : list[list[Script]]
             a list of list of Scripts describing the merkle tree of scripts to commit
-        merkle_path : bytes
-            the pre-calculated merkle path
+        index : int
+            the index of the leaf taproot using which to execute the transaction
         """
         self.pubkey = pubkey
         self.scripts = scripts
-        self.merkle_path = merkle_path
+        self.merkle_path = b"".join(_generate_merkle_path(scripts, index))
         self.is_odd = is_odd
 
     def to_bytes(self) -> bytes:
@@ -100,6 +100,42 @@ class ControlBlock:
     def to_hex(self):
         """Converts object to hexadecimal string"""
         return b_to_h(self.to_bytes())
+    
+def _generate_merkle_path(all_leafs, target_leaf_index):
+    """Generate the merkle path for spending a taproot path.
+
+    Parameters
+    ----------
+    all_leafs : list
+        List of all taproot leaf scripts.
+    target_leaf_index : int
+        Index of the target leaf script for which to generate the merkle path.
+
+    Returns
+    ----------
+    merkle_path : list
+        List of tagged hashes representing the merkle path.
+    """
+    merkle_path = []
+    traversed = 0
+    for level in all_leafs:
+        if type(level) == list:
+            for leaf in level:
+                if traversed == target_leaf_index:
+                    traversed += 1
+                    continue
+                tagged_hash = tapleaf_tagged_hash(leaf)
+                merkle_path.append(tagged_hash)
+                traversed += 1
+        else:
+            if traversed == target_leaf_index:
+                traversed += 1
+                continue
+            tagged_hash = tapleaf_tagged_hash(level)
+            merkle_path.append(tagged_hash)
+            traversed += 1
+
+    return merkle_path
 
 def get_tag_hashed_merkle_root(
     scripts: None | Script | list[Script] | list[list[Script]],
