@@ -37,7 +37,7 @@ from bitcoinutils.utils import (
     vi_to_int,
     encode_varint,
     tagged_hash,
-    prepend_varint,
+    prepend_compact_size,
     h_to_b,
     b_to_h,
 )
@@ -234,7 +234,7 @@ class TxWitnessInput:
         stack_bytes = b""
         for item in self.stack:
             # witness items can only be data items (hex str)
-            item_bytes = prepend_varint(h_to_b(item))
+            item_bytes = prepend_compact_size(h_to_b(item))
             stack_bytes += item_bytes
 
         return stack_bytes
@@ -1000,7 +1000,7 @@ class Transaction:
             tx_for_signing += txin_index.to_bytes(4, "little")
 
         # TODO if annex is present it should be added here
-        # length of annex should use prepend_varint (compact_size)
+        # length of annex should use compact_size
 
         # Data about this output
         if sighash_single:
@@ -1020,7 +1020,7 @@ class Transaction:
                 LEAF_VERSION_TAPSCRIPT  # pass as a parameter if a new version comes
             )
             tx_for_signing += tagged_hash(
-                bytes([leaf_ver]) + prepend_varint(script.to_bytes()), "TapLeaf"
+                bytes([leaf_ver]) + prepend_compact_size(script.to_bytes()), "TapLeaf"
             )
 
             # key version - type of public key used for this signature, currently only 0
