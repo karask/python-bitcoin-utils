@@ -541,14 +541,15 @@ class PublicKey:
             If first byte of public key (corresponding to SEC format) is
             invalid.
         """
-        # TODO accepts hex str in any format and handle here!
+        hex_str = hex_str.strip()
+
+        # Normalize hex string by removing '0x' prefix and any whitespace
+        if hex_str.lower().startswith('0x'):
+            hex_str = hex_str[2:]
 
         # expects key as hex string - SEC format
         first_byte_in_hex = hex_str[:2]  # 2 hex chars = 1 byte
         hex_bytes = h_to_b(hex_str)
-
-        # TODO needed?? - see flag below
-        taproot = False
 
         # check if compressed or not
         if len(hex_bytes) > 33:
@@ -559,10 +560,6 @@ class PublicKey:
             self.key = VerifyingKey.from_string(hex_bytes[1:], curve=SECP256k1)
         elif len(hex_bytes) > 31:
             # key is either compressed or in x-only taproot format
-
-            # taproot is 32 bytes and it should always be prefixed with 0x02
-            if len(hex_bytes) == 32:
-                taproot = True
 
             # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
             # is even else y is odd. Calculate y and then instantiate the ecdsa key
@@ -575,7 +572,7 @@ class PublicKey:
 
             assert y_values is not None
             # check SEC format's first byte to determine which of the 2 values to use
-            if first_byte_in_hex == "02" or taproot:
+            if first_byte_in_hex == "02" or len(hex_bytes) == 32:
                 # y is the even value
                 if y_values[0] % 2 == 0:  # type: ignore
                     y_coord = y_values[0]  # type: ignore
