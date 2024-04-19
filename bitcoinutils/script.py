@@ -290,11 +290,8 @@ class Script:
         Also note that according to standarardness rules (BIP-62) the minimum
         possible PUSHDATA operator must be used!
         """
-
-        # expects data in hexadecimal characters and converts appropriately
-        # TODO maybe, for convenience, also accept objects for public keys,
-        # addresses, etc. and use isinstance and convert manually
-        data_bytes = h_to_b(data)
+        
+        data_bytes = h_to_b(data) # Assuming string is hexadecimal
 
         if len(data_bytes) < 0x4C:
             return bytes([len(data_bytes)]) + data_bytes
