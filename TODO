@@ -52,4 +52,4 @@ OTHER
 - create test with script of 260 and another with 66000 commands
 - maybe make RBF the default from now on (like Bitcoin Core)
   . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
-
+  

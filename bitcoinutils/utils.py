@@ -62,10 +62,10 @@ class ControlBlock:
     ----------
     pubkey : PublicKey
         the internal public key object
-    script_to_spend : Script
-        the tapscript leaf that we want to spend
     scripts : list[ list[Script] ]
         a list of list of Scripts describing the merkle tree of scripts to commit
+    merkle_path : bytes
+        the pre-calculated merkle path
 
     Methods
     -------
@@ -75,38 +75,66 @@ class ControlBlock:
         returns the control block as a hexadecimal string
     """
 
-    def __init__(self, pubkey: PublicKey, script_to_spend=None, scripts=None, is_odd = False):
+    def __init__(self, pubkey: PublicKey, scripts: None | list[list[Script]], index: int, is_odd=False):
         """
         Parameters
         ----------
         pubkey : PublicKey
             the internal public key object
-        script_to_spend : Script (ignored for now)
-            the tapscript leaf that we want to spend
-        scripts : bytes
-            concatenated path (leafs/branches) hashes in bytes
+        scripts : list[list[Script]]
+            a list of list of Scripts describing the merkle tree of scripts to commit
+        index : int
+            the index of the leaf taproot using which to execute the transaction
         """
-        # script_to_spend is ignored for now - needed for automatically
-        # constructing the merkle path
         self.pubkey = pubkey
-        self.script_to_spend = script_to_spend
         self.scripts = scripts
+        self.merkle_path = b"".join(_generate_merkle_path(scripts, index))
         self.is_odd = is_odd
 
     def to_bytes(self) -> bytes:
-        leaf_version = bytes([ (1 if self.is_odd else 0) + LEAF_VERSION_TAPSCRIPT])
+        leaf_version = bytes([(1 if self.is_odd else 0) + LEAF_VERSION_TAPSCRIPT])
         # x-only public key is required
         pub_key = bytes.fromhex(self.pubkey.to_x_only_hex())
-        merkle_path = b""
-        # get merkle path from scripts, if any
-        # TODO currently the manually constructed merkle path is passed
-        if self.scripts:
-            merkle_path = self.scripts  # manually constructed path
-        return leaf_version + pub_key + merkle_path
+        return leaf_version + pub_key + self.merkle_path
 
     def to_hex(self):
         """Converts object to hexadecimal string"""
         return b_to_h(self.to_bytes())
+    
+def _generate_merkle_path(all_leafs, target_leaf_index):
+    """Generate the merkle path for spending a taproot path.
+
+    Parameters
+    ----------
+    all_leafs : list
+        List of all taproot leaf scripts. Can be nested.
+    target_leaf_index : int
+        Index of the target leaf script for which to generate the merkle path.
+
+    Returns
+    ----------
+    merkle_path : list
+        List of tagged hashes representing the merkle path.
+    """
+    merkle_path = []
+    traversed = 0
+    
+    def traverse_level(level):
+        nonlocal traversed
+        for leaf in level:
+            if isinstance(leaf, list):
+                traverse_level(leaf)
+            else:
+                if traversed == target_leaf_index:
+                    traversed += 1
+                    continue
+                tagged_hash = tapleaf_tagged_hash(leaf)
+                merkle_path.append(tagged_hash)
+                traversed += 1
+    
+    traverse_level(all_leafs)
+    
+    return merkle_path
 
 def get_tag_hashed_merkle_root(
     scripts: None | Script | list[Script] | list[list[Script]],
