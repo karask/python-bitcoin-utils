@@ -107,7 +107,7 @@ def _generate_merkle_path(all_leafs, target_leaf_index):
     Parameters
     ----------
     all_leafs : list
-        List of all taproot leaf scripts.
+        List of all taproot leaf scripts. Can be nested.
     target_leaf_index : int
         Index of the target leaf script for which to generate the merkle path.
 
@@ -118,23 +118,22 @@ def _generate_merkle_path(all_leafs, target_leaf_index):
     """
     merkle_path = []
     traversed = 0
-    for level in all_leafs:
-        if type(level) == list:
-            for leaf in level:
+    
+    def traverse_level(level):
+        nonlocal traversed
+        for leaf in level:
+            if isinstance(leaf, list):
+                traverse_level(leaf)
+            else:
                 if traversed == target_leaf_index:
                     traversed += 1
                     continue
                 tagged_hash = tapleaf_tagged_hash(leaf)
                 merkle_path.append(tagged_hash)
                 traversed += 1
-        else:
-            if traversed == target_leaf_index:
-                traversed += 1
-                continue
-            tagged_hash = tapleaf_tagged_hash(level)
-            merkle_path.append(tagged_hash)
-            traversed += 1
-
+    
+    traverse_level(all_leafs)
+    
     return merkle_path
 
 def get_tag_hashed_merkle_root(
