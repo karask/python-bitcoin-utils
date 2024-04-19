@@ -11,7 +11,6 @@ SEGWIT-related
 - segwit v0 and v1 address object instantiates from address, witness program and script
   . are all used? test?
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
-- ControlBlock does not automatically construct the merkle path (expects it as input)
 
 CLEAN UP 
 - transaction (input, output, etc) .from_raw code
