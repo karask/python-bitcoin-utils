@@ -409,10 +409,9 @@ def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     return bytes.fromhex(f"{tweaked_privkey_int:064x}")
 
 
-#
 # Basic conversions between bytes (b), hexadecimal (h) and integer (i)
 # Some were trivial but included for consistency.
-#
+
 def b_to_h(b: bytes) -> str:
     """Converts bytes to hexadecimal string"""
     return b.hex()
@@ -433,24 +432,16 @@ def i_to_h64(i: int) -> str:
     return f"{i:064x}"
 
 
-# def i_to_h(i: int) -> str:
-#    """Converts an int to a string hexadecimal (no padding)"""
-#    return f"{i:x}"
-
-
 # to convert hashes to ints we need byteorder BIG...
 def b_to_i(b: bytes) -> int:
     """Converts a bytes to a number"""
     return int.from_bytes(b, byteorder="big")
 
-def i_to_b32(i: int) -> bytes:
-    """Converts a integer to bytes"""
-    return i.to_bytes(32, byteorder="big")
 
-def i_to_b(i: int) -> bytes:
+def i_to_b(i: int, byte_length = None) -> bytes:
     """Converts a integer to bytes"""
     # determine the number of bytes required to represent the integer
-    byte_length = (i.bit_length() + 7) // 8
-    return i.to_bytes(byte_length, "big")
-
-# TODO are these required - maybe bytestoint and inttobytes are only required?!?
+    if byte_length is None:
+        byte_length = (i.bit_length() + 7) // 8
+        print(byte_length)
+    return i.to_bytes(byte_length, byteorder="big")

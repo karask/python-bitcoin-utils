@@ -57,7 +57,7 @@ from bitcoinutils.utils import (
     b_to_h,
     h_to_b,
     b_to_i,
-    i_to_b32,
+    i_to_b,
     tweak_taproot_pubkey,
     tweak_taproot_privkey,
 )
@@ -366,7 +366,7 @@ class PrivateKey:
         while length_r == 33:
             signature = self.key.sign_digest_deterministic(
                 tx_digest,
-                extra_entropy=i_to_b32(attempt),
+                extra_entropy=i_to_b(attempt, byte_length=32),
                 sigencode=sigencode_der,
                 hashfunc=hashlib.sha256,
             )
@@ -410,7 +410,7 @@ class PrivateKey:
             new_S_as_bigint = Secp256k1Params._order - S_as_bigint
             # convert bigint to bytes
             # new_S = h_to_b(i_to_h64(new_S_as_bigint))
-            new_S = i_to_b32(new_S_as_bigint)
+            new_S = i_to_b(new_S_as_bigint, byte_length=32)
             # new value should be 32 bytes
             assert len(new_S) == 0x20
             # reduce appropriate lengths

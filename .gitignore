@@ -107,6 +107,7 @@ venv.bak/
 
 # visual studio code
 .vscode
+dump
 
 # vim
 .*.sw*
