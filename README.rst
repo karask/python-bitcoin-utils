@@ -118,6 +118,13 @@ Send to taproot address that contains three scripts path spends
 Spend taproot from script path (has three alternative script path spends - A, B and C)
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_three_scripts_by_script_path.py - single input, single output, spend script path B.
 
+Security
+^^^^^^^^
+
+Calculate preimage resistance of bitcoin cryptographic hash functions(SHA256, RIPEMD160 AND SHA1)
+https://github.com/Hugongra/python-bitcoin-utils/blob/master/examples/security_hash_functions.py
+uses hash_sha256, hash_ripemd160, hash_sha1, calculate_hash_rate and estimate_computers_needed.
+
 Other
 ^^^^^
 
