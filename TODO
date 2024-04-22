@@ -1,7 +1,12 @@
 SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - load public key with x-only pubkey, ensure it works for several...
-- Check and fix potential vulnerabilities: https://github.com/karask/python-bitcoin-utils/security/dependabot
+- python-ecdsa is vulnerable to minerva timing attacks
+  . https://github.com/karask/python-bitcoin-utils/security/dependabot/2
+  . investigate the consequences (how critical) this is for the library
+  . find a python ecdsa implementation that solves this
+  . change the code to use the new library
+  . there are a couple of places where we extend the library for bitcoin-specific calculations; also update using the new library!
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
