@@ -1,7 +1,6 @@
 SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - load public key with x-only pubkey, ensure it works for several...
-- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj
 - Check and fix potential vulnerabilities: https://github.com/karask/python-bitcoin-utils/security/dependabot
 
 SEGWIT-related
@@ -37,11 +36,6 @@ SECURITY
 - check https://github.com/advisories/GHSA-wj6h-64fc-37mp and if/how it applies 
 
 OTHERLIBS-related
-- add to bitcoin-rpc lib option to ignore invalid ssl cert
-  . needed to access remotely withut cert (for other validators from clients)
-  . https://github.com/jgarzik/python-bitcoinrpc/pull/50
-  . but not in a lib release yet
-  . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
 - create HD wallet implementation - very simple - similar to the hdwallet lib that I wrap
 - create block object and impl. .from_raw(..) instantiation
 
