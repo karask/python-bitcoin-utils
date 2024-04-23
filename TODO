@@ -6,6 +6,9 @@ SHORT-TERM
   . find a python ecdsa implementation that solves this
   . change the code to use the new library
   . there are a couple of places where we extend the library for bitcoin-specific calculations; also update using the new library!
+- investigate taproot op_addchecksig and add to opcodes?
+  . other tapscript changes?
+  . think: differentiate tapscript in code?
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
