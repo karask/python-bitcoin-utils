@@ -126,6 +126,7 @@ OP_CODES = {
     "OP_CHECKSIGVERIFY": b"\xad",
     "OP_CHECKMULTISIG": b"\xae",
     "OP_CHECKMULTISIGVERIFY": b"\xaf",
+    "OP_CHECKSIGADD": b"\xba",
     # locktime
     "OP_NOP2": b"\xb1",
     "OP_CHECKLOCKTIMEVERIFY": b"\xb1",
@@ -221,6 +222,7 @@ CODE_OPS = {
     b"\xad": "OP_CHECKSIGVERIFY",
     b"\xae": "OP_CHECKMULTISIG",
     b"\xaf": "OP_CHECKMULTISIGVERIFY",
+    b"\xba": "OP_CHECKSIGADD",
     # locktime
     b"\xb1": "OP_NOP2",
     b"\xb1": "OP_CHECKLOCKTIMEVERIFY",
