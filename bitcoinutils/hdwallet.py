@@ -17,35 +17,23 @@ from hdwallet.symbols import BTC, BTCTEST  # type: ignore
 from bitcoinutils.setup import is_mainnet
 from bitcoinutils.keys import PrivateKey
 
-from mnemonic import Mnemonic
-from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Hash import SHA512
-import binascii
+import hashlib
+import hmac
+from binascii import unhexlify
 
 class HDW:
-    """Implements mnemonic codes (BIP-39) and hierarchical deterministic wallet (BIP-32)."""
+    def __init__(self, seed):
+        seed_bytes = unhexlify(seed)  # Convert hex string to bytes
+        self.seed = seed_bytes
+        self.master_private_key, self.master_chain_code = self.from_seed(seed_bytes)
 
-    def __init__(self, language='english'):
-        """Initialize the HDWallet with a specific language for the mnemonic."""
-        self.mnemonic_generator = Mnemonic(language)
-
-    def generate_mnemonic(self, words=12):
-        """Generate a mnemonic phrase."""
-        return self.mnemonic_generator.generate(strength={12: 128, 15: 160, 18: 192, 21: 224, 24: 256}[words])
-
-    def mnemonic_to_seed(self, mnemonic, passphrase=''):
-        """Convert mnemonic phrase to seed."""
-        return PBKDF2(mnemonic, 'mnemonic' + passphrase, dkLen=64, count=2048, hmac_hash_module=SHA512)
-
-    def create_wallet(self, words=12, passphrase=''):
-        """Create a new wallet with a mnemonic and derive the seed."""
-        mnemonic = self.generate_mnemonic(words)
-        seed = self.mnemonic_to_seed(mnemonic, passphrase)
-        return {
-            'mnemonic': mnemonic,
-            'seed': binascii.hexlify(seed).decode('utf-8')
-        }
-
+    def from_seed(self, seed_bytes):
+        """ Generate the master keys from the seed bytes """
+        key = b"Bitcoin seed"
+        h = hmac.new(key, seed_bytes, hashlib.sha512).digest()
+        master_private_key = h[:32]
+        master_chain_code = h[32:]
+        return master_private_key, master_chain_code
 
 class HDWallet:
     """Wraps the python hdwallet library to provide basic HD wallet functionality
