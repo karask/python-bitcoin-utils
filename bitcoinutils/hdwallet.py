@@ -19,8 +19,11 @@ from bitcoinutils.keys import PrivateKey
 
 import hashlib
 import hmac
-from binascii import unhexlify
+from binascii import unhexlify, b2a_hex
 import unicodedata
+import ecdsa
+import struct
+from ecdsa.curves import SECP256k1
 
 class HDW:
     def __init__(self, seed: Optional[str] = None):
@@ -31,6 +34,9 @@ class HDW:
             seed (Optional[str]): A hexadecimal string representing the seed from which the HD Wallet will derive its keys.
         """
         self.strength: Optional[int] = None
+        self._depth: int = 0
+        self._index: int = 0
+        self._parent_fingerprint: bytes = b"\0\0\0\0"
         if seed:
             seed_bytes = unhexlify(seed)  # Convert hex string to bytes
             self.seed = seed_bytes
@@ -92,9 +98,9 @@ class HDW:
             HDW: Returns itself after initializing the master keys.
         """
 
+        self._mnemonic = unicodedata.normalize("NFKD", mnemonic)
         self.strength = self.get_mnemonic_strength(mnemonic=self._mnemonic)
-        normalized_mnemonic = unicodedata.normalize("NFKD", mnemonic)
-        seed = self.to_seed(normalized_mnemonic, passphrase)
+        seed = self.to_seed(self._mnemonic, passphrase)
         self.master_private_key, self.master_chain_code = self.from_seed(seed)
         return self
 
@@ -118,6 +124,61 @@ class HDW:
             "sha512", mnemonic_bytes, passphrase_bytes, 2048
         )
         return stretched[:64]
+    
+    @staticmethod
+    def _deserialize_xprivate_key(xprivate_key: str, encoded: bool = True) -> tuple:
+        """
+        Deserialize an extended private key (xprivate key).
+
+        Args:
+            xprivate_key (str): The xprivate key as a string.
+            encoded (bool): Flag indicating if the xprivate key is hex-encoded.
+
+        Returns:
+            tuple: A tuple containing different parts of the xprivate key.
+
+        Raises:
+            ValueError: If the xprivate key is invalid or improperly sized.
+        """
+        decoded_xprivate_key = b2a_hex(xprivate_key) if encoded else xprivate_key
+        if len(decoded_xprivate_key) != 156:
+            raise ValueError("Invalid xprivate key.")
+        return (
+            decoded_xprivate_key[:4],    # Version bytes
+            decoded_xprivate_key[4:5],   # Depth
+            decoded_xprivate_key[5:9],   # Parent fingerprint
+            decoded_xprivate_key[9:13],  # Child number (index)
+            decoded_xprivate_key[13:45], # Private key data
+            decoded_xprivate_key[46:]    # Chain code
+        )
+
+    def from_xprivate_key(self, xprivate_key: str, strict: bool = False) -> "HDW":
+        """
+        Initialize the HD wallet from an extended private key (xprivate key).
+
+        Args:
+            xprivate_key (str): The xprivate key as a string.
+            strict (bool): If True, the xprivate key must be a root key.
+
+        Returns:
+            HDW: An instance of the HDWallet class initialized with the xprivate key.
+
+        Raises:
+            ValueError: If strict checking is enabled and the key is not a root key.
+        """
+        _parts = self._deserialize_xprivate_key(xprivate_key)
+        if strict and _parts[0] != b'\x04\x88\xAD\xE4':  # version bytes for xprv
+            raise ValueError("Invalid root xprivate key.")
+        
+        self._depth, self._parent_fingerprint, self._index = (
+            int.from_bytes(_parts[1], "big"),
+            _parts[2],
+            struct.unpack(">L", _parts[3])[0]
+        )
+        self.master_private_key, self.master_chain_code = _parts[4][:32], _parts[4][32:]
+        self._key = ecdsa.SigningKey.from_string(self.master_private_key, curve=ecdsa.SECP256k1)
+        self._verified_key = self._key.get_verifying_key()
+        return self
 
 class HDWallet:
     """Wraps the python hdwallet library to provide basic HD wallet functionality
