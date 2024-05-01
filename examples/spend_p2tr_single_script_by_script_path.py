@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2023 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -110,8 +110,7 @@ def main():
         tweak=False,
     )
 
-    # we spend a single script - no merkle path is required
-    control_block = ControlBlock(internal_pub, is_odd=to_address.is_odd())
+    control_block = ControlBlock(internal_pub, scripts=[tr_script_p2pk], index=0, is_odd=to_address.is_odd())
 
     tx.witnesses.append(
         TxWitnessInput([sig, tr_script_p2pk.to_hex(), control_block.to_hex()])

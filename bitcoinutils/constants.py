@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -8,8 +8,6 @@
 # No part of python-bitcoin-utils, including this file, may be copied, modified,
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
-
-# TODO organise constants in sections
 
 NETWORK_DEFAULT_PORTS = {
     "mainnet": 8332,
@@ -46,18 +44,24 @@ NETWORK_SEGWIT_PREFIXES = {
     "regtest": "bcrt",
 }
 
+
+# Constants for address types
 P2PKH_ADDRESS = "p2pkh"
 P2SH_ADDRESS = "p2sh"
 P2WPKH_ADDRESS_V0 = "p2wpkhv0"
 P2WSH_ADDRESS_V0 = "p2wshv0"
 P2TR_ADDRESS_V1 = "p2trv1"
 
+
+# Constants related to transaction signature types
 TAPROOT_SIGHASH_ALL = 0x00
 SIGHASH_ALL = 0x01
 SIGHASH_NONE = 0x02
 SIGHASH_SINGLE = 0x03
 SIGHASH_ANYONECANPAY = 0x80
 
+
+# Constants for time lock and RB
 TYPE_ABSOLUTE_TIMELOCK = 0x101
 TYPE_RELATIVE_TIMELOCK = 0x201
 TYPE_REPLACE_BY_FEE = 0x301
@@ -70,11 +74,16 @@ ABSOLUTE_TIMELOCK_SEQUENCE = b"\xfe\xff\xff\xff"
 
 REPLACE_BY_FEE_SEQUENCE = b"\x01\x00\x00\x00"
 
+
+# Constants related to transaction versions and scripts
 LEAF_VERSION_TAPSCRIPT = 0xC0
+
 
 # TX version 2 was introduced in BIP-68 with relative locktime -- tx v1
 # does not support relative locktime
 DEFAULT_TX_VERSION = b"\x02\x00\x00\x00"
 
+
+# Monetary constants
 SATOSHIS_PER_BITCOIN = 100000000
 NEGATIVE_SATOSHI = -1

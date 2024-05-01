@@ -1,7 +1,14 @@
 SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
-- load public key with x-only pubkey, ensure it works for several...
-- TxWitnessInput/Script can take objects and call the appr. method to hexlify after inspecting the obj
+- python-ecdsa is vulnerable to minerva timing attacks
+  . https://github.com/karask/python-bitcoin-utils/security/dependabot/2
+  . investigate the consequences (how critical) this is for the library
+  . find a python ecdsa implementation that solves this
+  . change the code to use the new library
+  . there are a couple of places where we extend the library for bitcoin-specific calculations; also update using the new library!
+- investigate taproot op_addchecksig and add to opcodes?
+  . other tapscript changes?
+  . think: differentiate tapscript in code?
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -10,19 +17,18 @@ SEGWIT-related
 - segwit v0 and v1 address object instantiates from address, witness program and script
   . are all used? test?
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
-- ControlBlock does not automatically construct the merkle path (expects it as input)
 
 CLEAN UP 
-- utils' to_bytes used in from_raw -- clean/reuse appropriate one
-- i_to_b32 exists but also bytes32_from_int (confirm they are the same and use i_to_b32)
-- rename VarInt to CompactSize
-- from_raw code
+- transaction (input, output, etc) .from_raw code
 - segwit examples and get_transaction_segwit_digest 
+
+TYPING 
 - use stubs for mypy to get type hints for external libraries that don't support hints (for now using # type: ignore for external libs)
 - python.analysis.useLibraryCodeForTypes is set to false for pyright to not auto-deduce types for external libraries that do not use hint stubs / mypy)
 
 IMPROVE
 - test proxy object extensively, students reports it fails sometimes
+- make a new proxy object from scratch (test with at least 2/3 of bitcoin core RPC)
 
 DOC-related
 - add explicit documentation for each module before members...
@@ -37,19 +43,13 @@ SECURITY
 - check https://github.com/advisories/GHSA-wj6h-64fc-37mp and if/how it applies 
 
 OTHERLIBS-related
-- add to bitcoin-rpc lib option to ignore invalid ssl cert
-  . needed to access remotely withut cert (for other validators from clients)
-  . https://github.com/jgarzik/python-bitcoinrpc/pull/50
-  . but not in a lib release yet
-  . add config.ini option to optionally ignore cert so that it works when calling btcd remotely
 - create HD wallet implementation - very simple - similar to the hdwallet lib that I wrap
 - create block object and impl. .from_raw(..) instantiation
 
 OTHER
-- reminder: update copyright in all files 2018-2022?
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
 - create test with 260 outputs (inputs too much trouble) - file: test_extreme_txs.py
 - create test with script of 260 and another with 66000 commands
 - maybe make RBF the default from now on (like Bitcoin Core)
   . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
-
+  

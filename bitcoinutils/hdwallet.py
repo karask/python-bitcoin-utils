@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2023 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -20,6 +20,7 @@ from bitcoinutils.keys import PrivateKey
 import hashlib
 import hmac
 from binascii import unhexlify
+import unicodedata
 
 class HDW:
     def __init__(self, seed):
@@ -34,6 +35,33 @@ class HDW:
         master_private_key = h[:32]
         master_chain_code = h[32:]
         return master_private_key, master_chain_code
+    
+    @staticmethod
+    def get_mnemonic_strength(mnemonic: str, language: str = None) -> int:
+        """
+        Get mnemonic strength.
+
+        :param mnemonic: Mnemonic words.
+        :type mnemonic: str
+        :param language: Mnemonic language, default to None.
+        :type language: str
+
+        :returns: int -- Mnemonic strength.
+        """
+
+        words = len(unicodedata.normalize("NFKD", mnemonic).split(" "))
+        if words == 12:
+            return 128
+        elif words == 15:
+            return 160
+        elif words == 18:
+            return 192
+        elif words == 21:
+            return 224
+        elif words == 24:
+            return 256
+        else:
+            raise ValueError("Unsupported number of words in mnemonic.")
 
 class HDWallet:
     """Wraps the python hdwallet library to provide basic HD wallet functionality
@@ -61,25 +89,24 @@ class HDWallet:
         self.hdw = ext_HDWallet(symbol)
 
         if mnemonic:
-            self.from_mnemonic(mnemonic)
+            self.hdw.from_mnemonic(mnemonic=mnemonic)
 
-        if xprivate_key:
-            assert path is not None
-            self.from_xprivate_key(xprivate_key, path)
-
-    # TODO make this a class method, return cls(mnemonic=)
-    def from_mnemonic(self, mnemonic: str):
-        """Set a mnemonic code for the HD Wallet"""
-
-        self.hdw.from_mnemonic(mnemonic=mnemonic)
-
-    # TODO make this a class method, return cls(xprivate_key=, path=)
-    def from_xprivate_key(self, xprivate_key: str, path: Optional[str] = None):
-        """Set an extended private key and optionally the path for the HD Wallet"""
-
-        self.hdw.from_xprivate_key(xprivate_key=xprivate_key)
-        if path:
+        if xprivate_key and path:
+            self.hdw.from_xprivate_key(xprivate_key=xprivate_key)
             self.hdw.from_path(path=path)
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str):
+        """Class method to instantiate from a mnemonic code for the HD Wallet"""
+        return cls(mnemonic=mnemonic)
+
+    @classmethod
+    def from_xprivate_key(cls, xprivate_key: str, path: Optional[str] = None):
+        """Class method to instantiate from an extended private key and optionally the path for the HD Wallet"""
+        # Assert to ensure path is not None if xprivate_key is provided
+        assert path is not None, "Path must be provided with xprivate key"
+        # Create an instance directly using the xprivate key and path
+        return cls(xprivate_key=xprivate_key, path=path)
 
     def from_path(self, path: str):
         """Set/update the path"""

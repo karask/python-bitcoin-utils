@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -95,8 +95,9 @@ class TestPublicKeys(unittest.TestCase):
         pub = PublicKey(self.public_key_hex)
         self.assertEqual(pub.get_address().to_hash160(), pub.to_hash160())
 
-    # TODO add test_pubkey_x_only(self)
-    # TODO add test_pubkey_x_only(self)
+    def test_pubkey_x_only(self):
+        pub = PublicKey(self.public_key_hex)
+        self.assertEqual(pub.to_x_only_hex(), self.public_key_hex[2:66])
 
 
 class TestP2pkhAddresses(unittest.TestCase):

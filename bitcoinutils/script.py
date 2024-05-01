@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -15,7 +15,7 @@ import struct
 from typing import Any
 
 from bitcoinutils.ripemd160 import ripemd160
-from bitcoinutils.utils import b_to_h, h_to_b, to_bytes, vi_to_int
+from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
 
 # import bitcoinutils.keys
 
@@ -290,11 +290,8 @@ class Script:
         Also note that according to standarardness rules (BIP-62) the minimum
         possible PUSHDATA operator must be used!
         """
-
-        # expects data in hexadecimal characters and converts appropriately
-        # TODO maybe, for convenience, also accept objects for public keys,
-        # addresses, etc. and use isinstance and convert manually
-        data_bytes = h_to_b(data)
+        
+        data_bytes = h_to_b(data) # Assuming string is hexadecimal
 
         if len(data_bytes) < 0x4C:
             return bytes([len(data_bytes)]) + data_bytes
@@ -369,32 +366,43 @@ class Script:
             has_segwit : boolean
                 Is the Tx Input segwit or not
         """
-        scriptraw = to_bytes(scriptrawhex)
+        scriptraw = h_to_b(scriptrawhex)
         commands = []
         index = 0
 
         while index < len(scriptraw):
             byte = scriptraw[index]
             if bytes([byte]) in CODE_OPS:
-                commands.append(CODE_OPS[bytes([byte])])
+                if (
+                    bytes([byte]) != b"\x4c"
+                    and bytes([byte]) != b"\x4d"
+                    and bytes([byte]) != b"\x4e"
+                ):
+                    commands.append(CODE_OPS[bytes([byte])])
                 index = index + 1
                 # handle the 3 special bytes 0x4c,0x4d,0x4e if the transaction is
                 # not segwit type
-            elif has_segwit is False and bytes([byte]) == b"\x4c":
-                bytes_to_read = int.from_bytes(scriptraw[index : index + 1], "little")
-                index = index + 1
-                commands.append(scriptraw[index : index + bytes_to_read].hex())
-                index = index + bytes_to_read
-            elif has_segwit is False and bytes([byte]) == b"\x4d":
-                bytes_to_read = int.from_bytes(scriptraw[index : index + 2], "little")
-                index = index + 2
-                commands.append(scriptraw[index : index + bytes_to_read].hex())
-                index = index + bytes_to_read
-            elif has_segwit is False and bytes([byte]) == b"\x4e":
-                bytes_to_read = int.from_bytes(scriptraw[index : index + 4], "little")
-                index = index + 4
-                commands.append(scriptraw[index : index + bytes_to_read].hex())
-                index = index + bytes_to_read
+                if has_segwit is False and bytes([byte]) == b"\x4c":
+                    bytes_to_read = int.from_bytes(
+                        scriptraw[index : index + 1], "little"
+                    )
+                    index = index + 1
+                    commands.append(scriptraw[index : index + bytes_to_read].hex())
+                    index = index + bytes_to_read
+                elif has_segwit is False and bytes([byte]) == b"\x4d":
+                    bytes_to_read = int.from_bytes(
+                        scriptraw[index : index + 2], "little"
+                    )
+                    index = index + 2
+                    commands.append(scriptraw[index : index + bytes_to_read].hex())
+                    index = index + bytes_to_read
+                elif has_segwit is False and bytes([byte]) == b"\x4e":
+                    bytes_to_read = int.from_bytes(
+                        scriptraw[index : index + 4], "little"
+                    )
+                    index = index + 4
+                    commands.append(scriptraw[index : index + bytes_to_read].hex())
+                    index = index + bytes_to_read
             else:
                 data_size, size = vi_to_int(scriptraw[index : index + 8])
                 commands.append(

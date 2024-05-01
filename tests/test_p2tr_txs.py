@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2023 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -13,7 +13,7 @@
 import unittest
 
 from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis, ControlBlock, tapleaf_tagged_hash
+from bitcoinutils.utils import to_satoshis, ControlBlock
 from bitcoinutils.keys import PrivateKey, P2pkhAddress
 from bitcoinutils.constants import (
     SIGHASH_ALL,
@@ -300,7 +300,7 @@ class TestCreateP2trWithSingleTapScript(unittest.TestCase):
             tapleaf_scripts=[self.tr_script_p2pk1],
             tweak=False,
         )
-        control_block = ControlBlock(self.from_pub2, is_odd=self.to_address2.is_odd())
+        control_block = ControlBlock(self.from_pub2, scripts=[[self.tr_script_p2pk1]], index=0, is_odd=self.to_address2.is_odd())
         tx.witnesses.append(
             TxWitnessInput([sig, self.tr_script_p2pk1.to_hex(), control_block.to_hex()])
         )
@@ -369,6 +369,7 @@ class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
     # 1-spend taproot from first script path (A) of two (A,B)
     def test_spend_script_path_A_from_AB(self):
         tx = Transaction([self.tx_in], [self.tx_out], has_segwit=True)
+        scripts = [[self.tr_script_p2pk_A, self.tr_script_p2pk_B]]
         sig = self.privkey_tr_script_A.sign_taproot_input(
             tx,
             0,
@@ -376,11 +377,11 @@ class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
             self.all_amounts,
             script_path=True,
             tapleaf_script=self.tr_script_p2pk_A,
-            tapleaf_scripts=[self.tr_script_p2pk_A, self.tr_script_p2pk_B],
+            tapleaf_scripts=scripts,
             tweak=False,
         )
-        leaf_b = tapleaf_tagged_hash(self.tr_script_p2pk_B)
-        control_block = ControlBlock(self.from_pub, scripts=leaf_b, is_odd=self.to_address.is_odd())
+
+        control_block = ControlBlock(self.from_pub, scripts, 0, is_odd=self.to_address.is_odd())
         tx.witnesses.append(
             TxWitnessInput(
                 [sig, self.tr_script_p2pk_A.to_hex(), control_block.to_hex()]
@@ -461,10 +462,8 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
     # 1-spend taproot from second script path (B) of three ((A,B),C)
     def test_spend_script_path_A_from_AB(self):
         tx = Transaction([self.tx_in], [self.tx_out], has_segwit=True)
-        scripts = [
-            [self.pubkey_tr_script_A, self.tr_script_p2pk_B],
-            self.tr_script_p2pk_C,
-        ]
+        scripts = [[self.pubkey_tr_script_A, self.tr_script_p2pk_B], self.tr_script_p2pk_C]
+        tr_scripts = [[self.tr_script_p2pk_A, self.tr_script_p2pk_B], self.tr_script_p2pk_C]
         sig = self.privkey_tr_script_B.sign_taproot_input(
             tx,
             0,
@@ -475,9 +474,7 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
             tapleaf_scripts=scripts,
             tweak=False,
         )
-        leaf_a = tapleaf_tagged_hash(self.tr_script_p2pk_A)
-        leaf_c = tapleaf_tagged_hash(self.tr_script_p2pk_C)
-        control_block = ControlBlock(self.from_pub, scripts=leaf_a + leaf_c, is_odd=self.to_address.is_odd())
+        control_block = ControlBlock(self.from_pub, tr_scripts, 1, is_odd=self.to_address.is_odd())
         tx.witnesses.append(
             TxWitnessInput(
                 [sig, self.tr_script_p2pk_B.to_hex(), control_block.to_hex()]

@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2023 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -10,7 +10,7 @@
 # in the LICENSE file.
 
 from bitcoinutils.setup import setup
-from bitcoinutils.utils import to_satoshis, ControlBlock, tapleaf_tagged_hash
+from bitcoinutils.utils import to_satoshis, ControlBlock
 from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 from bitcoinutils.keys import PrivateKey
@@ -120,11 +120,8 @@ def main():
         tweak=False,
     )
 
-    # tagged hash of leaf
-    leaf_b = tapleaf_tagged_hash(tr_script_p2pk_B)
-
     # we need to provide the leaf_b hash as merkle path
-    control_block = ControlBlock(internal_pub, scripts=leaf_b, is_odd=to_address.is_odd())
+    control_block = ControlBlock(internal_pub, all_leafs, 0, is_odd=to_address.is_odd())
 
     tx.witnesses.append(
         TxWitnessInput([sig, tr_script_p2pk_A.to_hex(), control_block.to_hex()])
