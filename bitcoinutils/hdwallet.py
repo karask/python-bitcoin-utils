@@ -17,16 +17,16 @@ from bitcoinutils.constants import BIP32KEY_HARDEN
 
 import hashlib
 import hmac
-from binascii import unhexlify, b2a_hex
+from binascii import unhexlify
 import unicodedata
 import ecdsa
 import struct
 from ecdsa.curves import SECP256k1
-from ecdsa.util import string_to_number, number_to_string
+from ecdsa.util import string_to_number
 import base58
 
 class HDW:
-    def __init__(self):
+    def __init__(self,symbol):
         """
         Initialize the HD Wallet with a seed if provided.
 
@@ -41,6 +41,7 @@ class HDW:
         self.master_chain_code : Optional[str] = None
         self.seed : Optional[str] = None
         self._root_private_key: Optional[tuple] = None
+        self.is_testnet = symbol
 
     def from_seed(self, seed : str):
         """
@@ -273,7 +274,7 @@ class HDW:
         """
         if self.master_private_key:
             # Set the prefix based on the network
-            prefix = b'\xef' if is_testnet else b'\x80'
+            prefix = b'\xef' if self.is_testnet else b'\x80'
             # Prepare the payload with the private key and a suffix '01' which denotes that the corresponding public key is compressed
             payload = prefix + self.master_private_key + b'\x01'
             # Compute the checksum: first 4 bytes of SHA-256(SHA-256(payload))
@@ -315,15 +316,12 @@ class HDWallet:
         mnemonic: Optional[str] = None,
         passphrase : Optional[str] = ""
     ):
-        """Instantiate a hdwallet object using the corresponding library with BTC"""
-
-        # symbol = None
-        # if is_mainnet():
-        #     symbol = BTC
-        # else:
-        #     symbol = BTCTEST
-
-        self.hdw = HDW()
+        symbol = None
+        if is_mainnet():
+            symbol = False
+        else:
+            symbol = True
+        self.hdw = HDW(symbol)
         if mnemonic:
             self.hdw.from_mnemonic(mnemonic=mnemonic,passphrase=passphrase)
 
