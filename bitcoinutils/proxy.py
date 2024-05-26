@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -9,7 +9,8 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-from bitcoinrpc.authproxy import AuthServiceProxy
+from typing import Optional
+from bitcoinrpc.authproxy import AuthServiceProxy  # type: ignore
 
 from bitcoinutils.setup import get_network
 from bitcoinutils.constants import NETWORK_DEFAULT_PORTS
@@ -24,7 +25,13 @@ class NodeProxy:
         a bitcoinrpc AuthServiceProxy object
     """
 
-    def __init__(self, rpcuser=None, rpcpassword=None, host=None, port=None):
+    def __init__(
+        self,
+        rpcuser: str,
+        rpcpassword: str,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+    ) -> None:
         """Connects to node using credentials given
 
         Parameters
@@ -45,18 +52,18 @@ class NodeProxy:
         """
 
         if not rpcuser or not rpcpassword:
-            raise ValueError('rpcuser or rpcpassword is missing')
+            raise ValueError("rpcuser or rpcpassword is missing")
 
         if not host:
-            host = '127.0.0.1'
+            host = "127.0.0.1"
 
         if not port:
             port = NETWORK_DEFAULT_PORTS[get_network()]
 
-        self.proxy = AuthServiceProxy("http://{}:{}@{}:{}".format(rpcuser, rpcpassword, host, port))
+        self.proxy = AuthServiceProxy(
+            "http://{}:{}@{}:{}".format(rpcuser, rpcpassword, host, port)
+        )
 
-
-    def get_proxy(self):
+    def get_proxy(self) -> "NodeProxy":
         """Returns bitcoinrpc AuthServiceProxy object"""
         return self.proxy
-

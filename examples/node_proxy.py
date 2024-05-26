@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -13,12 +13,13 @@
 from bitcoinutils.setup import setup
 from bitcoinutils.proxy import NodeProxy
 
+
 def main():
     # always remember to setup the network
-    setup('testnet')
+    setup("testnet")
 
     # get a node proxy using default host and port
-    proxy = NodeProxy('rpcuser', 'rpcpw').get_proxy()
+    proxy = NodeProxy("rpcuser", "rpcpw").get_proxy()
 
     # call the node's getblockcount JSON-RPC method
     count = proxy.getblockcount()
@@ -31,8 +32,8 @@ def main():
     print(block)
 
     # print only the difficulty of the network
-    print(block['difficulty'])
+    print(block["difficulty"])
+
 
 if __name__ == "__main__":
     main()
-

@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -11,7 +11,9 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bitcoinutils')))
 
-import bitcoinutils
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bitcoinutils"))
+)
 
+# import bitcoinutils

@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -11,20 +11,21 @@
 
 
 from bitcoinutils.setup import setup
-from bitcoinutils.keys import P2pkhAddress, PrivateKey, PublicKey
+from bitcoinutils.keys import PrivateKey, PublicKey
+
 
 def main():
     # always remember to setup the network
-    setup('mainnet')
+    setup("mainnet")
 
     # create a private key (deterministically)
-    priv = PrivateKey(secret_exponent = 1)
+    priv = PrivateKey(secret_exponent=1)
 
     # compressed is the default
     print("\nPrivate key WIF:", priv.to_wif(compressed=True))
 
     # could also instantiate from existing WIF key
-    #priv = PrivateKey.from_wif('KwDiBf89qGgbjEhKnhxjUh7LrciVRzI3qYjgd9m7Rfu73SvHnOwn')
+    # priv = PrivateKey.from_wif('KwDiBf89qGgbjEhKnhxjUh7LrciVRzI3qYjgd9m7Rfu73SvHnOwn')
 
     # get the public key
     pub = priv.get_public_key()
@@ -44,6 +45,7 @@ def main():
     # sign a message with the private key and verify it
     message = "The test!"
     signature = priv.sign_message(message)
+    assert signature is not None
     print("The message to sign:", message)
     print("The signature is:", signature)
 
@@ -55,4 +57,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

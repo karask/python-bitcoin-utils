@@ -3,7 +3,7 @@ python-bitcoin-utils
 
 This is a bitcoin library that provides tools/utilities to interact with the Bitcoin network. One of the primary goals of the library is to explain the low-level details of Bitcoin. The code is easy to read and properly documented explaining in detail all the thorny aspects of the implementation. It is a low-level library which assumes some high-level understanding of how Bitcoin works. In the future this might change.
 
-This is an early version of the library (v0.6.2) and currently, it supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot, with all SIGHASH types. All script op codes are included. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
+This is an early version of the library (v0.6.7) and currently, it supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot, with all SIGHASH types. All script op codes are included. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
 
 The API documentation can be build with Sphinx but is also available as a PDF for convenience. One can currently use the library for experimenting and learning the inner workings of Bitcoin. It is not meant for production yet and parts of the API might be updated with new versions.
 
@@ -19,7 +19,7 @@ Notes
 
 Installation
 ------------
-Python version 3 is required. Then just install with:
+Python version 3.10 and above is required. Then just install with:
 
 $ pip install bitcoin-utils
 
@@ -71,6 +71,12 @@ Transaction to pay to a P2WPKH
 
 Spend from a P2SH(P2WPKH) nested segwit address
    http://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2sh_p2wpkh_address.py - spend a P2WPKH that is nested into a P2SH for old client compatibility
+
+Transaction to pay to a P2SH(P2WSH(P2PK))
+  http://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2sh_p2wsh_p2pk_address.py - send coins from a P2PKH UTXO to a P2SH(P2WSH(P2PK))
+
+Spend from a P2SH(P2WPKH) nested segwit address
+   http://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_from_p2sh_p2wsh_p2pk_address.py - spend a P2WSH with a P2PK as witness script that is nested into a P2SH for old client compatibility
 
 
 Timelock Transactions

@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2022 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -16,6 +16,7 @@ from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import P2pkhAddress
 from bitcoinutils.script import Script
 
+
 #
 # Note that a non-standard transaction can only be included in a block if a
 # miner agrees with it. For this to work one needs to use a node setup up
@@ -27,18 +28,20 @@ from bitcoinutils.script import Script
 #
 def main():
     # always remember to setup the network
-    setup('regtest')
+    setup("regtest")
 
     # create transaction input from tx id of UTXO (contained 0.4 tBTC)
-    txin = TxInput('4d9a6baf45d4b57c875fe83d5e0834568eae4b5ef6e61d13720ef6685168e663', 0)
+    txin = TxInput(
+        "4d9a6baf45d4b57c875fe83d5e0834568eae4b5ef6e61d13720ef6685168e663", 0
+    )
     # provide unlocking script
     # note that no signing is required to unlock: OP_ADD OP_5 OP_EQUAL
-    txin.script_sig = Script(['OP_2', 'OP_3'])
+    txin.script_sig = Script(["OP_2", "OP_3"])
 
     # create transaction output using P2PKH scriptPubKey (locking script)
-    addr = P2pkhAddress('mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r')
+    addr = P2pkhAddress("mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r")
     # locking script expects 2 numbers that when added equal 5 (silly example)
-    txout = TxOutput(to_satoshis(0.8), addr.to_script_pub_key() )
+    txout = TxOutput(to_satoshis(0.8), addr.to_script_pub_key())
 
     # create transaction from inputs/outputs -- default locktime is used
     tx = Transaction([txin], [txout])
@@ -49,4 +52,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

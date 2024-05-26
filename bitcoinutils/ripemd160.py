@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Pieter Wuille
+# Copyright (c) 2021-2024 Pieter Wuille
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 """Test-only pure Python RIPEMD160 implementation."""
