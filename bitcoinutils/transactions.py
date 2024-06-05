@@ -1058,7 +1058,7 @@ class Transaction:
         if has_segwit:
             for witness in self.witnesses:
                 # add witnesses script Count
-                witnesses_count_bytes = chr(len(witness.stack)).encode()
+                witnesses_count_bytes = encode_varint(len(witness.stack))
                 data += witnesses_count_bytes
                 data += witness.to_bytes()
         data += self.locktime
