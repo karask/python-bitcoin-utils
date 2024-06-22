@@ -87,3 +87,13 @@ DEFAULT_TX_VERSION = b"\x02\x00\x00\x00"
 # Monetary constants
 SATOSHIS_PER_BITCOIN = 100000000
 NEGATIVE_SATOSHI = -1
+
+# Block
+HEADER_SIZE = 80
+
+BLOCK_MAGIC_NUMBER = {
+    "f9beb4d9" : "mainnet",
+    "0b110907" : "testnet",
+    "fabfb5da" : "regtest",
+    "0a03cf40" : "signet"
+}
