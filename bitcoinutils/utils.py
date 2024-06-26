@@ -22,6 +22,7 @@ import hashlib
 from ecdsa import ellipticcurve  # type: ignore
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
+import struct
 
 # clean whatever is not used!
 class Secp256k1Params:
@@ -205,6 +206,77 @@ def encode_varint(i: int) -> bytes:
         return b"\xff" + i.to_bytes(8, "little")
     else:
         raise ValueError("Integer is too large: %d" % i)
+    
+def parse_compact_size(data: bytes) -> tuple:
+    """
+    Parse variable integer. Returns (count, size) 
+    """
+    first_byte = data[0]
+    if first_byte < 0xfd:
+        return (first_byte, 1)
+    elif first_byte == 0xfd:
+        return (struct.unpack('<H', data[1:3])[0], 3)
+    elif first_byte == 0xfe:
+        return (struct.unpack('<I', data[1:5])[0], 5)
+    elif first_byte == 0xff:
+        return (struct.unpack('<Q', data[1:9])[0], 9)
+    
+def get_transaction_length(data: bytes) -> int:
+    """
+    Return length of a transaction, including handling for SegWit transactions.
+    """
+    offset = 0
+
+    # Version (4 bytes)
+    offset += 4
+
+    # Check for SegWit marker and flag
+    marker, flag = data[offset], data[offset+1]
+    is_segwit = (marker == 0 and flag != 0)
+    if is_segwit:
+        offset += 2  # Skip marker and flag
+
+    # Number of Inputs (CompactSize)
+    num_inputs, size = parse_compact_size(data[offset:])
+    offset += size
+
+    # Inputs
+    for _ in range(num_inputs):
+        # Previous output (32 bytes + 4 bytes)
+        offset += 36
+        # Script length
+        script_length, size = parse_compact_size(data[offset:])
+        offset += size
+        # Script + sequence number
+        offset += script_length + 4
+
+    # Number of Outputs (CompactSize)
+    num_outputs, size = parse_compact_size(data[offset:])
+    offset += size
+
+    # Outputs
+    for _ in range(num_outputs):
+        # Value (8 bytes)
+        offset += 8
+        # Script length
+        script_length, size = parse_compact_size(data[offset:])
+        offset += size
+        # Script
+        offset += script_length
+
+    # Witness Data
+    if is_segwit:
+        for _ in range(num_inputs):
+            num_witness_items, size = parse_compact_size(data[offset:])
+            offset += size
+            for __ in range(num_witness_items):
+                witness_length, size = parse_compact_size(data[offset:])
+                offset += size + witness_length
+
+    # Lock time (4 bytes)
+    offset += 4
+
+    return offset
 
 
 def is_address_bech32(address: str) -> bool:
