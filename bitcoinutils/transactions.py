@@ -581,8 +581,12 @@ class Transaction:
             )
             outputs.append(output)
 
+        # if witnesses are present (i.e. tx is signed) then they sit before the
+        # last tx field (locktime) and the remaining payload length is greater
+        # than the locktime length (4 bytes)
+        has_witness_field = True if len(rawtx) - cursor > 4 else False
         witnesses = []
-        if has_segwit is True:
+        if has_segwit is True and has_witness_field is True:
             # iterate to read the witnesses for every input
             for n in range(0, len(inputs)):
                 n_items, size = vi_to_int(rawtx[cursor : cursor + 9])
