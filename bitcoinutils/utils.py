@@ -115,8 +115,8 @@ def _generate_merkle_path(all_leafs, target_leaf_index):
 
     Returns
     ----------
-    merkle_path : list
-        List of tagged hashes representing the merkle path.
+    merkle_path : bytes
+        Tagged hash representing the merkle path.
     """
     traversed = 0
 
