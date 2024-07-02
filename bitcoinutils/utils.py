@@ -89,7 +89,7 @@ class ControlBlock:
         """
         self.pubkey = pubkey
         self.scripts = scripts
-        self.merkle_path = b"".join(_generate_merkle_path(scripts, index))
+        self.merkle_path = _generate_merkle_path(scripts, index)
         self.is_odd = is_odd
 
     def to_bytes(self) -> bytes:
@@ -101,7 +101,8 @@ class ControlBlock:
     def to_hex(self):
         """Converts object to hexadecimal string"""
         return b_to_h(self.to_bytes())
-    
+
+
 def _generate_merkle_path(all_leafs, target_leaf_index):
     """Generate the merkle path for spending a taproot path.
 
@@ -117,25 +118,33 @@ def _generate_merkle_path(all_leafs, target_leaf_index):
     merkle_path : list
         List of tagged hashes representing the merkle path.
     """
-    merkle_path = []
     traversed = 0
-    
+
     def traverse_level(level):
         nonlocal traversed
-        for leaf in level:
-            if isinstance(leaf, list):
-                traverse_level(leaf)
-            else:
-                if traversed == target_leaf_index:
-                    traversed += 1
-                    continue
-                tagged_hash = tapleaf_tagged_hash(leaf)
-                merkle_path.append(tagged_hash)
+        if isinstance(level, list):
+            if len(level) == 1:
+                return traverse_level(level[0])
+            if len(level) == 2:
+                a, a1 = traverse_level(level[0])
+                b, b1 = traverse_level(level[1])
+                if a1:
+                    return (a + b), True
+                if b1:
+                    return (b + a), True
+                return tapbranch_tagged_hash(a, b), False
+            raise ValueError("Invalid Merkle branch: List cannot have more than 2 branches.")
+        else:
+            if traversed == target_leaf_index:
                 traversed += 1
+                return b"", True
+            traversed += 1
+            return tapleaf_tagged_hash(level), False
+
+    merkle_path = traverse_level(all_leafs)
     
-    traverse_level(all_leafs)
-    
-    return merkle_path
+    return merkle_path[0]
+
 
 def get_tag_hashed_merkle_root(
     scripts: None | Script | list[Script] | list[list[Script]],
