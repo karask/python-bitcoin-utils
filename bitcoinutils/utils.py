@@ -220,7 +220,7 @@ def parse_compact_size(data: bytes) -> tuple:
         return (struct.unpack('<I', data[1:5])[0], 5)
     elif first_byte == 0xff:
         return (struct.unpack('<Q', data[1:9])[0], 9)
-    
+        
 def get_transaction_length(data: bytes) -> int:
     """
     Return length of a transaction, including handling for SegWit transactions.
