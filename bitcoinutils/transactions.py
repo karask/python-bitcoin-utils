@@ -143,50 +143,45 @@ class TxInput:
     @staticmethod
     def from_raw(txinputrawhex: str, cursor: int = 0, has_segwit: bool = False):
         """
-        Imports a TxInput from a Transaction's hexadecimal data using struct for parsing.
+        Imports a TxInput from a Transaction's hexadecimal data
 
-        Args:
-            txinputrawhex (str): The hexadecimal raw string of the Transaction.
-            cursor (int): The position at which the algorithm will start to read the data.
-            has_segwit (bool): Indicates if the Tx Input is SegWit enabled.
-
-        Returns:
-            tuple: (TxInput object, new cursor position)
-
-        Raises:
-            Exception: If the transaction hash or script is malformed.
+        Attributes
+        ----------
+        txinputrawhex : string (hex)
+            The hexadecimal raw string of the Transaction
+        cursor : int
+            The cursor of which the algorithm will start to read the data
+        has_segwit : boolean
+            Is the Tx Input segwit or not
         """
         txinputraw = h_to_b(txinputrawhex)
 
-        # Unpack transaction ID (hash) and output index
-        txid_format = "<32sI"
-        txid, vout = struct.unpack_from(txid_format, txinputraw, cursor)
-        txid = txid[::-1].hex()  # Reverse to match usual hexadecimal order
-        cursor += struct.calcsize(txid_format)
+        # Unpack transaction ID (hash) in bytes and output index
+        txid, vout = struct.unpack_from('<32sI', txinputraw, cursor)
+        txid = txid[::-1]  # Reverse to match usual hexadecimal order
+        cursor += 36  # 32 bytes for txid and 4 bytes for vout
 
         # Read the unlocking script size using parse_compact_size
-        unlocking_script_size, size = parse_compact_size(txinputraw, cursor)
+        unlocking_script_size, size = parse_compact_size(txinputraw[cursor:])
         cursor += size
 
-        # Read the unlocking script
-        script_format = f"{unlocking_script_size}s"
-        unlocking_script, = struct.unpack_from(script_format, txinputraw, cursor)
+        # Read the unlocking script in bytes
+        unlocking_script = struct.unpack_from(f'{unlocking_script_size}s', txinputraw, cursor)[0]
         cursor += unlocking_script_size
 
-        # Read the sequence number
-        sequence_format = "<I"
-        sequence, = struct.unpack_from(sequence_format, txinputraw, cursor)
-        cursor += struct.calcsize(sequence_format)
+        # Read the sequence number in bytes
+        sequence, = struct.unpack_from('<4s', txinputraw, cursor)
+        cursor += 4
 
-        # If coinbase input, handle differently
-        if txid == 64 * "0":
+        # If coinbase input (utxo will be all zeros), handle script differently
+        if txid.hex() == '00' * 32:
             script_sig = Script([unlocking_script.hex()])  # Treat as single element for coinbase
         else:
             script_sig = Script.from_raw(unlocking_script.hex(), has_segwit=has_segwit)
 
         # Create the TxInput instance
         tx_input = TxInput(
-            txid=txid,
+            txid=txid.hex(),
             txout_index=vout,
             script_sig=script_sig,
             sequence=sequence
@@ -306,13 +301,13 @@ class TxOutput:
         """
         txoutputraw = h_to_b(txoutputrawhex)
 
-        # Unpack the output value (amount)
+        # Unpack the amount of the TxOutput directly in bytes
         amount_format = "<Q"  # Little-endian unsigned long long (8 bytes)
         amount, = struct.unpack_from(amount_format, txoutputraw, cursor)
         cursor += struct.calcsize(amount_format)
 
         # Read the locking script size using parse_compact_size
-        lock_script_size, size = parse_compact_size(txoutputraw, cursor)
+        lock_script_size, size = parse_compact_size(txoutputraw[cursor:])
         cursor += size
 
         # Read the locking script
@@ -327,6 +322,7 @@ class TxOutput:
         )
 
         return tx_output, cursor
+
 
     def __str__(self) -> str:
         return str({"amount": self.amount, "script_pubkey": self.script_pubkey})
@@ -532,75 +528,72 @@ class Transaction:
     @staticmethod
     def from_raw(rawtxhex: str):
         """
-        Imports a Transaction from hexadecimal data
+        Imports a Transaction from hexadecimal data.
 
         Attributes
         ----------
         rawtxhex : string (hex)
-            The hexadecimal raw string of the Transaction
+            The hexadecimal raw string of the Transaction.
         """
         rawtx = h_to_b(rawtxhex)
-        cursor = 0
 
-        # Unpack version (4 bytes)
-        version, = struct.unpack_from('<I', rawtx, cursor)
-        cursor += 4
+        # Read version (4 bytes)
+        version = rawtx[0:4]
+        cursor = 4
 
         # Detect and handle SegWit
-        flag = None
         has_segwit = False
-        if rawtx[cursor] == 0x00 and rawtx[cursor + 1] == 0x01:
-            flag = rawtx[cursor + 1]
+        if rawtx[cursor:cursor + 2] == b'\x00\x01':
             has_segwit = True
-            cursor += 2  # Skip past the marker and flag bytes
+            cursor += 2  # Skipping past the marker and flag bytes
 
         # Read the number of inputs
-        n_inputs, size = parse_compact_size(rawtx, cursor)
+        n_inputs, size = parse_compact_size(rawtx[cursor:])
         cursor += size
         inputs = []
 
         # Read inputs
         for _ in range(n_inputs):
-            inp, cursor = TxInput.from_raw(rawtxhex, cursor, has_segwit)
+            inp, cursor = TxInput.from_raw(rawtx.hex(), cursor, has_segwit)
             inputs.append(inp)
 
-        # Read the number of outputs
-        n_outputs, size = parse_compact_size(rawtx, cursor)
+        # Read the number of outputs using parse_compact_size
+        n_outputs, size = parse_compact_size(rawtx[cursor:])
         cursor += size
         outputs = []
 
         # Read outputs
         for _ in range(n_outputs):
-            output, cursor = TxOutput.from_raw(rawtxhex, cursor, has_segwit)
+            output, cursor = TxOutput.from_raw(rawtx.hex(), cursor, has_segwit)
             outputs.append(output)
 
         # Handle witnesses if SegWit is enabled
         witnesses = []
         if has_segwit:
             for _ in range(n_inputs):
-                n_items, size = parse_compact_size(rawtx, cursor)
+                n_items, size = parse_compact_size(rawtx[cursor:])
                 cursor += size
-                witness_stack = []
-                for __ in range(n_items):
-                    item_size, size = parse_compact_size(rawtx, cursor)
+                witnesses_tmp = []
+                for _ in range(n_items):
+                    item_size, size = parse_compact_size(rawtx[cursor:])
                     cursor += size
                     witness_data = rawtx[cursor:cursor + item_size]
                     cursor += item_size
-                    witness_stack.append(witness_data.hex())
-                witnesses.append(TxWitnessInput(stack=witness_stack))
+                    witnesses_tmp.append(witness_data.hex())
+                if witnesses_tmp:
+                    witnesses.append(TxWitnessInput(stack=witnesses_tmp))
 
-        # Unpack locktime (4 bytes)
-        locktime, = struct.unpack_from('<I', rawtx, cursor)
-        cursor += 4
+        # Read locktime (4 bytes)
+        locktime = rawtx[cursor:cursor + 4]
 
-        # Construct and return the Transaction object
+        #Returning the Transaction object
         return Transaction(
-            version=version,
             inputs=inputs,
             outputs=outputs,
+            version=version,
             locktime=locktime,
             has_segwit=has_segwit,
-            witnesses=witnesses
+            witnesses=witnesses,
         )
 
     def __str__(self) -> str:
