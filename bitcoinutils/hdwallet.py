@@ -12,9 +12,7 @@
 from typing import Optional
 
 from hdwallet import HDWallet as ext_HDWallet  # type: ignore
-from hdwallet.cryptocurrencies import Bitcoin
-from hdwallet.derivations import CustomDerivation
-from hdwallet.mnemonics import BIP39Mnemonic
+from hdwallet.symbols import BTC, BTCTEST  # type: ignore
 
 from bitcoinutils.setup import is_mainnet
 from bitcoinutils.keys import PrivateKey
@@ -42,14 +40,20 @@ class HDWallet:
     ):
         """Instantiate a hdwallet object using the corresponding library with BTC"""
 
-        self.hdw = ext_HDWallet(cryptocurrency=Bitcoin, network='mainnet' if is_mainnet() else 'testnet')
+        symbol = None
+        if is_mainnet():
+            symbol = BTC
+        else:
+            symbol = BTCTEST
+
+        self.hdw = ext_HDWallet(symbol)
 
         if mnemonic:
-            self.hdw.from_mnemonic(mnemonic=BIP39Mnemonic(mnemonic=mnemonic))
+            self.hdw.from_mnemonic(mnemonic=mnemonic)
 
         if xprivate_key and path:
             self.hdw.from_xprivate_key(xprivate_key=xprivate_key)
-            self.hdw.from_derivation(CustomDerivation(path))
+            self.hdw.from_path(path=path)
 
     @classmethod
     def from_mnemonic(cls, mnemonic: str):
@@ -68,7 +72,7 @@ class HDWallet:
         """Set/update the path"""
 
         self.hdw.clean_derivation()  # type: ignore
-        self.hdw.from_derivation(CustomDerivation(path))
+        self.hdw.from_path(path=path)
 
     def get_private_key(self):
         """Return a PrivateKey object used throughout bitcoinutils library"""
