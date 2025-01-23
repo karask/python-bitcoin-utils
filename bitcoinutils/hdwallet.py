@@ -14,6 +14,7 @@ from typing import Optional
 from hdwallet import HDWallet as ext_HDWallet  # type: ignore
 from hdwallet.cryptocurrencies import Bitcoin
 from hdwallet.derivations import CustomDerivation
+from hdwallet.hds import BIP32HD
 from hdwallet.mnemonics import BIP39Mnemonic
 
 from bitcoinutils.setup import is_mainnet
@@ -42,7 +43,7 @@ class HDWallet:
     ):
         """Instantiate a hdwallet object using the corresponding library with BTC"""
 
-        self.hdw = ext_HDWallet(cryptocurrency=Bitcoin, network='mainnet' if is_mainnet() else 'testnet')
+        self.hdw = ext_HDWallet(cryptocurrency=Bitcoin, network='mainnet' if is_mainnet() else 'testnet', hd=BIP32HD)
 
         if mnemonic:
             self.hdw.from_mnemonic(mnemonic=BIP39Mnemonic(mnemonic=mnemonic))

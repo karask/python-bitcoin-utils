@@ -24,7 +24,7 @@ setup(name='bitcoin-utils',
           'ecdsa==0.18.0',
           'sympy>=1.2,<2.0',
           'python-bitcoinrpc>=1.0,<2.0',
-          'hdwallet==2.2.1'
+          'hdwallet~=3.0'
       ],
       packages=['bitcoinutils'],
       #package_data={
