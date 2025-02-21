@@ -358,7 +358,7 @@ def tagged_hash(data: bytes, tag: str) -> bytes:
 
 
 def calculate_tweak(
-    pubkey: PublicKey, scripts: None | Script | list[Script] | list[list[Script]]
+    pubkey: PublicKey, scripts: None | Script | list[Script] | list[list[Script]] | bytes
 ) -> int:
     """
     Calculates the tweak to apply to the public and private key when required.
@@ -369,6 +369,8 @@ def calculate_tweak(
 
     if not scripts:
         tweak = tagged_hash(key_x, "TapTweak")
+    elif isinstance(scripts, bytes):
+        tweak = tagged_hash(key_x + scripts, "TapTweak")
     else:
         # if also script spending this should include the tapleaf of the
         # versioned script!
