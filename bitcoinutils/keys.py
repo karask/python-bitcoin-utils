@@ -145,7 +145,7 @@ class PrivateKey:
 
     @classmethod
     def from_bytes(cls, b: bytes):
-        """Creates key from WIFC or WIF format key"""
+        """Creates a key directly from 32 raw bytes"""
 
         return cls(b=b)
 
