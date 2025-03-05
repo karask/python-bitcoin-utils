@@ -89,34 +89,45 @@ Spend from a timelocked address
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2sh_csv_p2pkh.py - spends from a P2SH(CSV+P2PKH) address as created from above.
 
 Taproot (segwit v1) Transactions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------------
 
-Spend from a taproot address
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_default_path.py - single input, single output default key path spending.
+Taproot combines Schnorr signatures, Merkle trees, and a new scripting language to improve Bitcoin's privacy, efficiency, and smart contract capabilities. The library fully supports Taproot addresses, key path spending, and script path spending with multiple script options.
+
+Taproot Keys and Addresses
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/keys_taproot_addresses.py - creates a public key, derives its corresponding tweaked taproot public key (x-only) and taproot address.
+
+Spend from a taproot address (key path)
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_default_path.py - spends a taproot UTXO using the key path, which is the most efficient and private approach.
 
 Spend a multi input that contains both taproot and legacy UTXOs
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_multi_input_p2tr_and_p2pkh.py - three inputs (two taproot and one legacy), single legacy output.
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_multi_input_p2tr_and_p2pkh.py - three inputs (two taproot and one legacy), single legacy output.
+
+Taproot with Single Script Path
+-------------------------------
 
 Send to taproot address that contains a single script path spend
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_single_script.py - single input, single output (key path and single script path).
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_single_script.py - single input, single output (key path and single script path).
 
 Spend taproot from key path (has single alternative script path spend)
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_single_script_by_key_path.py - single input, single output, spend key path.
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_single_script_by_key_path.py - single input, single output, spend key path.
 
 Spend taproot from script path (has single alternative script path spend)
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_single_script_by_script_path.py - single input, single output, spend script path.
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_single_script_by_script_path.py - single input, single output, spend script path.
+
+Taproot with Multiple Script Paths
+---------------------------------
 
 Send to taproot address that contains two scripts path spends
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_two_scripts.py - single input, single output (key path and two script paths - A and B).
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_two_scripts.py - single input, single output (key path and two script paths - A and B).
 
 Spend taproot from script path (has two alternative script path spend - A and B)
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_two_scripts_by_script_path.py - single input, single output, spend script path A.
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_two_scripts_by_script_path.py - single input, single output, spend script path A.
 
 Send to taproot address that contains three scripts path spends
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_three_scripts.py - single input, single output (key path and three script paths - A, B and C).
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_three_scripts.py - single input, single output (key path and three script paths - A, B and C).
 
 Spend taproot from script path (has three alternative script path spends - A, B and C)
-  https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_three_scripts_by_script_path.py - single input, single output, spend script path B.
+https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_three_scripts_by_script_path.py - single input, single output, spend script path B.
 
 Other
 ^^^^^
