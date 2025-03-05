@@ -28,7 +28,7 @@ Examples
 --------
 
 Keys and Addresses
-^^^^^^^^^^^^^^^^^^
+------------------
 
 Legacy Keys and Addresses
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/keys_addresses.py - creates a private key which we use to derive a public key and in turn an address. We also use the private key to sign a message and then verify it using the public key. 
@@ -40,7 +40,7 @@ Hierarchical Deterministic Keys
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/hd_keys.py - creates an extended private key, from an xpriv/tpriv and path, which we use to derive a public key and in turn all different address (legacy, segwit v0 and taproot (segwit v1).
 
 Legacy Transactions (P2PKH, P2SH)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------
 
 Transaction with P2PKH input and outputs
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/p2pkh_transaction.py - creates a simple transaction with one input and two outputs.
@@ -55,7 +55,7 @@ Create (spent) a P2SH Transaction
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2sh_transaction.py - creates a transaction that spends a P2SH output.
 
 Non-standard Transactions
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 Create a non-standard tx
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/create_non_std_tx.py - sends funds to an address with a non-standard tx (script: OP_ADD OP_5 OP_EQUAL)
@@ -64,7 +64,7 @@ Spend a non-standard tx
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_non_std_tx.py - spends funds from script OP_ADD OP_5 OP_EQUAL 
 
 Segwit Transactions
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 Transaction to pay to a P2WPKH
   http://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2wpkh_transaction.py - send coins from two P2PKH UTXOs to a native segwit address (P2WPKH)
@@ -80,7 +80,7 @@ Spend from a P2SH(P2WPKH) nested segwit address
 
 
 Timelock Transactions
-^^^^^^^^^^^^^^^^^^^^^
+---------------------
 
 Create a P2SH address with a relative timelock
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/create_p2sh_csv_p2pkh_address.py - creates a P2SH address that locks funds (sent to it) with a private key (P2PKH) and a relative locktime of 200 blocks in the future.
@@ -115,7 +115,7 @@ Spend taproot from script path (has single alternative script path spend)
 https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_single_script_by_script_path.py - single input, single output, spend script path.
 
 Taproot with Multiple Script Paths
----------------------------------
+----------------------------------
 
 Send to taproot address that contains two scripts path spends
 https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr_with_two_scripts.py - single input, single output (key path and two script paths - A and B).
@@ -130,7 +130,7 @@ Spend taproot from script path (has three alternative script path spends - A, B 
 https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_three_scripts_by_script_path.py - single input, single output, spend script path B.
 
 Other
-^^^^^
+-----
 
 Use NodeProxy to make calls to a Bitcoin node
   https://github.com/karask/python-bitcoin-utils/blob/master/examples/node_proxy.py - make Bitcoin command-line interface calls programmatically (NodeProxy wraps jsonrpc-requests library)
