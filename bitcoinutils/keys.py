@@ -144,7 +144,7 @@ class PrivateKey:
 
     @classmethod
     def from_bytes(cls, b: bytes):
-        """Creates key from WIFC or WIF format key"""
+        """Creates a key directly from 32 raw bytes"""
 
         return cls(b=b)
 
@@ -303,7 +303,7 @@ class PrivateKey:
         amounts: list[int],
         script_path: bool = False,
         tapleaf_script: Script = Script([]),
-        tapleaf_scripts: Optional[Script | list[Script] | list[list[Script]]] = None,
+        tapleaf_scripts: Optional[Script | list[Script] | list[list[Script]]] | bytes = None,
         sighash: int = TAPROOT_SIGHASH_ALL,
         tweak: bool = True,
     ):
@@ -807,7 +807,7 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
     def get_taproot_address(
-        self, scripts: Optional[Script | list[Script] | list[list[Script]]] = None
+        self, scripts: Optional[Script | list[Script] | list[list[Script]]] | bytes = None
     ) -> P2trAddress:
         """Returns the corresponding P2TR address
 

@@ -6,9 +6,9 @@ SHORT-TERM
   . find a python ecdsa implementation that solves this
   . change the code to use the new library
   . there are a couple of places where we extend the library for bitcoin-specific calculations; also update using the new library!
-- investigate taproot op_addchecksig and add to opcodes?
+- taproot's op_addchecksig simply added
   . other tapscript changes?
-  . think: differentiate tapscript in code?
+  . think: how to differentiate tapscript in code? (right now addchecksig can be used in any script)
 
 SEGWIT-related
 - A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
@@ -19,7 +19,6 @@ SEGWIT-related
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
 
 CLEAN UP 
-- transaction (input, output, etc) .from_raw code
 - segwit examples and get_transaction_segwit_digest 
 
 TYPING 
@@ -44,7 +43,6 @@ SECURITY
 
 OTHERLIBS-related
 - create HD wallet implementation - very simple - similar to the hdwallet lib that I wrap
-- create block object and impl. .from_raw(..) instantiation
 
 OTHER
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
