@@ -215,6 +215,27 @@ def encode_varint(i: int) -> bytes:
         return b"\xff" + i.to_bytes(8, "little")
     else:
         raise ValueError("Integer is too large: %d" % i)
+
+
+def encode_bip143_script_code(script):
+    """Encode a script according to BIP143 for SegWit transactions.
+    
+    Parameters
+    ----------
+    script : Script or bytes
+        The script to encode
+        
+    Returns
+    -------
+    bytes
+        The encoded script
+    """
+    if hasattr(script, 'to_bytes'):
+        script_bytes = script.to_bytes()
+    else:
+        script_bytes = script
+    
+    return prepend_compact_size(script_bytes)
     
 def parse_compact_size(data: bytes) -> tuple:
     """
@@ -500,8 +521,28 @@ def b_to_h(b: bytes) -> str:
 
 
 def h_to_b(h: str) -> bytes:
-    """Converts bytes to hexadecimal string"""
-    return bytes.fromhex(h)
+    """Converts hex string to bytes, handles whitespace and 0x prefix."""
+    # Normalize by removing spaces, tabs, and 0x prefix
+    if not isinstance(h, str):
+        return h  # Return as is if not a string
+        
+    h = h.strip()
+    if h.lower().startswith('0x'):
+        h = h[2:]
+    
+    # Handle odd length by padding with a leading zero
+    if len(h) % 2 == 1:
+        h = '0' + h
+        
+    try:
+        return bytes.fromhex(h)
+    except ValueError as e:
+        # Find problematic character for better error message
+        for i, c in enumerate(h):
+            if c not in '0123456789abcdefABCDEF':
+                raise ValueError(f"Invalid hex character '{c}' at position {i} in '{h}'") from e
+        # If we can't find specific problem, re-raise the original error
+        raise
 
 
 def h_to_i(hex_str: str) -> int:
@@ -534,4 +575,92 @@ def i_to_b(i: int) -> bytes:
     byte_length = (i.bit_length() + 7) // 8
     return i.to_bytes(byte_length, "big")
 
+def to_bytes(value, length=None, byteorder='little'):
+    """
+    Converts an integer to bytes.
+    
+    Args:
+        value (int): The integer to convert
+        length (int): The length of the resulting bytes object. If None, the minimum
+                      number of bytes required is used.
+        byteorder (str): The byte order ('little' or 'big')
+    
+    Returns:
+        bytes: The integer encoded as bytes
+    """
+    if length is None:
+        length = (value.bit_length() + 7) // 8
+    return value.to_bytes(length, byteorder)
+
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?
+
+def parse_psbt_key_pair(data, offset):
+    """Parse a key-value pair from a PSBT.
+    
+    Parameters
+    ----------
+    data : bytes
+        The PSBT data
+    offset : int
+        The current offset in the data
+        
+    Returns
+    -------
+    tuple
+        (key, value, new_offset)
+    """
+    # Parse key size using parse_compact_size
+    key_size, size_bytes = parse_compact_size(data[offset:])
+    offset += size_bytes
+    
+    # Read the key
+    key = data[offset:offset+key_size]
+    offset += key_size
+    
+    # Parse value size using parse_compact_size
+    value_size, size_bytes = parse_compact_size(data[offset:])
+    offset += size_bytes
+    
+    # Read the value
+    value = data[offset:offset+value_size]
+    offset += value_size
+    
+    return key, value, offset
+
+def to_little_endian(value, bytes_length=4):
+    """Convert an integer to little-endian byte representation.
+    
+    Parameters
+    ----------
+    value : int
+        The integer value to convert
+    bytes_length : int, optional
+        Number of bytes to use (default 4)
+        
+    Returns
+    -------
+    bytes
+        Little-endian byte representation of the value
+    """
+    return value.to_bytes(bytes_length, byteorder='little')
+
+def to_little_endian_uint(value, bytes_length=4):
+    """Convert an integer to little-endian byte representation for unsigned integers.
+    
+    Parameters
+    ----------
+    value : int
+        The integer value to convert
+    bytes_length : int, optional
+        Number of bytes to use (default 4)
+        
+    Returns
+    -------
+    bytes
+        Little-endian byte representation of the unsigned integer value
+    """
+    return value.to_bytes(bytes_length, byteorder='little', signed=False)
+
+def bytes_to_hex_str(bytes_obj):
+    """Convert bytes to hexadecimal string representation."""
+    return bytes_obj.hex()

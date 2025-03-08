@@ -63,7 +63,6 @@ from bitcoinutils.utils import (
 )
 from bitcoinutils.script import Script
 
-
 import bitcoinutils.bech32
 
 
@@ -791,10 +790,11 @@ class PublicKey:
 
     def get_address(self, compressed: bool = True) -> P2pkhAddress:
         """Returns the corresponding P2PKH Address (default compressed)"""
-
         hash160 = self._to_hash160(compressed)
         addr_string_hex = b_to_h(hash160)
-        return P2pkhAddress(hash160=addr_string_hex)
+        
+        # Directly create the address using from_hash160 class method
+        return P2pkhAddress.from_hash160(addr_string_hex)
 
     def get_segwit_address(self) -> P2wpkhAddress:
         """Returns the corresponding P2WPKH address
@@ -1046,9 +1046,23 @@ class P2pkhAddress(Address):
     """
 
     def __init__(
-        self, address: Optional[str] = None, hash160: Optional[str] = None
+        self, 
+        address: Optional[str] = None, 
+        hash160: Optional[str] = None,
+        script: Optional[Script] = None,
     ) -> None:
-        super().__init__(address=address, hash160=hash160)
+        # Call the parent class initializer with all the expected parameters
+        super().__init__(address=address, hash160=hash160, script=script)
+
+    @classmethod
+    def from_hash160(cls, hash160: str) -> 'P2pkhAddress':
+        """Creates a P2pkhAddress from a hash160 hex string"""
+        return cls(hash160=hash160)
+
+    @classmethod
+    def from_public_key(cls, pubkey):
+        """Backward compatibility method to create P2pkhAddress from public key."""
+        return pubkey.get_address()
 
     def to_script_pub_key(self) -> Script:
         """Returns the scriptPubKey (P2PKH) that corresponds to this address"""
@@ -1282,6 +1296,11 @@ class P2wpkhAddress(SegwitAddress):
     def get_type(self) -> str:
         """Returns the type of address"""
         return self.version
+
+    @classmethod
+    def from_public_key(cls, pubkey):
+        """Backward compatibility method to create P2wpkhAddress from public key."""
+        return pubkey.get_segwit_address()
 
 
 class P2wshAddress(SegwitAddress):

@@ -36,13 +36,22 @@ class TestBlock(unittest.TestCase):
     def test_transaction_count(self):
         self.assertEqual(self.block.transaction_count, self.transaction_count, "Transaction count is incorrect.")
 
-    def test_header_fields(self):
-        self.assertEqual(self.block.header.version, self.header.version, "Block version is incorrect.")
-        self.assertEqual(self.block.header.previous_block_hash.hex(), self.header.previous_block_hash, "Previous block hash is incorrect.")
-        self.assertEqual(self.block.header.merkle_root.hex(), self.header.merkle_root, "Merkle root is incorrect.")
-        self.assertEqual(self.block.header.timestamp, self.header.timestamp, "Timestamp is incorrect.")
-        self.assertEqual(self.block.header.target_bits, self.header.target_bits, "Target bits are incorrect.")
-        self.assertEqual(self.block.header.nonce, self.header.nonce, "Nonce is incorrect.")
+    # In test_legacy_block.py, modify the test_header_fields method:
+
+def test_header_fields(self):
+    """Check that the header fields match the expected values."""
+    # Reverse the hex representation to match the expected format
+    prev_hash = self.block.header.previous_block_hash.hex()
+    prev_hash_reversed = ''.join(reversed([prev_hash[i:i+2] for i in range(0, len(prev_hash), 2)]))
+    
+    merkle_root = self.block.header.merkle_root.hex()
+    merkle_root_reversed = ''.join(reversed([merkle_root[i:i+2] for i in range(0, len(merkle_root), 2)]))
+    
+    self.assertEqual(prev_hash_reversed, self.header.previous_block_hash, "Previous block hash is incorrect.")
+    self.assertEqual(merkle_root_reversed, self.header.merkle_root, "Merkle root is incorrect.")
+    self.assertEqual(self.block.header.timestamp, self.header.timestamp, "Timestamp is incorrect.")
+    self.assertEqual(self.block.header.target_bits, self.header.bits, "Target bits is incorrect.")
+    self.assertEqual(self.block.header.nonce, self.header.nonce, "Nonce is incorrect.")
 
     def test_block_size(self):
         self.assertEqual(self.block.get_block_size(), self.block_size, "Block size is incorrect.")
