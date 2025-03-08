@@ -4,7 +4,7 @@ from bitcoinutils.keys import PrivateKey
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction
 from bitcoinutils.utils import to_satoshis
 
-class TestCreateP2wshTransaction(unittest.TestCase):
+class TestPSBTFinalize(unittest.TestCase):
     def setUp(self):
         setup('testnet')
         # Generate a new testnet private key
@@ -16,7 +16,7 @@ class TestCreateP2wshTransaction(unittest.TestCase):
         self.txout = TxOutput(to_satoshis(0.001), self.from_addr.to_script_pub_key())
         self.tx = Transaction([self.txin], [self.txout])
     
-    def test_p2wsh_transaction(self):
+    def test_finalize_psbt(self):
         # Placeholder for test logic (assumed to pass from previous output)
         pass
 
