@@ -528,12 +528,18 @@ class PublicKey:
         returns the corresponding P2trAddress object
     """
 
-    def __init__(self, hex_str: str) -> None:
+    def __init__(self, hex_str: str = None, message: str = None, signature: bytes = None) -> None:
         """
         Parameters
         ----------
         hex_str : str
             the public key in hex string
+        
+        In case of generating public key from message and signature:-
+        message : str
+            the message
+        signature : str
+            the compressed signature in bytes
 
         Raises
         ------
@@ -541,61 +547,80 @@ class PublicKey:
             If first byte of public key (corresponding to SEC format) is
             invalid.
         """
-        hex_str = hex_str.strip()
+        if hex_str:
+            hex_str = hex_str.strip()
 
-        # Normalize hex string by removing '0x' prefix and any whitespace
-        if hex_str.lower().startswith('0x'):
-            hex_str = hex_str[2:]
+            # Normalize hex string by removing '0x' prefix and any whitespace
+            if hex_str.lower().startswith('0x'):
+                hex_str = hex_str[2:]
 
-        # expects key as hex string - SEC format
-        first_byte_in_hex = hex_str[:2]  # 2 hex chars = 1 byte
-        hex_bytes = h_to_b(hex_str)
+            # expects key as hex string - SEC format
+            first_byte_in_hex = hex_str[:2]  # 2 hex chars = 1 byte
+            hex_bytes = h_to_b(hex_str)
 
-        taproot = False
+            taproot = False
 
-        # check if compressed or not
-        if len(hex_bytes) > 33:
-            # uncompressed - SEC format: 0x04 + x + y coordinates (x,y are 32 byte
-            # numbers)
+            # check if compressed or not
+            if len(hex_bytes) > 33:
+                # uncompressed - SEC format: 0x04 + x + y coordinates (x,y are 32 byte
+                # numbers)
 
-            # remove first byte and instantiate ecdsa key
-            self.key = VerifyingKey.from_string(hex_bytes[1:], curve=SECP256k1)
-        elif len(hex_bytes) > 31:
-            # key is either compressed or in x-only taproot format
+                # remove first byte and instantiate ecdsa key
+                self.key = VerifyingKey.from_string(hex_bytes[1:], curve=SECP256k1)
+            elif len(hex_bytes) > 31:
+                # key is either compressed or in x-only taproot format
 
-            # taproot public keys are exactly 32 bytes
-            if len(hex_bytes) == 32:
-                taproot = True
+                # taproot public keys are exactly 32 bytes
+                if len(hex_bytes) == 32:
+                    taproot = True
 
-            # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
-            # is even else y is odd. Calculate y and then instantiate the ecdsa key
-            x_coord = int(hex_str[2:], 16)
+                # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
+                # is even else y is odd. Calculate y and then instantiate the ecdsa key
+                x_coord = int(hex_str[2:], 16)
 
-            # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
-            y_values = sqrt_mod(
-                (x_coord**3 + 7) % Secp256k1Params._p, Secp256k1Params._p, True
+                # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
+                y_values = sqrt_mod(
+                    (x_coord**3 + 7) % Secp256k1Params._p, Secp256k1Params._p, True
+                )
+
+                assert y_values is not None
+                # check SEC format's first byte to determine which of the 2 values to use
+                if first_byte_in_hex == "02" or taproot:
+                    # y is the even value
+                    if y_values[0] % 2 == 0:  # type: ignore
+                        y_coord = y_values[0]  # type: ignore
+                    else:
+                        y_coord = y_values[1]  # type: ignore
+                elif first_byte_in_hex == "03":
+                    # y is the odd value
+                    if y_values[0] % 2 == 0:  # type: ignore
+                        y_coord = y_values[1]  # type: ignore
+                    else:
+                        y_coord = y_values[0]  # type: ignore
+                else:
+                    raise TypeError("Invalid SEC compressed format")
+
+                uncompressed_hex = f"{x_coord:064x}{y_coord:064x}"
+                uncompressed_hex_bytes = h_to_b(uncompressed_hex)
+                self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
+        elif message and signature:
+            if(len(signature) != 65):
+                raise ValueError("Invalid signature length")
+
+            recovery_id = signature[0] - 31 #Extract recovery id
+            
+            signature = signature[1:] #Remove recovery id from signature
+            
+            message_magic = add_magic_prefix(message)
+            # create message digest
+            message_digest = hashlib.sha256(hashlib.sha256(message_magic).digest()).digest()
+
+            recovered_keys = VerifyingKey.from_public_key_recovery_with_digest(
+                signature, message_digest, curve=SECP256k1, hashfunc = hashlib.sha256, sigdecode=sigdecode_string
             )
-
-            assert y_values is not None
-            # check SEC format's first byte to determine which of the 2 values to use
-            if first_byte_in_hex == "02" or taproot:
-                # y is the even value
-                if y_values[0] % 2 == 0:  # type: ignore
-                    y_coord = y_values[0]  # type: ignore
-                else:
-                    y_coord = y_values[1]  # type: ignore
-            elif first_byte_in_hex == "03":
-                # y is the odd value
-                if y_values[0] % 2 == 0:  # type: ignore
-                    y_coord = y_values[1]  # type: ignore
-                else:
-                    y_coord = y_values[0]  # type: ignore
-            else:
-                raise TypeError("Invalid SEC compressed format")
-
-            uncompressed_hex = f"{x_coord:064x}{y_coord:064x}"
-            uncompressed_hex_bytes = h_to_b(uncompressed_hex)
-            self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
+            self.key = recovered_keys[recovery_id]
+        else:
+            raise TypeError("Parameters missing")
 
     @classmethod
     def from_hex(cls, hex_str: str) -> PublicKey:
@@ -665,11 +690,12 @@ class PublicKey:
         return y % 2 == 0
 
     @classmethod
-    def from_message_signature(cls, signature):
-        # TODO implement (add signature=None in __init__, etc.)
-        # TODO plus does this apply to DER signatures as well?
-        # return cls(signature=signature)
-        raise BaseException("NO-OP!")
+    def from_message_signature(cls, message, signature):
+        """Creates a public key from a message signature
+        """
+        #Note: Only works for compressed signatures because DER encoding does not contain the recovery id
+        return cls(message=message, signature=signature)
+        # raise BaseException("NO-OP!")
 
     @classmethod
     def verify_message(cls, address: str, signature: str, message: str) -> bool:
