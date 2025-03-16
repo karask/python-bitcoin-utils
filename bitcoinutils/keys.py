@@ -532,20 +532,25 @@ class PublicKey:
         """
         Parameters
         ----------
-        hex_str : str
+        hex_str : str, optional
             the public key in hex string
         
         In case of generating public key from message and signature:-
-        message : str
-            the message
-        signature : str
-            the compressed signature in bytes
+        message : str, optional
+            The original message that was signed
+        signature : bytes, optional
+            A 65-byte Bitcoin signature (1-byte recovery ID + 64-byte ECDSA signature).
 
         Raises
         ------
         TypeError
             If first byte of public key (corresponding to SEC format) is
             invalid.
+            If neither hex_str nor (message, signature) are provided
+        ValueError
+            If message is empty when attempting recovery
+            If signature is not exactly 65 bytes
+            If an invalid recovery ID is detected
         """
         if hex_str:
             hex_str = hex_str.strip()
@@ -603,14 +608,23 @@ class PublicKey:
                 uncompressed_hex = f"{x_coord:064x}{y_coord:064x}"
                 uncompressed_hex_bytes = h_to_b(uncompressed_hex)
                 self.key = VerifyingKey.from_string(uncompressed_hex_bytes, curve=SECP256k1)
-        elif message and signature:
+        elif message or signature:
+            if not message:
+                raise ValueError("Empty message provided for public key recovery.")
+            
             if(len(signature) != 65):
-                raise ValueError("Invalid signature length")
+                raise ValueError("Invalid signature length, must be exactly 65 bytes")
 
-            recovery_id = signature[0] - 31 #Extract recovery id
+            # The compressed signature is of the format: recovery_id (1 byte) | r (32 bytes) | s (32 bytes)
+            # We subtract the prefix(27) for uncompressed signatures and an additional 4 (31) for compressed signatures to get the recovery id
+            recovery_id = signature[0] - 31
+            if not (0 <= recovery_id <= 3): # A valid recovery ID is between 0 and 3
+                raise ValueError(f"Invalid recovery ID: expected 31-34, got {signature[0]}")
             
             signature = signature[1:] #Remove recovery id from signature
             
+            # All bitcoin signatures include the magic prefix. It is just a string
+            # added to the message to distinguish Bitcoin-specific messages.
             message_magic = add_magic_prefix(message)
             # create message digest
             message_digest = hashlib.sha256(hashlib.sha256(message_magic).digest()).digest()
@@ -620,7 +634,7 @@ class PublicKey:
             )
             self.key = recovered_keys[recovery_id]
         else:
-            raise TypeError("Parameters missing")
+            raise TypeError("Either 'hex_str' or ('message', 'signature') must be provided.")
 
     @classmethod
     def from_hex(cls, hex_str: str) -> PublicKey:
@@ -691,7 +705,7 @@ class PublicKey:
 
     @classmethod
     def from_message_signature(cls, message, signature):
-        """Creates a public key from a message signature
+        """Recovers a public key from a Bitcoin-signed message and a 65-byte compressed signature.
         """
         #Note: Only works for compressed signatures because DER encoding does not contain the recovery id
         return cls(message=message, signature=signature)
