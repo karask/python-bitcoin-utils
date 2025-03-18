@@ -113,19 +113,17 @@ class BlockHeader:
         if len(rawdata) < 80:  # A block header is exactly 80 bytes
             raise ValueError(f"Block header must be at least 80 bytes, got {len(rawdata)}")
 
-        # Parse the block header fields
-        version = struct.unpack("<I", rawdata[0:4])[0]
+        # Define the header format
+        header_format = '<I32s32sIII'
         
-        # In Bitcoin, hashes are stored in little-endian in the block structure
-        # But they are typically displayed in big-endian in hex representation
-        # So we need to keep them as they are in the binary format 
-        # The tests expect them to be in their binary little-endian format
-        prev_block_hash = rawdata[4:36]
-        merkle_root = rawdata[36:68]
-        
-        timestamp = struct.unpack("<I", rawdata[68:72])[0]
-        bits = struct.unpack("<I", rawdata[72:76])[0]
-        nonce = struct.unpack("<I", rawdata[76:80])[0]
+        # Unpack the header data
+        fields = struct.unpack(header_format, rawdata[:80])
+        version = fields[0]
+        prev_block_hash = fields[1]
+        merkle_root = fields[2]
+        timestamp = fields[3]
+        bits = fields[4]
+        nonce = fields[5]
 
         return BlockHeader(
             version=version,
