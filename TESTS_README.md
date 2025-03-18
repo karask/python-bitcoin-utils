@@ -23,16 +23,32 @@ The tests are organized by functionality:
 
 Mock data is stored in JSON files in the `tests/mock_data` directory. These files contain test vectors for various scenarios.
 
-## Message Signature Tests (PR #120)
+## Public Key Recovery Tests (PR #120)
 
-The `test_public_key_recovery.py` file contains tests for public key recovery from message and signature functionality (PR #120). Most of these tests are currently skipped as they require the implementation from PR #120.
+The `test_key_recovery.py` file contains fully implemented tests for public key recovery from message and signature functionality from PR #120. These tests verify:
 
-Once PR #120 is merged, these tests will verify:
 - Recovery of public keys from message signatures
-- Error handling for various invalid inputs
-- Functionality of the `from_message_signature` class method
+- Error handling for invalid signature length
+- Error handling for invalid recovery ID
+- Error handling for missing parameters
+- Error handling for empty messages
 
-The tests use mock data from `message_signature_data.json`, which contains test vectors for message signature operations.
+The tests use predefined test vectors with known messages, signatures, and corresponding public keys to verify the recovery process works correctly.
+
+### Running the Public Key Recovery Tests
+
+To run the public key recovery tests specifically:
+
+```bash
+pytest -xvs tests/test_key_recovery.py
+```
+
+### Extending Public Key Recovery Tests
+
+To add more test cases for public key recovery:
+1. Add new test vectors (message, signature, expected public key)
+2. Follow the pattern in the `TestPublicKeyRecovery` class
+3. Ensure proper validation of error cases
 
 ## Running Tests
 
@@ -121,6 +137,31 @@ class TestKeysAndAddresses(unittest.TestCase):
         
         # Verify address matches expected
         self.assertEqual(address.to_string(), expected_address)
+```
+
+### Example 3: Testing Public Key Recovery (PR #120)
+
+```python
+import unittest
+from bitcoinutils.setup import setup
+from bitcoinutils.keys import PublicKey
+
+class TestPublicKeyRecovery(unittest.TestCase):
+    def setUp(self):
+        # Set up the network
+        setup('testnet')
+        
+        # Test data for public key recovery
+        self.valid_message = "Hello, Bitcoin!"
+        self.valid_signature = b'\x1f\x0c\xfc\xd8V\xec27)\xa7\xfc\x02:\xda\xcfT\xb2*\x02\x16.\xe2s\x7f\x18[&^\xb3e\xee3"KN\xfct\x011Z[\x05\xb5\xea\n!\xe8\xce\x9em\x89/\xf2\xa0\x15\x83{\x7f\x9e\xba+\xb4\xf8&\x15'
+        self.expected_public_key = '02649abc7094d2783670255073ccfd132677555ca84045c5a005611f25ef51fdbf'
+    
+    def test_public_key_recovery_valid(self):
+        # Recover public key from message and signature
+        pubkey = PublicKey(message=self.valid_message, signature=self.valid_signature)
+        
+        # Verify recovered public key matches expected
+        self.assertEqual(pubkey.key.to_string("compressed").hex(), self.expected_public_key)
 ```
 
 These examples demonstrate how to use mock data in your tests without relying on live network connections.
