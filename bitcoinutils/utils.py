@@ -537,36 +537,27 @@ def b_to_h(b: bytes) -> str:
     return b.hex()
 
 
-def h_to_b(h: str) -> bytes:
-    """Converts hex string to bytes, handles whitespace and 0x prefix."""
-    # Original implementation: return bytes.fromhex(h)
-    # The original implementation doesn't handle:
-    # - Whitespace in the hex string
-    # - '0x' prefixes
-    # - Odd-length hex strings
-    # - Detailed error messages for invalid characters
-    
-    # Normalize by removing spaces, tabs, and 0x prefix
-    if not isinstance(h, str):
-        return h  # Return as is if not a string
-        
-    h = h.strip()
-    if h.lower().startswith('0x'):
-        h = h[2:]
-    
-    # Handle odd length by padding with a leading zero
-    if len(h) % 2 == 1:
-        h = '0' + h
-        
+def h_to_b(hex_str):
+    """
+    Converts a hexadecimal string to bytes.
+
+    Edge cases handled:
+    - Leading '0x' prefix
+    - Whitespace in the string
+    - Odd-length hex strings (padded with leading zero)
+
+    Original implementation:
+    # return bytes.fromhex(hex_str)
+    """
+    if hex_str.startswith('0x'):
+        hex_str = hex_str[2:]
+    hex_str = hex_str.replace(' ', '')
+    if len(hex_str) % 2 != 0:
+        hex_str = '0' + hex_str
     try:
-        return bytes.fromhex(h)
+        return bytes.fromhex(hex_str)
     except ValueError as e:
-        # Find problematic character for better error message
-        for i, c in enumerate(h):
-            if c not in '0123456789abcdefABCDEF':
-                raise ValueError(f"Invalid hex character '{c}' at position {i} in '{h}'") from e
-        # If we can't find specific problem, re-raise the original error
-        raise
+        raise ValueError(f"Invalid hex string: {hex_str}") from e
 
 
 def h_to_i(hex_str: str) -> int:
