@@ -42,6 +42,7 @@ from bitcoinutils.utils import (
     b_to_h,
     parse_compact_size,
 )
+from bitcoinutils.setup import get_auto_add_zero_byte
 
 
 class TxInput:
@@ -92,8 +93,14 @@ class TxInput:
         else:
             self.sequence = sequence
 
-    def to_bytes(self) -> bytes:
-        """Serializes to bytes"""
+    def to_bytes(self, is_for_segwit_tx=False) -> bytes:
+        """Serializes to bytes
+        
+        Parameters
+        ----------
+        is_for_segwit_tx : bool
+            True if this input is part of a segwit transaction (has witness data)
+        """
 
         # Internally Bitcoin uses little-endian byte order as it improves
         # speed. Hashes are defined and implemented as big-endian thus
@@ -110,13 +117,20 @@ class TxInput:
         # check if coinbase input add manually to avoid adding the script size,
         # pushdata, etc since it is just raw data used by the miner (extra nonce,
         # mining pool, etc.)
-        if self.txid == 64 * "0":
+        if self.txid == 64 * "0" and len(self.script_sig.script) > 0:
             script_sig_bytes = h_to_b(
                 self.script_sig.script[0]
             )  # coinbase has a single element as script_sig
         # normal input
         else:
             script_sig_bytes = self.script_sig.to_bytes()
+            
+            # Automatically add '00' byte for non-witness inputs in segwit transactions
+            # if the script_sig is empty and the auto-add feature is enabled
+            if (is_for_segwit_tx and 
+                get_auto_add_zero_byte() and 
+                len(script_sig_bytes) == 0):
+                script_sig_bytes = b"\x00"
 
         data = (
             txid_bytes
@@ -402,7 +416,7 @@ class Sequence:
     def for_script(self) -> int:
         """Creates a relative/absolute timelock sequence value as expected in scripts"""
         if self.seq_type == TYPE_REPLACE_BY_FEE:
-            raise ValueError("RBF is not to be included in a script.")
+            raise ValueError("RBF is not to be used in a script.")
 
         script_integer = self.value
 
@@ -1038,7 +1052,7 @@ class Transaction:
         txout_count_bytes = encode_varint(len(self.outputs))
         data += txin_count_bytes
         for txin in self.inputs:
-            data += txin.to_bytes()
+            data += txin.to_bytes(is_for_segwit_tx=has_segwit)
         data += txout_count_bytes
         for txout in self.outputs:
             data += txout.to_bytes()

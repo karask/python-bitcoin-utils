@@ -15,6 +15,7 @@ Notes
 * For schnorr, bech32[m], ripemd160 the python Bitcoin Core reference implementations are used.
 * For making calls to a Bitcoin node a simple node proxy object exists, which wraps the python-bitcoinrpc library.
 * For Hierarchical Deterministic keys we wrap the python hdwallet library. For now we wrap only some very basic functionality to acquire a PrivateKey object that is used throughtout the library.
+* Automatic '00' byte handling for non-witness inputs is available but disabled by default. When enabled, this feature automatically adds the required '00' byte for empty non-witness inputs in segwit transactions. You can enable this feature by calling `bitcoinutils.setup.set_auto_add_zero_byte(True)`.
 
 
 Installation
@@ -22,6 +23,25 @@ Installation
 Python version 3.10 and above is required. Then just install with:
 
 $ pip install bitcoin-utils
+
+
+Configuration
+------------
+
+Setting up the library to work with different networks and options:
+
+.. code-block:: python
+
+    from bitcoinutils.setup import setup, set_auto_add_zero_byte
+    
+    # Use testnet
+    setup('testnet')
+    
+    # Enable automatic '00' byte handling for non-witness inputs (disabled by default)
+    set_auto_add_zero_byte(True)
+    
+    # Or when setting up, you can configure both at once
+    setup('testnet', auto_add_zero_byte=True)
 
 
 Examples
