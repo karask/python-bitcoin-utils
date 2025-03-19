@@ -63,6 +63,7 @@ from bitcoinutils.utils import (
 )
 from bitcoinutils.script import Script
 
+
 import bitcoinutils.bech32
 
 
@@ -1059,6 +1060,7 @@ class P2pkhAddress(Address):
         """Creates a P2pkhAddress from a hash160 hex string"""
         return cls(hash160=hash160)
 
+    # Added for PSBT support
     @classmethod
     def from_public_key(cls, pubkey):
         """Backward compatibility method to create P2pkhAddress from public key."""
@@ -1297,6 +1299,7 @@ class P2wpkhAddress(SegwitAddress):
         """Returns the type of address"""
         return self.version
 
+    # Added for PSBT support
     @classmethod
     def from_public_key(cls, pubkey):
         """Backward compatibility method to create P2wpkhAddress from public key."""

@@ -549,6 +549,9 @@ def h_to_b(hex_str):
     Original implementation:
     # return bytes.fromhex(hex_str)
     """
+    if not isinstance(hex_str, str):
+        return hex_str
+        
     if hex_str.startswith('0x'):
         hex_str = hex_str[2:]
     hex_str = hex_str.replace(' ', '')
