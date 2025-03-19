@@ -89,19 +89,20 @@ class BlockHeader:
     @staticmethod
     def from_raw(rawhexdata: Union[str, bytes]):
         """
-        Constructs a BlockHeader instance from raw block header data in hexadecimal or byte format.
+        Constructs a BlockHeader object from a raw block header data.
 
         Args:
-            rawhexdata (Union[str, bytes]): The raw data of the block header in hexadecimal or bytes format.
+            rawhexdata (Union[str, bytes]): Raw hexadecimal or byte data representing the block header.
 
         Returns:
-            BlockHeader: A fully parsed BlockHeader object.
+            BlockHeader: An instance of BlockHeader initialized from the provided raw data.
 
         Raises:
-            TypeError: If the input is not a string or bytes.
-            ValueError: If the input does not meet the expected header structure or size.
+            TypeError: If the input data type is not a string or bytes.
+            ValueError: If the length of raw data does not match the expected size of a block header.
         """
-        # Convert to bytes if necessary
+
+        # Checking if rawhexdata is in hex and convert to bytes if necessary
         if isinstance(rawhexdata, str):
             rawdata = h_to_b(rawhexdata)
         elif isinstance(rawhexdata, bytes):
@@ -109,29 +110,36 @@ class BlockHeader:
         else:
             raise TypeError("Input must be a hexadecimal string or bytes")
 
-        # Ensure we have enough data for a header
-        if len(rawdata) < 80:  # A block header is exactly 80 bytes
-            raise ValueError(f"Block header must be at least 80 bytes, got {len(rawdata)}")
+        # format String for struct packing/unpacking for block header
+        header_format = "<"  # little-edian
+        header_format += "I"  # version (4 bytes)
+        header_format += "32s"  # previous block hash (32 bytes)
+        header_format += "32s"  # merkle root (32 bytes)
+        header_format += "I"  # timestamp (4 bytes)
+        header_format += "I"  # target bits (4 bytes)
+        header_format += "I"  # nonce (4 bytes)
 
-        # Define the header format
-        header_format = '<I32s32sIII'
-        
-        # Unpack the header data
-        fields = struct.unpack(header_format, rawdata[:80])
-        version = fields[0]
-        prev_block_hash = fields[1]
-        merkle_root = fields[2]
-        timestamp = fields[3]
-        bits = fields[4]
-        nonce = fields[5]
+        if len(rawdata) != HEADER_SIZE:
+            raise ValueError(f"Incorrect data length. Expected {HEADER_SIZE} bytes.")
+
+        (
+            version,
+            previous_block_hash,
+            merkle_root,
+            timestamp,
+            target_bits,
+            nonce,
+        ) = struct.unpack(header_format, rawdata)
+        previous_block_hash = previous_block_hash[::-1]  # natural byte order
+        merkle_root = merkle_root[::-1]  # natural byte order
 
         return BlockHeader(
             version=version,
-            previous_block_hash=prev_block_hash,
+            previous_block_hash=previous_block_hash,
             merkle_root=merkle_root,
             timestamp=timestamp,
-            target_bits=bits,
-            nonce=nonce
+            target_bits=target_bits,
+            nonce=nonce,
         )
 
     def __str__(self) -> str:
@@ -160,31 +168,13 @@ class BlockHeader:
         """Returns the block version, or None if not set."""
         return self.version if self.version is not None else None
 
-    def get_previous_block_hash(self) -> Optional[str]:
-        """
-        Returns the previous block hash as a hex string, or None if not set.
-        The hash is displayed in big-endian format (reversed bytes) which is the standard display format.
-        
-        Returns:
-            Optional[str]: The previous block hash in big-endian hex format, or None if not set.
-        """
-        if self.previous_block_hash is None:
-            return None
-        # Convert from little-endian storage to big-endian display format
-        return self.previous_block_hash[::-1].hex()
+    def get_previous_block_hash(self) -> Optional[bytes]:
+        """Returns the previous block hash as bytes, or None if not set."""
+        return self.previous_block_hash.hex() if self.previous_block_hash else None
 
-    def get_merkle_root(self) -> Optional[str]:
-        """
-        Returns the merkle root as a hex string, or None if not set.
-        The merkle root is displayed in big-endian format (reversed bytes) which is the standard display format.
-        
-        Returns:
-            Optional[str]: The merkle root in big-endian hex format, or None if not set.
-        """
-        if self.merkle_root is None:
-            return None
-        # Convert from little-endian storage to big-endian display format
-        return self.merkle_root[::-1].hex()
+    def get_merkle_root(self) -> Optional[bytes]:
+        """Returns the merkle root as bytes, or None if not set."""
+        return self.merkle_root.hex() if self.merkle_root else None
 
     def get_timestamp(self) -> Optional[int]:
         """Returns the block timestamp, or None if not set."""
@@ -368,32 +358,32 @@ class Block:
             rawdata = rawhexdata
         else:
             raise TypeError("Input must be a hexadecimal string or bytes")
-        
-        # Ensure we have enough data for the block header
-        if len(rawdata) < 8 + HEADER_SIZE:
-            raise ValueError(f"Block data must be at least {8 + HEADER_SIZE} bytes, got {len(rawdata)}")
-            
         magic = rawdata[0:4]
         block_size = struct.unpack("<I", rawdata[4:8])[0]
-        header = BlockHeader.from_raw(rawdata[8:8 + HEADER_SIZE])
+        block_size = block_size
+        header = BlockHeader.from_raw(rawdata[8 : 8 + HEADER_SIZE])
 
         # Handling the transaction counter which is a CompactSize
-        transaction_count, tx_offset = parse_compact_size(rawdata[8 + HEADER_SIZE:])
+        transaction_count, tx_offset = parse_compact_size(rawdata[88:])
         transactions = []
-        current_offset = 8 + HEADER_SIZE + tx_offset
-        
+        current_offset = 88 + tx_offset
         for i in range(transaction_count):
             try:
                 tx_length = get_transaction_length(rawdata[current_offset:])
-                tx_hex = rawdata[current_offset:current_offset + tx_length].hex()
-                tx = Transaction.from_raw(tx_hex)
-                transactions.append(tx)
+                transactions.append(
+                    Transaction.from_raw(
+                        rawdata[current_offset : current_offset + tx_length].hex()
+                    )
+                )
+                temp = Transaction.from_raw(
+                    rawdata[current_offset : current_offset + tx_length].hex()
+                )
                 current_offset += tx_length
+
             except Exception as e:
-                print(f"Error parsing transaction {i}/{transaction_count}: {e}")
-                current_offset += 1  # Move forward to try to find next transaction
-                if current_offset >= len(rawdata):
-                    break
+                print(e)
+                print(i, transaction_count)
+                break
 
         return Block(magic, block_size, header, transaction_count, transactions)
 
