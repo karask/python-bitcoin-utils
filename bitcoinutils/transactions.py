@@ -567,9 +567,11 @@ class Transaction:
             output, cursor = TxOutput.from_raw(rawtx.hex(), cursor, has_segwit)
             outputs.append(output)
 
-        # Handle witnesses if SegWit is enabled
+        # Handle witnesses if SegWit is enabled and if they are present i.e. if
+        # remaining payload length is greater than last tx field length (locktime)
+        has_witness_field = True if len(rawtx) - cursor > 4 else False
         witnesses = []
-        if has_segwit:
+        if has_segwit and has_witness_field:
             for _ in range(n_inputs):
                 n_items, size = parse_compact_size(rawtx[cursor:])
                 cursor += size
