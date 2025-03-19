@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2025 The python-bitcoin-utils developers
+# Copyright (C) 2018-2024 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -843,8 +843,6 @@ class Transaction:
 
         return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
 
-    # TODO Update doc with TAPROOT_SIGHASH_ALL
-    # clean prints after finishing other sighashes
     def get_transaction_taproot_digest(
         self,
         txin_index: int,
@@ -854,6 +852,7 @@ class Transaction:
         script=Script([]),
         leaf_ver=LEAF_VERSION_TAPSCRIPT,
         sighash=TAPROOT_SIGHASH_ALL,
+        annex: Optional[bytes] = None,
     ):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
         https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
@@ -886,6 +885,8 @@ class Transaction:
                  The script version, LEAF_VERSION_TAPSCRIPT for the default tapscript
              sighash : int
                  The type of the signature hash to be created
+             annex : bytes, optional
+                 Optional annex data (will be hashed as per BIP-341)
         """
 
         # clone transaction to modify without messing up the real transaction
@@ -962,7 +963,9 @@ class Transaction:
             tx_for_signing += hash_outputs
 
         # Data about this input
-        spend_type = ext_flag * 2 + 0  # 0 for hard-coded - no annex_present
+        # Set annex_present flag in spend_type if annex is present
+        annex_present = 1 if annex is not None else 0
+        spend_type = ext_flag * 2 + annex_present
 
         tx_for_signing += bytes([spend_type])
 
@@ -986,8 +989,12 @@ class Transaction:
             # print('4')
             tx_for_signing += txin_index.to_bytes(4, "little")
 
-        # TODO if annex is present it should be added here
-        # length of annex should use compact_size
+        # Add annex if present
+        if annex_present:
+            # Encode annex with a TapLeaf prefix of 0x50 as per BIP-341
+            annex_bytes = b'\x50' + encode_varint(len(annex)) + annex
+            # Hash the annex and add to the signature message
+            tx_for_signing += hashlib.sha256(annex_bytes).digest()
 
         # Data about this output
         if sighash_single:
