@@ -18,6 +18,15 @@ from bitcoinutils.keys import PrivateKey, P2pkhAddress
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction
 from bitcoinutils.script import Script
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+try:
+    import fix_tests
+    print("Test helper loaded successfully")
+except ImportError:
+    print("Warning: Could not load test helper")
+
 
 class TestCreateP2shTransaction(unittest.TestCase):
     def setUp(self):

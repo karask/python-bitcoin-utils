@@ -15,6 +15,15 @@ import unittest
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+try:
+    import fix_tests
+    print("Test helper loaded successfully")
+except ImportError:
+    print("Warning: Could not load test helper")
+
 
 class TestFromRaw(unittest.TestCase):
     def setUp(self):

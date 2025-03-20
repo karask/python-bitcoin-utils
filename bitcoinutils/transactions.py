@@ -958,6 +958,28 @@ class Transaction:
             offset += 4
 
         return tx
+        
+    # Added for PSBT support
+@classmethod
+def from_raw(cls, hex_string):
+    """Deserialize a Transaction from a hex string.
+
+    Parameters
+    ----------
+    hex_string : str
+        The serialized Transaction data as a hex string
+            
+    Returns
+    -------
+    Transaction
+        The deserialized Transaction
+    """
+    # Convert hex string to bytes
+    from bitcoinutils.utils import h_to_b
+    data = h_to_b(hex_string)
+    
+    # Use from_bytes to deserialize
+    return cls.from_bytes(data)
 
 def main():
     pass

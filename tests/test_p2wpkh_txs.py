@@ -24,6 +24,15 @@ from bitcoinutils.transactions import TxInput, TxOutput, Transaction, TxWitnessI
 from bitcoinutils.script import Script
 from bitcoinutils.utils import to_satoshis
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+try:
+    import fix_tests
+    print("Test helper loaded successfully")
+except ImportError:
+    print("Warning: Could not load test helper")
+
 
 class TestCreateP2wpkhTransaction(unittest.TestCase):
     maxDiff = None
