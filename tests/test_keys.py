@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2024 The python-bitcoin-utils developers
+# Copyright (C) 2018-2025 The python-bitcoin-utils developers
 #
 # This file is part of python-bitcoin-utils
 #
@@ -23,6 +23,7 @@ from bitcoinutils.keys import (
 )
 from bitcoinutils.script import Script
 from bitcoinutils.hdwallet import HDWallet
+from base64 import b64decode
 
 
 class TestPrivateKeys(unittest.TestCase):
@@ -72,6 +73,13 @@ class TestPublicKeys(unittest.TestCase):
             b"\x08\xa8\xfd\x17\xb4H\xa6\x85T\x19\x9cG\xd0\x8f\xfb\x10\xd4\xb8"
         )
         self.address = "1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm"
+        
+        # Message public key recovery tests
+        self.valid_message = "Hello, Bitcoin!"
+        # 65-byte Bitcoin signature (1-byte recovery ID + 64-byte ECDSA signature)
+        self.valid_signature = b'\x1f\x0c\xfc\xd8V\xec27)\xa7\xfc\x02:\xda\xcfT\xb2*\x02\x16.\xe2s\x7f\x18[&^\xb3e\xee3"KN\xfct\x011Z[\x05\xb5\xea\n!\xe8\xce\x9em\x89/\xf2\xa0\x15\x83{\x7f\x9e\xba+\xb4\xf8&\x15'
+        # Known valid public key corresponding to the message + signature
+        self.expected_public_key = '02649abc7094d2783670255073ccfd132677555ca84045c5a005611f25ef51fdbf'
 
     def test_pubkey_creation(self):
         pub1 = PublicKey(self.public_key_hex)
@@ -98,6 +106,38 @@ class TestPublicKeys(unittest.TestCase):
     def test_pubkey_x_only(self):
         pub = PublicKey(self.public_key_hex)
         self.assertEqual(pub.to_x_only_hex(), self.public_key_hex[2:66])
+    
+    #Tests for PublicKey recovery from message and signature
+    def test_public_key_recovery_valid(self):
+        """Test successful public key recovery from a valid message and signature"""
+        pubkey = PublicKey(message=self.valid_message, signature=self.valid_signature)
+        self.assertEqual(pubkey.key.to_string("compressed").hex(), self.expected_public_key)
+
+    def test_invalid_signature_length(self):
+        """Test handling of invalid signature length (not 65 bytes)"""
+        short_signature = self.valid_signature[:60]  # Truncate signature to 60 bytes
+        with self.assertRaises(ValueError) as context:
+            PublicKey(message=self.valid_message, signature=short_signature)
+        self.assertEqual(str(context.exception), "Invalid signature length, must be exactly 65 bytes")
+
+    def test_invalid_recovery_id(self):
+        """Test handling of an invalid recovery ID"""
+        invalid_signature = bytes([50]) + self.valid_signature[1:]  # Modify recovery ID to 50
+        with self.assertRaises(ValueError) as context:
+            PublicKey(message=self.valid_message, signature=invalid_signature)
+        self.assertIn("Invalid recovery ID", str(context.exception))
+
+    def test_missing_parameters(self):
+        """Test that missing both hex_str and (message, signature) raises an error"""
+        with self.assertRaises(TypeError) as context:
+            PublicKey()
+        self.assertEqual(str(context.exception), "Either 'hex_str' or ('message', 'signature') must be provided.")
+
+    def test_empty_message(self):
+        """Test handling of an empty message for public key recovery"""
+        with self.assertRaises(ValueError) as context:
+            PublicKey(message="", signature=self.valid_signature)
+        self.assertEqual(str(context.exception), "Empty message provided for public key recovery.")
 
 
 class TestP2pkhAddresses(unittest.TestCase):
@@ -311,7 +351,6 @@ class TestHDWallet(unittest.TestCase):
         hdw.from_path("m/44'/1'/0'/0/3")
         address = hdw.get_private_key().get_public_key().get_address()
         self.assertTrue(address.to_string(), self.legacy_address_m_44_1h_0h_0_3)
-
-
+        
 if __name__ == "__main__":
     unittest.main()
