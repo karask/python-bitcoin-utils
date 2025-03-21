@@ -307,7 +307,6 @@ class PrivateKey:
         tapleaf_scripts: Optional[Script | list[Script] | list[list[Script]]] | bytes = None,
         sighash: int = TAPROOT_SIGHASH_ALL,
         tweak: bool = True,
-        rand_aux: bytes = None,
     ):
         # get the digest from the transaction object and sign
         # note that when signing a tapleaf we typically won't use tweaked
@@ -325,7 +324,7 @@ class PrivateKey:
             tx_digest = tx.get_transaction_taproot_digest(
                 txin_index, utxo_scripts, amounts, 0, sighash=sighash
             )
-        return self._sign_taproot_input(tx_digest, sighash, tapleaf_scripts, tweak, rand_aux)
+        return self._sign_taproot_input(tx_digest, sighash, tapleaf_scripts, tweak)
 
     def _sign_input(self, tx_digest: bytes, sighash: int = SIGHASH_ALL) -> str:
         """Signs a transaction input with the private key
@@ -442,7 +441,6 @@ class PrivateKey:
         sighash: int = SIGHASH_ALL,
         scripts: Optional[Script | list[Script] | list[list[Script]]] = None,
         tweak: bool = True,
-        rand_aux: bytes = None,
     ) -> str:
         """Signs a taproot transaction input with the private key
 
@@ -472,8 +470,12 @@ class PrivateKey:
         # it is the hash of the tx_digest and private key
         # TODO not identical to Bitcoin Core's signature, rand_aux
         # needs to change if we want identical signatures!
-        if rand_aux is None:
-            rand_aux = hashlib.sha256(tx_digest + byte_key).digest()
+        # if rand_aux is None:
+        #     rand_aux = hashlib.sha256(tx_digest + byte_key).digest()
+
+        # Currently bitcoin core is passing 32 bytes data as randam aux
+        # https://github.com/bitcoin/bitcoin/blob/master/src/script/sign.cpp#L88
+        rand_aux = bytes(32)
 
         # use BIP-340 python's reference implementation for signing
         sig = schnorr_sign(tx_digest, byte_key, rand_aux)

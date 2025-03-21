@@ -78,7 +78,7 @@ def main():
         # sign taproot input
         # to create the digest message to sign in taproot we need to
         # pass all the utxos' scriptPubKeys and their amounts
-        sig = priv.sign_taproot_input(tx, 0, utxos_script_pubkeys, amounts, rand_aux=bytes(32))
+        sig = priv.sign_taproot_input(tx, 0, utxos_script_pubkeys, amounts)
         # print(sig)
 
         tx.witnesses.append(TxWitnessInput([sig]))
