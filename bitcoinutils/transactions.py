@@ -652,13 +652,12 @@ class Transaction:
         for txin in tmp_tx.inputs:
             txin.script_sig = Script([])
 
-        #
-        # TODO Deal with (delete?) script's OP_CODESEPARATORs, if any
-        # Very early versions of Bitcoin were using a different design for
-        # scripts that were flawed. OP_CODESEPARATOR has no purpose currently
-        # but we could not delete it for compatibility purposes. If it exists
-        # in a script it needs to be removed.
-        #
+        # If there are OP_CODESEPARATORs in the script, we need to remove them
+        # for the signature hash calculation
+        if "OP_CODESEPARATOR" in script.script:
+            # Create a new script without OP_CODESEPARATORs
+            filtered_script_elements = [element for element in script.script if element != "OP_CODESEPARATOR"]
+            script = Script(filtered_script_elements)
 
         # the temporary transaction's scriptSig needs to be set to the
         # scriptPubKey of the UTXO we are trying to spend - this is required to
@@ -843,8 +842,6 @@ class Transaction:
 
         return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
 
-    # TODO Update doc with TAPROOT_SIGHASH_ALL
-    # clean prints after finishing other sighashes
     def get_transaction_taproot_digest(
         self,
         txin_index: int,
@@ -861,11 +858,11 @@ class Transaction:
         And: https://github.com/bitcoin/bitcoin/blob/b5f33ac1f82aea290b4653af36ac2ad1bf1cce7b/test/functional/test_framework/script.py
 
              |  SIGHASH types (see constants.py):
-             |      TAPROOT_SIGHASH_ALL - signs all inputs and outputs (default)
-             |      SIGHASH_ALL - signs all inputs and outputs
-             |      SIGHASH_NONE - signs all of the inputs
-             |      SIGHASH_SINGLE - signs all inputs but only txin_index output
-             |      SIGHASH_ANYONECANPAY (only combined with one of the above)
+             |      TAPROOT_SIGHASH_ALL (0x00) - signs all inputs and outputs (default)
+             |      SIGHASH_ALL (0x01) - signs all inputs and outputs
+             |      SIGHASH_NONE (0x02) - signs all of the inputs
+             |      SIGHASH_SINGLE (0x03) - signs all inputs but only txin_index output
+             |      SIGHASH_ANYONECANPAY (0x80) (only combined with one of the above)
              |      - with ALL - signs all outputs but only txin_index input
              |      - with NONE - signs only the txin_index input
              |      - with SINGLE - signs txin_index input and output
@@ -887,11 +884,6 @@ class Transaction:
              sighash : int
                  The type of the signature hash to be created
         """
-
-        # clone transaction to modify without messing up the real transaction
-        # tmp_tx is not really used for its to_bytes() here
-        # TODO we could use self directly to access fields
-        tmp_tx = Transaction.copy(self)
 
         # acquiring the signature type
         # sign_all = sig_hash & 0x03 == SIGHASH_ALL
@@ -920,9 +912,8 @@ class Transaction:
 
         # Data about the transaction
         if not anyone_can_pay:
-            # print('1')
             # the SHA256 of the serialization of all input outpoints
-            for txin in tmp_tx.inputs:
+            for txin in self.inputs:
                 hash_prevouts += h_to_b(txin.txid)[::-1] + struct.pack(
                     "<I",
                     txin.txout_index,
@@ -945,14 +936,13 @@ class Transaction:
             tx_for_signing += hash_script_pubkeys
 
             # the SHA256 of the serialization of all input nSequence
-            for txin in tmp_tx.inputs:
+            for txin in self.inputs:
                 hash_sequences += txin.sequence
             hash_sequences = hashlib.sha256(hash_sequences).digest()
             tx_for_signing += hash_sequences
 
         if not (sighash_none or sighash_single):
-            # print('2')
-            for txout in tmp_tx.outputs:
+            for txout in self.outputs:
                 amount_bytes = struct.pack("<Q", txout.amount)
                 script_bytes = txout.script_pubkey.to_bytes()
                 hash_outputs += (
@@ -967,8 +957,7 @@ class Transaction:
         tx_for_signing += bytes([spend_type])
 
         if anyone_can_pay:
-            # print('3')
-            txin = tmp_tx.inputs[txin_index]
+            txin = self.inputs[txin_index]
             # convert txid to big-endian first
             tx_for_signing += h_to_b(txin.txid)[::-1] + struct.pack(
                 "<I",
@@ -983,16 +972,21 @@ class Transaction:
 
             tx_for_signing += txin.sequence
         else:
-            # print('4')
             tx_for_signing += txin_index.to_bytes(4, "little")
 
-        # TODO if annex is present it should be added here
-        # length of annex should use compact_size
+        if hasattr(self, 'annex') and self.annex is not None:
+            # Process annex data with validation
+            annex_data = self.annex[txin_index] if isinstance(self.annex, list) else self.annex
+            
+            # Validate the annex data format before using
+            if isinstance(annex_data, str) and all(c in '0123456789abcdefABCDEF' for c in annex_data):
+                tx_for_signing += prepend_compact_size(h_to_b(annex_data))
+            else:
+                raise ValueError("Invalid annex data format. Must be a hexadecimal string.")
 
         # Data about this output
         if sighash_single:
-            # print('5')
-            txout = tmp_tx.outputs[txin_index]
+            txout = self.outputs[txin_index]
             amount_bytes = struct.pack("<Q", txout.amount)
             script_bytes = txout.script_pubkey.to_bytes()
             hash_output = (
