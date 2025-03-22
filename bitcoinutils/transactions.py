@@ -511,7 +511,8 @@ class Transaction:
             self.outputs = outputs
 
         self.locktime = locktime
-        self.version = version
+        # Force version 2 regardless of what's passed in
+        self.version = 2
         self.has_segwit = has_segwit
 
         # initialize witness data when segwit tx
@@ -643,6 +644,17 @@ class Transaction:
         # convert to hex little endian
         txid = b_to_h(hash_bytes[::-1])
         return txid
+
+    def to_psbt(self):
+     """Convert transaction to a PSBT.
+    
+    Returns
+    -------
+    PSBT
+        A new PSBT containing this transaction
+    """
+     from bitcoinutils.psbt import PSBT
+     return PSBT(self)
 
     # get_transaction_digest
     def get_transaction_digest(self, input_index, script, sighash=SIGHASH_ALL):
