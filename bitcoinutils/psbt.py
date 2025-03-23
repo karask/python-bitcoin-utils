@@ -79,6 +79,7 @@ class PSBT:
     
     def serialize(self):
         psbt = MAGIC_BYTES
+        # Here we are including keytype and keydata in key, therefore serialize_key_val() works as intended
         for key, val in sorted(self.maps['global'].items()):
             psbt += self.serialize_key_val(key, val)
         psbt += SEPARATOR
