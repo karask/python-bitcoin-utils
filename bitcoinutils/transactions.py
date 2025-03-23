@@ -625,8 +625,8 @@ class Transaction:
         wits = [TxWitnessInput.copy(witness) for witness in tx.witnesses]
         return cls(ins, outs, tx.locktime, tx.version, tx.has_segwit, wits)
 
-    # this sets empty witness slots which are equal
-    # to the number of inputs, to prevent expliclty defining empty witness inputs
+    # this sets empty witness slots (if necessary)
+    # makes length of witness equal to the number of inputs, to prevent expliclty defining empty witness inputs
     # for non segwit inputs
     def set_witness(self, txin_index: int, witness: TxWitnessInput):
         """Safely set a witness at the specified index"""
