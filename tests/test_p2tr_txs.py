@@ -305,6 +305,38 @@ class TestCreateP2trWithSingleTapScript(unittest.TestCase):
             TxWitnessInput([sig, self.tr_script_p2pk1.to_hex(), control_block.to_hex()])
         )
         self.assertEqual(tx.serialize(), self.signed_tx3)
+    
+    # 4-spend and validate taproot transaction with explicit documentation
+    def test_spend_script_path_with_documentation(self):
+       
+        # create the transaction with inputs and outputs
+        tx = Transaction([self.tx_in2], [self.tx_out2], has_segwit=True)
+        
+        # sign the transaction with the private key of the taproot script
+        sig = self.privkey_tr_script1.sign_taproot_input(
+            tx,
+            0,
+            self.all_utxos_scriptPubkeys2,
+            self.all_amounts2,
+            script_path=True,
+            tapleaf_script=self.tr_script_p2pk1,  
+            tapleaf_scripts=[self.tr_script_p2pk1], 
+            tweak=False,  
+        )
+        
+        control_block = ControlBlock(
+            self.from_pub2,                   
+            scripts=[[self.tr_script_p2pk1]],  
+            index=0,                           
+            is_odd=self.to_address2.is_odd()   
+        )
+        
+
+        tx.witnesses.append(
+            TxWitnessInput([sig, self.tr_script_p2pk1.to_hex(), control_block.to_hex()])
+        )
+        
+        self.assertEqual(tx.serialize(), self.signed_tx3)
 
 
 class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
