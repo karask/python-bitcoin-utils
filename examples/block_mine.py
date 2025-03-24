@@ -11,21 +11,6 @@ from bitcoinutils.block import Block, BlockHeader
 import hashlib
 
 
-tx_details = ""
-with open(
-    "./examples/mempool/test_tx.json",
-    "r",
-) as file:
-    tx_details = json.load(file)
-
-setup("mainnet")
-
-
-from_addr = "0000000000000000000000000000000000000000000000000000000000000000"
-to_addr = "bc1pvh7n6s375348q5zjfrde38nnq2lmhhtyaeqe8hv6t8mf398smeyqnug47s"
-to_addr = P2trAddress(to_addr)
-
-
 def calculate_wtxid(tx_hex):
     tx_binary = bytes.fromhex(tx_hex)
     hash_once = hashlib.sha256(tx_binary).digest()
@@ -198,6 +183,19 @@ def mine_block(block_header_bytes, target_hex):
 
 
 def main():
+
+    with open(
+        "./examples/mempool/test_tx.json",
+        "r",
+    ) as file:
+        tx_details = json.load(file)
+
+    setup("mainnet")
+
+    from_txid = "0000000000000000000000000000000000000000000000000000000000000000"
+    to_addr = "bc1pvh7n6s375348q5zjfrde38nnq2lmhhtyaeqe8hv6t8mf398smeyqnug47s"
+    to_addr = P2trAddress(to_addr)
+
     # create a coinbase transaction
     witness_reserved_value = (
         "0000000000000000000000000000000000000000000000000000000000000000"
@@ -209,7 +207,7 @@ def main():
     tx1 = Transaction()
     tx1 = tx1.from_raw(tx_details["hex"])
     txinp = TxInput(
-        txid=from_addr,
+        txid=from_txid,
         txout_index=0,
         script_sig=Script([witness_reserved_value]),
     )
