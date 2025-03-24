@@ -166,13 +166,11 @@ class TxInput:
         cursor += size
 
         # Read the unlocking script in bytes
-        unlocking_script = struct.unpack_from(
-            f"{unlocking_script_size}s", txinputraw, cursor
-        )[0]
+        unlocking_script = struct.unpack_from(f"{unlocking_script_size}s", txinputraw, cursor)[0]
         cursor += unlocking_script_size
 
         # Read the sequence number in bytes
-        (sequence,) = struct.unpack_from("<4s", txinputraw, cursor)
+        sequence = struct.unpack_from("<4s", txinputraw, cursor)
         cursor += 4
 
         # If coinbase input (utxo will be all zeros), handle script differently
@@ -304,7 +302,7 @@ class TxOutput:
 
         # Unpack the amount of the TxOutput directly in bytes
         amount_format = "<Q"  # Little-endian unsigned long long (8 bytes)
-        (amount,) = struct.unpack_from(amount_format, txoutputraw, cursor)
+        amount = struct.unpack_from(amount_format, txoutputraw, cursor)
         cursor += struct.calcsize(amount_format)
 
         # Read the locking script size using parse_compact_size
@@ -313,7 +311,7 @@ class TxOutput:
 
         # Read the locking script
         script_format = f"{lock_script_size}s"
-        (lock_script,) = struct.unpack_from(script_format, txoutputraw, cursor)
+        lock_script = struct.unpack_from(script_format, txoutputraw, cursor)
         cursor += lock_script_size
 
         # Create the TxOutput instance
@@ -504,7 +502,7 @@ class Transaction:
         locktime: str | bytes = DEFAULT_TX_LOCKTIME,
         version: bytes = DEFAULT_TX_VERSION,
         has_segwit: bool = False,
-        witnesses: list[TxWitnessInput] = None,
+        witnesses: Optional[list[TxWitnessInput]] = None,
     ) -> None:
         """See Transaction description"""
 
