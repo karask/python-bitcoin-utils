@@ -1,16 +1,9 @@
 import unittest
-import test_helper
-import fix_tests
-import combined_patch
-import combined_patch_v2
-import combined_patch_final  # Your previous patches
-import override_transaction  # This new complete override
-import patch_functions
-import fix_bitcoin_utils
 from bitcoinutils.setup import setup
 from bitcoinutils.keys import PrivateKey
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.script import Script
+from bitcoinutils.utils import h_to_b
 
 # Import the PSBT class and its components
 from bitcoinutils.psbt import PSBT, PSBTInput, PSBTOutput
@@ -31,11 +24,10 @@ class TestPSBT(unittest.TestCase):
         cls.txin = TxInput('339e9f3ff9aeb6bb75cfed89b397994663c9aa3458dd5ed6e710626a36ee9dfc', 0)
         cls.txout = TxOutput(1000000, cls.address.to_script_pub_key())
         cls.tx = Transaction([cls.txin], [cls.txout])
-        from bitcoinutils.utils import h_to_b
         
         # Create a previous transaction for UTXO testing
         cls.prev_tx_hex = '0200000001f3dc9c924e7813c81cfb218fdad0603a76fdd37a4ad9622d475d11741940bfbc000000006a47304402201fad9a9735a3182e76e6ae47ebfd23784bd142384a73146c7f7f277dbd399b22022032f2a086d4ebac27398f6896298a2d3ce7e6b50afd934302c873133442b1c8c8012102653c8de9f4854ca4da358d8403b6e0ce61c621d37f9c1bf2384d9e3d6b9a59b5feffffff01102700000000000017a914a36f0f7839deeac8755c1c1ad9b3d877e99ed77a8700000000'
-        cls.prev_tx = Transaction.from_bytes(h_to_b(cls.prev_tx_hex))
+        cls.prev_tx = Transaction.from_hex(cls.prev_tx_hex)
 
     def test_psbt_creation(self):
         """Test basic PSBT creation"""
@@ -58,7 +50,7 @@ class TestPSBT(unittest.TestCase):
                 txin.script_sig = None
                 
         # Create PSBT from transaction
-        psbt = PSBT.from_transaction(self.tx)
+        psbt = PSBT.extract_transaction(self.tx)
         
         # Verify PSBT structure
         self.assertEqual(psbt.global_tx, self.tx)

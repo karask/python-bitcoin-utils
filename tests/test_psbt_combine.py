@@ -1,13 +1,4 @@
 import unittest
-import test_helper
-import fix_tests
-import test_helper
-import combined_patch
-import combined_patch_v2
-import combined_patch_final  # Your previous patches
-import override_transaction  # This new complete override
-import patch_functions
-import fix_bitcoin_utils
 from bitcoinutils.setup import setup
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.keys import PrivateKey, P2pkhAddress
@@ -33,11 +24,11 @@ class TestPSBTCombine(unittest.TestCase):
         
         # Create a previous transaction for UTXO testing
         cls.prev_tx_hex = '0200000001f3dc9c924e7813c81cfb218fdad0603a76fdd37a4ad9622d475d11741940bfbc000000006a47304402201fad9a9735a3182e76e6ae47ebfd23784bd142384a73146c7f7f277dbd399b22022032f2a086d4ebac27398f6896298a2d3ce7e6b50afd934302c873133442b1c8c8012102653c8de9f4854ca4da358d8403b6e0ce61c621d37f9c1bf2384d9e3d6b9a59b5feffffff01102700000000000017a914a36f0f7839deeac8755c1c1ad9b3d877e99ed77a8700000000'
-        cls.prev_tx = Transaction.from_bytes(h_to_b(cls.prev_tx_hex))
+        cls.prev_tx = Transaction.from_hex(cls.prev_tx_hex)
 
     def test_combine_different_signatures(self):
         # Create a PSBT
-        psbt = PSBT.from_transaction(self.tx)
+        psbt = PSBT.extract_transaction(self.tx)
         psbt.add_input_utxo(0, utxo_tx=self.prev_tx)
         
         # Create copies for different signers
@@ -60,7 +51,7 @@ class TestPSBTCombine(unittest.TestCase):
 
     def test_combine_different_metadata(self):
         # Create a PSBT
-        psbt = PSBT.from_transaction(self.tx)
+        psbt = PSBT.extract_transaction(self.tx)
         
         # Create copies for different metadata
         psbt1 = PSBT.from_base64(psbt.to_base64())
@@ -81,7 +72,7 @@ class TestPSBTCombine(unittest.TestCase):
 
     def test_combine_identical_psbts(self):
         # Create a PSBT
-        psbt = PSBT.from_transaction(self.tx)
+        psbt = PSBT.extract_transaction(self.tx)
         psbt.add_input_utxo(0, utxo_tx=self.prev_tx)
         psbt.sign_input(self.privkey1, 0)
         
@@ -98,12 +89,15 @@ class TestPSBTCombine(unittest.TestCase):
     def test_combine_different_transactions(self):
         # Create two PSBTs with different transactions
         tx1 = Transaction([self.txin], [self.txout])
-        psbt1 = PSBT.from_transaction(tx1)
+        psbt1 = PSBT.extract_transaction(tx1)
         
         txout2 = TxOutput(900000, self.address.to_script_pub_key())
         tx2 = Transaction([self.txin], [txout2])
-        psbt2 = PSBT.from_transaction(tx2)
+        psbt2 = PSBT.extract_transaction(tx2)
         
         # Combining should raise an error
         with self.assertRaises(ValueError):
             PSBT.combine([psbt1, psbt2])
+
+if __name__ == '__main__':
+    unittest.main()

@@ -201,12 +201,17 @@ def to_satoshis(num: int | float | Decimal):
     return int(round(num * SATOSHIS_PER_BITCOIN))
 
 
-def prepend_compact_size(data: bytes) -> bytes:
+def prepend_compact_size(data):
     """
     Counts bytes and returns them with their varint (or compact size) prepended.
+    If data is an integer, use it directly as the count.
     """
-    varint_bytes = encode_varint(len(data))
-    return varint_bytes + data
+    if isinstance(data, int):
+        varint_bytes = encode_varint(data)
+        return varint_bytes
+    else:
+        varint_bytes = encode_varint(len(data))
+        return varint_bytes + data
 
 
 def encode_varint(i: int) -> bytes:
