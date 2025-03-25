@@ -129,6 +129,26 @@ https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr
 Spend taproot from script path (has three alternative script path spends - A, B and C)
 https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_three_scripts_by_script_path.py - single input, single output, spend script path B.
 
+Partially Signed Bitcoin Transactions (PSBT)
+--------------------------------------------
+
+The library now supports BIP-174 Partially Signed Bitcoin Transactions (PSBT), which enables secure, flexible transaction construction and signing across multiple devices or parties.
+
+Creating a PSBT
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/create_psbt.py - creates a PSBT from an unsigned transaction and adds UTXO information.
+
+Signing a PSBT
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/sign_psbt.py - signs a PSBT with a private key.
+
+Combining PSBTs
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/combine_psbt.py - combines PSBTs signed by different parties.
+
+Finalizing and Extracting a Transaction
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/finalize_psbt.py - finalizes a PSBT and extracts the final transaction.
+
+Multisignature Wallet with PSBT
+  https://github.com/karask/python-bitcoin-utils/blob/master/examples/psbt_multisig_wallet.py - demonstrates a complete multisignature workflow using PSBTs.
+
 Other
 -----
 
