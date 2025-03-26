@@ -104,6 +104,13 @@ Creating a PSBT
     psbt_base64 = psbt.to_base64()
     print(psbt_base64)
 
+There's also a shortcut method `to_psbt()` directly on Transaction objects:
+
+.. code-block:: python
+
+    # Create a PSBT from the transaction
+    psbt = tx.to_psbt()
+
 Signing a PSBT
 ~~~~~~~~~~~~~
 
@@ -167,12 +174,16 @@ Finalizing and Extracting a Transaction
     setup('testnet')
     
     # Parse the PSBT from base64
-    psbt_base64 = "cHNidP8BAHUCAAAAAcgijGQXgR7MRl5Fx6g5dPgaVJfwhY4SK4M5I6pTLy9HAAAAAAD/////AoCWmAEAAAAAGXapFEPbU3M0+15UVo8nUXvQPVgvMQqziKwAAAAAAAAAGXapFC3J0f1e4DC1YgLFBzThoaj8jWWjiKwAAAAAAAEBIAhYmAEAAAAAFgAUfaLsJ5hKK8BLOXfgXHb0EbQnS3IiAgMC9D2zgHto4gyl4qbtdGuihjh7GzWk2n3LQ4iLzOA5QEcwRAIgcLsQZYL5GAmpk9GHYV0yQwAfRwL9kYoZ0dKB8tWBxCkCIBiQlz9HUeZ6gsXLgCHLVJk94+GaynYEQQTrZUHj63HHASECC+Ch0g8yJaMFvtJdT13DiKEqRxGwIzdUyF/YgfCiVpSsAAAAIgICxC8OG0az7kKZB7xMMaIXzt5CyyqXzqoMxS1zczS15H0YRzBEAiAufbU+MI/sVWzwB/r5+y4H9Vfa/PbWrXQfJYgDgW3cWQIgP9MsPMeAeN8Qw+l8nmF12Nj5XBcMmMSNURHwWB4rg2ABAQMEAQAAAAEFW1IhA5XEW4M0wOepEHBa+/xw+lnbEwL//SZtWADcW0Igyo0wUq92U64AAA=="
+    psbt_base64 = "cHNidP8BAHUCAAAAAcgijGQXgR7MRl5Fx6g5dPgaVJfwhY4SK4M5I6pTLy9HAAAAAAD/////AoCWmAEAAAAAGXapFEPbU3M0+15UVo8nUXvQPVgvMQqziKwAAAAAAAAAGXapFC3J0f1e4DC1YgLFBzThoaj8jWWjiKwAAAAAAAEBIAhYmAEAAAAAFgAUfaLsJ5hKK8BLOXfgXHb0EbQnS3IiAgMC9D2zgHto4gyl4qbtdGuihjh7GzWk2n3LQ4iLzOA5QEcwRAIgcLsQZYL5GAmpk9GHYV0yQwAfRwL9kYoZ0dKB8tWBxCkCIBiQlz9HUeZ6gsXLgCHLVJk94+GaynYEQQTrZUHj63HHASECC+Ch0g8yJaMFvtJdT13DiKEqRxGwIzdUyF/YgfCiVpSsAAAAIgICxC8OG0az7kKZB7xMMaIXzt5CyyqXzqoMxS1zczS15H0YRzBEAiAufbU+MI/sVWzwB/r5+y4H9Vfa/PbWrXQfJYgDgW3cWQIgP9MsPMeAeN8Qw+l8nmF12Nj5XBcMmMSNURHwWB4rg2ABAQMEAQAAAAEFaVIhAvcqvE3jTj8r/CpKfhS8HI79yv5fJgeOhCaCRUrITQK5Ihjw+/pxLXcXG9JA+X5mQbHi+GPO4JGLKnHPqWVUnm8hA5XEW4M0wOepEHBa+/xw+lnbEwL//SZtWADcW0Igyo0wUq92U64AAQVpUiEDAvQ9s4B7aOIMpeKm7XRrooY4exs1pNp9y0OIi8zgOUAYGPD7+nEtdxcb0kD5fmZBseL4Y87gkYsqcc+pZVSebxsDlcRbgzTA56kQcFr7/HD6WdsTAv/9Jm1YANxbQiDKjTBSr3ZTrgAA"
     psbt = PSBT.from_base64(psbt_base64)
     
     # Finalize the PSBT
     if psbt.finalize():
         print("PSBT successfully finalized")
+        
+        # Check if all inputs are finalized
+        if psbt.is_finalized():
+            print("All inputs are finalized")
         
         # Extract the final transaction
         final_tx = psbt.extract_transaction()
