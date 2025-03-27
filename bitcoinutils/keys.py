@@ -275,6 +275,117 @@ class PrivateKey:
 
         return None
 
+    def sign(self, message, k=None):
+        """Signs a message with the private key (deterministically using RFC 6979)
+
+        Parameters
+        ----------
+        message : bytes or str
+            The message to sign
+        k : int, optional
+            Optional nonce value for testing or custom ECDSA signature generation
+            
+        Returns
+        -------
+        bytes
+            The DER-encoded signature
+        """
+        # Convert message to bytes if it's not already
+        if not isinstance(message, bytes):
+            if isinstance(message, str):
+                message = message.encode('utf-8')
+            else:
+                message = bytes(message)
+        
+        # Hash the message if it's not already a 32-byte hash
+        if len(message) != 32:
+            message_digest = hashlib.sha256(message).digest()
+        else:
+            message_digest = message
+        
+        # Deterministic k generation following RFC 6979
+        if k is None:
+            # Get private key as bytes
+            private_key_bytes = self.to_bytes()
+            
+            # Initialize RFC 6979 variables
+            import hmac
+            v = b'\x01' * 32
+            k_hmac = b'\x00' * 32
+            
+            # Initial k calculation
+            k_hmac = hmac.new(k_hmac, v + b'\x00' + private_key_bytes + message_digest, hashlib.sha256).digest()
+            v = hmac.new(k_hmac, v, hashlib.sha256).digest()
+            k_hmac = hmac.new(k_hmac, v + b'\x01' + private_key_bytes + message_digest, hashlib.sha256).digest()
+            v = hmac.new(k_hmac, v, hashlib.sha256).digest()
+            
+            # Generate k value until we find one in the valid range
+            while True:
+                v = hmac.new(k_hmac, v, hashlib.sha256).digest()
+                k_int = int.from_bytes(v, byteorder='big')
+                
+                if 1 <= k_int < Secp256k1Params._order:
+                    # Valid k found
+                    k = k_int
+                    break
+                    
+                # Try again with a different v
+                k_hmac = hmac.new(k_hmac, v + b'\x00', hashlib.sha256).digest()
+                v = hmac.new(k_hmac, v, hashlib.sha256).digest()
+        
+        # Sign the message with custom or deterministic k
+        signature = self.key.sign_digest(
+            message_digest, 
+            sigencode=sigencode_der,
+            k=k
+        )
+        
+        # Ensure Low S value for standardness (BIP 62)
+        # Extract R and S from the DER signature
+        r_pos = 4  # Position after DER header and R length
+        r_len = signature[3]
+        s_pos = r_pos + r_len + 2  # Position of S value
+        s_len = signature[r_pos + r_len + 1]
+        s_value = int.from_bytes(signature[s_pos:s_pos+s_len], byteorder='big')
+        
+        # Check if S is greater than half the curve order
+        half_order = Secp256k1Params._order // 2
+        if s_value > half_order:
+            # Convert to low S value
+            s_value = Secp256k1Params._order - s_value
+            s_bytes = s_value.to_bytes(32, byteorder='big')
+            
+            # Remove any leading zeros to match DER encoding rules
+            while s_bytes[0] == 0 and len(s_bytes) > 1:
+                s_bytes = s_bytes[1:]
+            
+            # If high bit is set, prepend a zero byte
+            if s_bytes[0] & 0x80:
+                s_bytes = b'\x00' + s_bytes
+            
+            # Reconstruct the signature with the new S value
+            new_s_len = len(s_bytes)
+            
+            # Calculate total length for DER encoding
+            total_len = r_len + new_s_len + 4
+            if total_len > 255:
+                total_len = 255  # Limit to maximum DER length
+            
+            # Construct new signature
+            new_sig = bytearray()
+            new_sig.append(0x30)  # DER sequence
+            new_sig.append(total_len - 2)  # Sequence length
+            new_sig.append(0x02)  # Integer type
+            new_sig.append(r_len)  # R length
+            new_sig.extend(signature[r_pos:r_pos+r_len])  # R value
+            new_sig.append(0x02)  # Integer type
+            new_sig.append(new_s_len)  # S length
+            new_sig.extend(s_bytes)  # S value
+            
+            signature = bytes(new_sig)
+        
+        return signature
+
     def sign_input(
         self, tx: Transaction, txin_index: int, script: Script, sighash=SIGHASH_ALL
     ):
@@ -831,10 +942,11 @@ class PublicKey:
 
     def get_address(self, compressed: bool = True) -> P2pkhAddress:
         """Returns the corresponding P2PKH Address (default compressed)"""
-
         hash160 = self._to_hash160(compressed)
         addr_string_hex = b_to_h(hash160)
-        return P2pkhAddress(hash160=addr_string_hex)
+        
+        # Directly create the address using from_hash160 class method
+        return P2pkhAddress.from_hash160(addr_string_hex)
 
     def get_segwit_address(self) -> P2wpkhAddress:
         """Returns the corresponding P2WPKH address
@@ -1086,9 +1198,24 @@ class P2pkhAddress(Address):
     """
 
     def __init__(
-        self, address: Optional[str] = None, hash160: Optional[str] = None
+        self, 
+        address: Optional[str] = None, 
+        hash160: Optional[str] = None,
+        script: Optional[Script] = None,
     ) -> None:
-        super().__init__(address=address, hash160=hash160)
+        # Call the parent class initializer with all the expected parameters
+        super().__init__(address=address, hash160=hash160, script=script)
+
+    @classmethod
+    def from_hash160(cls, hash160: str) -> 'P2pkhAddress':
+        """Creates a P2pkhAddress from a hash160 hex string"""
+        return cls(hash160=hash160)
+
+    # Added for PSBT support
+    @classmethod
+    def from_public_key(cls, pubkey):
+        """Backward compatibility method to create P2pkhAddress from public key."""
+        return pubkey.get_address()
 
     def to_script_pub_key(self) -> Script:
         """Returns the scriptPubKey (P2PKH) that corresponds to this address"""
@@ -1322,6 +1449,12 @@ class P2wpkhAddress(SegwitAddress):
     def get_type(self) -> str:
         """Returns the type of address"""
         return self.version
+
+    # Added for PSBT support
+    @classmethod
+    def from_public_key(cls, pubkey):
+        """Backward compatibility method to create P2wpkhAddress from public key."""
+        return pubkey.get_segwit_address()
 
 
 class P2wshAddress(SegwitAddress):

@@ -201,12 +201,17 @@ def to_satoshis(num: int | float | Decimal):
     return int(round(num * SATOSHIS_PER_BITCOIN))
 
 
-def prepend_compact_size(data: bytes) -> bytes:
+def prepend_compact_size(data):
     """
     Counts bytes and returns them with their varint (or compact size) prepended.
+    If data is an integer, use it directly as the count.
     """
-    varint_bytes = encode_varint(len(data))
-    return varint_bytes + data
+    if isinstance(data, int):
+        varint_bytes = encode_varint(data)
+        return varint_bytes
+    else:
+        varint_bytes = encode_varint(len(data))
+        return varint_bytes + data
 
 
 def encode_varint(i: int) -> bytes:
@@ -228,6 +233,26 @@ def encode_varint(i: int) -> bytes:
         raise ValueError("Integer is too large: %d" % i)
 
 
+def encode_bip143_script_code(script):
+    """Encode a script according to BIP143 for SegWit transactions.
+    
+    Parameters
+    ----------
+    script : Script or bytes
+        The script to encode
+        
+    Returns
+    -------
+    bytes
+        The encoded script
+    """
+    if hasattr(script, 'to_bytes'):
+        script_bytes = script.to_bytes()
+    else:
+        script_bytes = script
+    
+    return prepend_compact_size(script_bytes)
+  
 def parse_compact_size(data: bytes) -> tuple:
     """
     Parse variable integer. Returns (count, size)
@@ -517,9 +542,30 @@ def b_to_h(b: bytes) -> str:
     return b.hex()
 
 
-def h_to_b(h: str) -> bytes:
-    """Converts hexadecimal string to bytes"""
-    return bytes.fromhex(h)
+def h_to_b(hex_str):
+    """
+    Converts a hexadecimal string to bytes.
+
+    Edge cases handled:
+    - Leading '0x' prefix
+    - Whitespace in the string
+    - Odd-length hex strings (padded with leading zero)
+
+    Original implementation:
+    # return bytes.fromhex(hex_str)
+    """
+    if not isinstance(hex_str, str):
+        return hex_str
+        
+    if hex_str.startswith('0x'):
+        hex_str = hex_str[2:]
+    hex_str = hex_str.replace(' ', '')
+    if len(hex_str) % 2 != 0:
+        hex_str = '0' + hex_str
+    try:
+        return bytes.fromhex(hex_str)
+    except ValueError as e:
+        raise ValueError(f"Invalid hex string: {hex_str}") from e
 
 
 def h_to_i(hex_str: str) -> int:
@@ -555,4 +601,173 @@ def i_to_b(i: int) -> bytes:
     return i.to_bytes(byte_length, "big")
 
 
+def to_bytes(value, length=None, byteorder='little'):
+    """
+    Converts an integer to bytes.
+    
+    Args:
+        value (int): The integer to convert
+        length (int): The length of the resulting bytes object. If None, the minimum
+                      number of bytes required is used.
+        byteorder (str): The byte order ('little' or 'big')
+    
+    Returns:
+        bytes: The integer encoded as bytes
+    """
+    if length is None:
+        length = (value.bit_length() + 7) // 8
+    return value.to_bytes(length, byteorder)
+
+
+def hash160(data: bytes) -> bytes:
+    """Compute the hash160 of the input data."""
+    import hashlib
+    sha256_hash = hashlib.sha256(data).digest()
+    ripemd160_hash = hashlib.new('ripemd160', sha256_hash).digest()
+    return ripemd160_hash
+
+
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?
+
+def parse_psbt_key_pair(data, offset):
+    """Parse a key-value pair from a PSBT.
+    
+    Parameters
+    ----------
+    data : bytes
+        The PSBT data
+    offset : int
+        The current offset in the data
+        
+    Returns
+    -------
+    tuple
+        (key, value, new_offset)
+    """
+    # Parse key size using parse_compact_size
+    key_size, size_bytes = parse_compact_size(data[offset:])
+    offset += size_bytes
+    
+    # Read the key
+    key = data[offset:offset+key_size]
+    offset += key_size
+    
+    # Parse value size using parse_compact_size
+    value_size, size_bytes = parse_compact_size(data[offset:])
+    offset += size_bytes
+    
+    # Read the value
+    value = data[offset:offset+value_size]
+    offset += value_size
+    
+    return key, value, offset
+
+
+def to_little_endian(value, bytes_length=4):
+    """Convert an integer to little-endian byte representation.
+    
+    Parameters
+    ----------
+    value : int
+        The integer value to convert
+    bytes_length : int, optional
+        Number of bytes to use (default 4)
+        
+    Returns
+    -------
+    bytes
+        Little-endian byte representation of the value
+    """
+    return value.to_bytes(bytes_length, byteorder='little')
+
+
+def to_little_endian_uint(value, bytes_length=4):
+    """Convert an integer to little-endian byte representation for unsigned integers.
+    
+    Parameters
+    ----------
+    value : int
+        The integer value to convert
+    bytes_length : int, optional
+        Number of bytes to use (default 4)
+        
+    Returns
+    -------
+    bytes
+        Little-endian byte representation of the unsigned integer value
+    """
+    return value.to_bytes(bytes_length, byteorder='little', signed=False)
+
+
+def bytes_to_hex_str(bytes_obj):
+    """Convert bytes to hexadecimal string representation."""
+    return bytes_obj.hex()
+
+def hash256(data: bytes) -> bytes:
+    """Double SHA256 hash of the input data."""
+    import hashlib
+    return hashlib.sha256(hashlib.sha256(data).digest()).digest()
+
+def hash160_to_address(h160: bytes, testnet: bool = False) -> str:
+    """
+    Convert a hash160 (RIPEMD160 after SHA256) value to a Bitcoin address.
+    
+    Parameters
+    ----------
+    h160 : bytes
+        Hash160 of the public key
+    testnet : bool
+        Whether to use testnet address format
+        
+    Returns
+    -------
+    str
+        The Bitcoin address
+    """
+    import base58
+    # Version byte: 0x00 for mainnet, 0x6f for testnet
+    version = b'\x6f' if testnet else b'\x00'
+    # Add version byte
+    versioned_hash = version + h160
+    # Calculate checksum (first 4 bytes of double SHA256)
+    checksum = hash256(versioned_hash)[:4]
+    # Final binary address (version + hash + checksum)
+    binary_addr = versioned_hash + checksum
+    # Encode with Base58
+    return base58.b58encode(binary_addr).decode('ascii')
+
+def address_to_hash160(address: str) -> bytes:
+    """
+    Convert a Bitcoin address to its hash160 value.
+    
+    Parameters
+    ----------
+    address : str
+        Bitcoin address
+        
+    Returns
+    -------
+    bytes
+        Hash160 of the public key
+    """
+    import base58
+    try:
+        # Decode the base58 address
+        decoded = base58.b58decode(address)
+        # Check if address is of valid length (25 bytes = 1 version + 20 hash + 4 checksum)
+        if len(decoded) != 25:
+            raise Exception(f"Invalid address length: {len(decoded)}")
+        
+        # Extract the expected checksum and version+hash part
+        checksum = decoded[-4:]
+        versioned_hash = decoded[:-4]
+        
+        # Calculate the checksum and verify it matches
+        calculated_checksum = hash256(versioned_hash)[:4]
+        if checksum != calculated_checksum:
+            raise Exception("Invalid checksum")
+            
+        # Return just the hash160 part (without version byte)
+        return decoded[1:-4]
+    except Exception as e:
+        raise Exception(f"Invalid address: {e}")
