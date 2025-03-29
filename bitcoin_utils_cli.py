@@ -1,38 +1,16 @@
 #!/usr/bin/env python3
 """
-Bitcoin Utils CLI (bu) - Command line interface for python-bitcoin-utils
+Bitcoin Utils CLI - Command line interface for python-bitcoin-utils
 
 This CLI tool provides educational utilities to interact with Bitcoin through
 the python-bitcoin-utils library. It's designed to help understand the 
 inner workings of Bitcoin through practical examples and utilities.
-
-Installation Instructions:
-------------------------
-
-1. Make the file executable:
-   $ chmod +x bitcoin_utils_cli.py
-
-2. Create a symlink named 'bu' in your PATH:
-   $ sudo ln -s /path/to/bitcoin_utils_cli.py /usr/local/bin/bu
-
-   Or using pip (if included in a package):
-   $ pip install python-bitcoin-utils[cli]
-
-Usage:
-------
-   $ bu --help
-   $ bu generate
-   $ bu validate 1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH --pubkey 0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6
-   $ bu decode <transaction_hex>
-   $ bu script <script_hex>
-   $ bu block <block_file_path>
 """
 
 import argparse
 import sys
 import json
 import binascii
-import os
 from bitcoinutils.setup import setup
 from bitcoinutils.keys import PrivateKey, PublicKey
 from bitcoinutils.transactions import Transaction
@@ -284,7 +262,7 @@ def parse_block(args):
 
 def main():
     """Main entry point for the CLI"""
-    parser = argparse.ArgumentParser(description='Bitcoin Utils CLI (bu) - Educational tools for understanding Bitcoin')
+    parser = argparse.ArgumentParser(description='Bitcoin Utils CLI - Educational tools for understanding Bitcoin')
     
     # Network options
     parser.add_argument('--network', choices=['mainnet', 'testnet', 'regtest'], 

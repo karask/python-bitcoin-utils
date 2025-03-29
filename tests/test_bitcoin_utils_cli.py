@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests for the Bitcoin Utils CLI (bu) tool
+Tests for the Bitcoin Utils CLI tool
 """
 
 import unittest
