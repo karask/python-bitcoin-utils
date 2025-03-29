@@ -294,7 +294,16 @@ class Script:
         possible PUSHDATA operator must be used!
         """
         
-        data_bytes = h_to_b(data) # Assuming string is hexadecimal
+        # Check if data is already in bytes format
+        if isinstance(data, bytes):
+            data_bytes = data
+        else:
+            # Try to convert from hex, but if it fails, treat as regular string
+            try:
+                data_bytes = h_to_b(data)  # Assuming string is hexadecimal
+            except ValueError:
+                # If not valid hex, treat as a regular string and encode to bytes
+                data_bytes = data.encode('utf-8')
 
         if len(data_bytes) < 0x4C:
             return bytes([len(data_bytes)]) + data_bytes
