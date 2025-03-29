@@ -730,7 +730,17 @@ class Transaction:
         -------
         bytes
             The transaction digest to be signed
+            
+        Raises
+        ------
+        ValueError
+            If the annex does not start with the required 0x50 byte
         """
+        # Validate annex format if provided
+        if annex is not None:
+            if not annex or annex[0] != 0x50:
+                raise ValueError("Invalid annex: first byte must be 0x50 as per BIP-341")
+        
         # Ensure script_pubkeys and amounts are provided
         if script_pubkeys is None:
             script_pubkeys = [None] * len(self.inputs)
@@ -1144,6 +1154,10 @@ class Transaction:
 
         # Handle annex if provided
         if annex is not None and self.version >= 2:  # Only for taproot transactions
+            # Validate annex format if provided - for consistency with get_transaction_taproot_digest
+            if not annex or annex[0] != 0x50:
+                raise ValueError("Invalid annex: first byte must be 0x50 as per BIP-341")
+                
             annex_hash = hashlib.sha256(annex).digest()
             tx_for_signing += annex_hash
 

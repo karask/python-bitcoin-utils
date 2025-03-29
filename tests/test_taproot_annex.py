@@ -103,10 +103,8 @@ class TestTaprootAnnex(unittest.TestCase):
         self.assertNotEqual(serialized_tx, serialized_tx_no_annex,
                           "Serialized transactions should differ when annex is included")
                           
-    # Updated test to not expect ValueError since our implementation doesn't 
-    # currently validate the annex prefix
     def test_invalid_annex_prefix(self):
-        """Test that an annex with invalid prefix"""
+        """Test that an annex with invalid prefix raises ValueError"""
         
         # Create keys for P2TR input
         priv_key_taproot = PrivateKey(secret_exponent=3)
@@ -130,18 +128,16 @@ class TestTaprootAnnex(unittest.TestCase):
         # Create an annex with invalid prefix (should start with 0x50)
         invalid_annex = bytes([0x51]) + b"Test annex data"
         
-        # In our current implementation, this doesn't raise an error
-        sig_with_invalid_annex = priv_key_taproot.sign_taproot_input(
-            tx,
-            0,
-            [p2tr_address.to_script_pub_key()],
-            [100000],
-            script_path=False,
-            annex=invalid_annex
-        )
-        
-        # Just verify that we get a signature (validation will be added later)
-        self.assertTrue(len(sig_with_invalid_annex) > 0)
+        # This should now raise a ValueError
+        with self.assertRaises(ValueError):
+            sig_with_invalid_annex = priv_key_taproot.sign_taproot_input(
+                tx,
+                0,
+                [p2tr_address.to_script_pub_key()],
+                [100000],
+                script_path=False,
+                annex=invalid_annex
+            )
     
     def test_annex_in_script_path_spending(self):
         """Test annex with script-path spending"""
