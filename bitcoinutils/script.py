@@ -12,13 +12,17 @@
 import copy
 import hashlib
 import struct
-from typing import Any
+from typing import Any, Optional
 
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
 
 # import bitcoinutils.keys
 
+# Script types for differentiation
+SCRIPT_TYPE_LEGACY = 'legacy'
+SCRIPT_TYPE_SEGWIT_V0 = 'segwit_v0'
+SCRIPT_TYPE_TAPSCRIPT = 'tapscript'
 
 # Bitcoin's op codes. Complete list at: https://en.bitcoin.it/wiki/Script
 OP_CODES = {
@@ -242,6 +246,8 @@ class Script:
     ----------
     script : list
         the list with all the script OP_CODES and data
+    script_type : str
+        the type of script (legacy, segwit_v0, tapscript)
 
     Methods
     -------
@@ -258,12 +264,16 @@ class Script:
         creates a copy of the object (classmethod)
 
     from_raw()
+        instantiates object from raw hex script
 
     to_p2sh_script_pub_key()
         converts script to p2sh scriptPubKey (locking script)
 
     to_p2wsh_script_pub_key()
         converts script to p2wsh scriptPubKey (locking script)
+        
+    is_tapscript()
+        returns True if script is a Tapscript
 
     Raises
     ------
@@ -271,16 +281,17 @@ class Script:
         If string data is too large or integer is negative
     """
 
-    def __init__(self, script: list[Any]):
+    def __init__(self, script: list[Any], script_type: str = SCRIPT_TYPE_LEGACY):
         """See Script description"""
 
         self.script: list[Any] = script
+        self.script_type = script_type
 
     @classmethod
     def copy(cls, script: "Script") -> "Script":
         """Deep copy of Script"""
         scripts = copy.deepcopy(script.script)
-        return cls(scripts)
+        return cls(scripts, script.script_type)
 
     def _op_push_data(self, data: str) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
@@ -341,6 +352,9 @@ class Script:
         for token in self.script:
             # add op codes directly
             if token in OP_CODES:
+                # Check if using CHECKSIGADD in non-Tapscript
+                if token == "OP_CHECKSIGADD" and self.script_type != SCRIPT_TYPE_TAPSCRIPT:
+                    raise ValueError("OP_CHECKSIGADD is only valid in Tapscript")
                 script_bytes += OP_CODES[token]
             # if integer between 0 and 16 add the appropriate op code
             elif isinstance(token, int) and token >= 0 and token <= 16:
@@ -359,15 +373,17 @@ class Script:
         return b_to_h(self.to_bytes())
 
     @staticmethod
-    def from_raw(scriptrawhex: str, has_segwit: bool = False):
+    def from_raw(scriptrawhex: str, has_segwit: bool = False, script_type: str = SCRIPT_TYPE_LEGACY):
         """
         Imports a Script commands list from raw hexadecimal data
             Attributes
             ----------
-            txinputraw : string (hex)
+            scriptrawhex : string (hex)
                 The hexadecimal raw string representing the Script commands
             has_segwit : boolean
                 Is the Tx Input segwit or not
+            script_type : str
+                The type of script (legacy, segwit_v0, tapscript)
         """
         scriptraw = h_to_b(scriptrawhex)
         commands = []
@@ -413,7 +429,7 @@ class Script:
                 )
                 index = index + data_size + size
 
-        return Script(script=commands)
+        return Script(script=commands, script_type=script_type)
 
     def get_script(self) -> list[Any]:
         """Returns script as array of strings"""
@@ -435,7 +451,25 @@ class Script:
         Calculates the sha256 of the script and uses it to construct a P2WSH script.
         """
         sha256 = hashlib.sha256(self.to_bytes()).digest()
-        return Script(["OP_0", b_to_h(sha256)])
+        return Script(["OP_0", b_to_h(sha256)], script_type=SCRIPT_TYPE_SEGWIT_V0)
+
+    def is_tapscript(self) -> bool:
+        """Returns True if script is a Tapscript"""
+        return self.script_type == SCRIPT_TYPE_TAPSCRIPT
+
+    def add_op(self, opcode: str) -> "Script":
+        """Add an opcode to the script."""
+        # Check if using CHECKSIGADD in non-Tapscript
+        if opcode == "OP_CHECKSIGADD" and self.script_type != SCRIPT_TYPE_TAPSCRIPT:
+            raise ValueError("OP_CHECKSIGADD is only valid in Tapscript")
+        
+        self.script.append(opcode)
+        return self
+
+    def add_data(self, data: str) -> "Script":
+        """Add data push to the script."""
+        self.script.append(data)
+        return self
 
     def __str__(self) -> str:
         return str(self.script)
@@ -446,4 +480,150 @@ class Script:
     def __eq__(self, _other: object) -> bool:
         if not isinstance(_other, Script):
             return False
-        return self.script == _other.script
+        return self.script == _other.script and self.script_type == _other.script_type
+
+
+class TapscriptFactory:
+    """
+    Factory class for creating Tapscript scripts (SegWit v1).
+    """
+
+    @staticmethod
+    def create_p2tr_key_path(internal_pubkey: str) -> Script:
+        """
+        Create a P2TR key-path spending script.
+        """
+        # In key-path spending, there's no actual script to execute
+        return Script([], script_type=SCRIPT_TYPE_TAPSCRIPT)
+
+    @staticmethod
+    def create_p2tr_script_path(leaf_script: Script) -> Script:
+        """
+        Create a P2TR script-path spending script.
+        """
+        # Ensure the leaf script is a Tapscript
+        if not leaf_script.is_tapscript():
+            leaf_script_copy = Script.copy(leaf_script)
+            leaf_script_copy.script_type = SCRIPT_TYPE_TAPSCRIPT
+            return leaf_script_copy
+        return leaf_script
+
+    @staticmethod
+    def create_checksigadd_script(pubkeys: list[str], threshold: int) -> Script:
+        """
+        Create a Tapscript using OP_CHECKSIGADD for multisig.
+        
+        Args:
+            pubkeys: List of public keys as hex strings
+            threshold: Number of signatures required
+            
+        Returns:
+            A Tapscript for threshold signature verification
+        """
+        if not pubkeys or threshold <= 0 or threshold > len(pubkeys):
+            raise ValueError("Invalid pubkeys or threshold values")
+            
+        script = Script([], script_type=SCRIPT_TYPE_TAPSCRIPT)
+        
+        # Start with first pubkey and OP_CHECKSIG
+        script.add_data(pubkeys[0])
+        script.add_op("OP_CHECKSIG")
+        
+        # Add remaining pubkeys with OP_CHECKSIGADD
+        for pubkey in pubkeys[1:]:
+            script.add_data(pubkey)
+            script.add_op("OP_CHECKSIGADD")
+            
+        # Add the threshold value
+        script.script.append(threshold)
+        
+        # Add final verification
+        script.add_op("OP_EQUAL")
+        
+        return script
+
+    @staticmethod
+    def create_single_signature_script(pubkey: str) -> Script:
+        """
+        Create a simple single-signature Tapscript.
+        """
+        return Script([pubkey, "OP_CHECKSIG"], script_type=SCRIPT_TYPE_TAPSCRIPT)
+
+    @staticmethod
+    def is_op_allowed_in_tapscript(opcode: str) -> bool:
+        """
+        Check if an opcode is allowed in Tapscript.
+        """
+        # OP_CHECKSIGADD is only allowed in Tapscript
+        if opcode == "OP_CHECKSIGADD":
+            return True
+            
+        # List of disabled opcodes in Tapscript
+        disabled_in_tapscript = [
+            # Disabled string operation opcodes
+            "OP_CAT", "OP_SUBSTR", "OP_LEFT", "OP_RIGHT",
+            
+            # Disabled arithmetic opcodes
+            "OP_MUL", "OP_DIV", "OP_MOD", "OP_LSHIFT", "OP_RSHIFT",
+            
+            # Success opcodes (not yet implemented)
+            "OP_SUCCESS", "OP_SUCCESS1", "OP_SUCCESS2", "OP_SUCCESS3", 
+            "OP_SUCCESS4", "OP_SUCCESS5", "OP_SUCCESS6", "OP_SUCCESS7"
+        ]
+        
+        return opcode not in disabled_in_tapscript
+
+    @staticmethod
+    def calculate_leaf_hash(script: Script) -> bytes:
+        """
+        Calculate the TapLeaf hash of a script.
+        """
+        # TapLeaf hash = H_TapLeaf(0xc0 || CompactSize(script) || script)
+        tag_hash = hashlib.sha256(b"TapLeaf").digest()
+        
+        script_bytes = script.to_bytes()
+        script_len = len(script_bytes)
+        
+        if script_len < 0xfd:
+            leaf_data = bytes([0xc0, script_len]) + script_bytes
+        elif script_len <= 0xffff:
+            leaf_data = bytes([0xc0, 0xfd]) + script_len.to_bytes(2, byteorder="little") + script_bytes
+        elif script_len <= 0xffffffff:
+            leaf_data = bytes([0xc0, 0xfe]) + script_len.to_bytes(4, byteorder="little") + script_bytes
+        else:
+            leaf_data = bytes([0xc0, 0xff]) + script_len.to_bytes(8, byteorder="little") + script_bytes
+            
+        return hashlib.sha256(tag_hash + leaf_data).digest()
+
+    @staticmethod
+    def calculate_tap_merkle_root(leaf_hashes: list[bytes]) -> Optional[bytes]:
+        """
+        Calculate the merkle root of a TapTree from leaf hashes.
+        """
+        if not leaf_hashes:
+            return None
+            
+        if len(leaf_hashes) == 1:
+            return leaf_hashes[0]
+            
+        # Helper function to calculate branch hash
+        def calculate_branch_hash(a: bytes, b: bytes) -> bytes:
+            tag_hash = hashlib.sha256(b"TapBranch").digest()
+            # Sort the hashes to ensure deterministic behavior
+            if a > b:
+                a, b = b, a
+            return hashlib.sha256(tag_hash + a + b).digest()
+        
+        # Build the merkle tree from leaf hashes
+        current_level = leaf_hashes.copy()
+        while len(current_level) > 1:
+            next_level = []
+            for i in range(0, len(current_level), 2):
+                if i + 1 < len(current_level):
+                    next_level.append(calculate_branch_hash(current_level[i], current_level[i+1]))
+                else:
+                    # Odd number of nodes, promote the last node to the next level
+                    next_level.append(current_level[i])
+            current_level = next_level
+            
+        return current_level[0]

@@ -5,9 +5,9 @@
 # It is subject to the license terms in the LICENSE file found in the top-level
 # directory of this distribution.
 #
-# No part of python-bitcoin-utils, including this file, may be copied, modified,
-# propagated, or distributed except according to the terms contained in the
-# LICENSE file.
+# No part of python-bitcoin-utils, including this file, may be copied,
+# modified, propagated, or distributed except according to the terms contained
+# in the LICENSE file.
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -356,18 +356,33 @@ def add_magic_prefix(message: str) -> bytes:
     return message_magic
 
 
-def tagged_hash(data: bytes, tag: str) -> bytes:
+def tagged_hash(tag, data):
     """
     Tagged hashes ensure that hashes used in one context can not be used in another.
     It is used extensively in Taproot
 
-    A tagged hash is: SHA256( SHA256("TapTweak") ||
-                              SHA256("TapTweak") ||
+    A tagged hash is: SHA256( SHA256(tag) ||
+                              SHA256(tag) ||
                               data
                             )
     """
-
-    tag_digest = hashlib.sha256(tag.encode()).digest()
+    # Handle tag correctly based on its type
+    if isinstance(tag, str):
+        tag_bytes = tag.encode('utf-8')
+    else:
+        # It's already bytes, use it directly
+        tag_bytes = tag
+    
+    # Ensure tag_digest is bytes
+    tag_digest = hashlib.sha256(tag_bytes).digest()
+    
+    # Ensure data is bytes too
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    elif not isinstance(data, bytes):
+        data = bytes(data)
+    
+    # Concatenate bytes with bytes (both tag_digest and data are now bytes)
     return hashlib.sha256(tag_digest + tag_digest + data).digest()
 
 

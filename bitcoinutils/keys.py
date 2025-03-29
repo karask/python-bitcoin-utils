@@ -307,7 +307,38 @@ class PrivateKey:
         tapleaf_scripts: Optional[Script | list[Script] | list[list[Script]]] | bytes = None,
         sighash: int = TAPROOT_SIGHASH_ALL,
         tweak: bool = True,
+        annex: bytes = None,  # Added annex parameter
     ):
+        """Signs a taproot transaction input with the private key
+
+        Attributes
+        ----------
+        tx : Transaction
+            the transaction
+        txin_index : int
+            the input index that we wish to sign
+        utxo_scripts : list(Script)
+            the scriptPubKeys for each input
+        amounts : list(int)
+            the amounts for each input
+        script_path : bool
+            True if spending through script path
+        tapleaf_script : Script
+            script to be used for script path spending
+        tapleaf_scripts : Script | list[Script] | list[list[Script]] | bytes
+            scripts to commit to in the taproot tree
+        sighash : int
+            the signature hash type
+        tweak : bool
+            whether to tweak the key
+        annex : bytes
+            optional annex field for taproot
+        
+        Returns
+        -------
+        str
+            the encoded signature including the signature hash type
+        """
         # get the digest from the transaction object and sign
         # note that when signing a tapleaf we typically won't use tweaked
         # keys - so tweak should be set to False
@@ -319,10 +350,16 @@ class PrivateKey:
                 1,
                 script=tapleaf_script,
                 sighash=sighash,
+                annex=annex,  # Pass annex to digest method
             )
         else:
             tx_digest = tx.get_transaction_taproot_digest(
-                txin_index, utxo_scripts, amounts, 0, sighash=sighash
+                txin_index, 
+                utxo_scripts, 
+                amounts, 
+                0, 
+                sighash=sighash,
+                annex=annex,  # Pass annex to digest method
             )
         return self._sign_taproot_input(tx_digest, sighash, tapleaf_scripts, tweak)
 
@@ -501,7 +538,7 @@ class PublicKey:
     from_hex(hex_str)
         creates an object from a hex string in SEC format (classmethod)
     from_message_signature(signature)
-        NO-OP! (classmethod)
+        recovers a public key from a message signature (classmethod)
     verify_message(address, signature, message) (classmethod)
         constructs the public key, confirms the address and
         verifies the signature (classmethod)
@@ -800,7 +837,20 @@ class PublicKey:
 
     def verify(self, signature: str, message: str) -> bool:
         """Verifies that the message was signed with this public key's
-        corresponding private key."""
+        corresponding private key.
+
+        Attributes
+        ----------
+        signature : str
+            The signature in Base64 format
+        message : str
+            The message that was signed
+            
+        Returns
+        -------
+        bool
+            True if the signature is valid, False otherwise
+        """
 
         # All bitcoin signatures include the magic prefix. It is just a string
         # added to the message to distinguish Bitcoin-specific messages.

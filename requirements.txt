@@ -3,3 +3,4 @@ ecdsa==0.19.0
 sympy>=1.2,<2.0
 python-bitcoinrpc>=1.0,<2.0
 hdwallet~=3.0
+coincurve>=13.0.0
