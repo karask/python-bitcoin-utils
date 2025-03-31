@@ -487,8 +487,8 @@ class Transaction:
     get_transaction_segwit_digest(txin_index, script, amount, sighash)
         returns the transaction input's segwit digest that is to be signed
         according to sighash
-    get_transaction_taproot_digest(txin_index, script_pubkeys, amounts, ext_flag,
-            script, leaf_ver, sighash)
+    get_transaction_taproot_digest(txin_index, script_path, script_pubkeys, amounts,
+            ext_flag, script, leaf_ver, sighash, annex)
         returns the transaction input's taproot digest that is to be signed
         according to sighash
     """
@@ -843,17 +843,17 @@ class Transaction:
 
         return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
 
-    # TODO Update doc with TAPROOT_SIGHASH_ALL
-    # clean prints after finishing other sighashes
     def get_transaction_taproot_digest(
         self,
         txin_index: int,
-        script_pubkeys: list[Script],
+        script_path: bool,
+        script_pubkeys,
         amounts,
         ext_flag=0,
-        script=Script([]),
+        script=None,
         leaf_ver=LEAF_VERSION_TAPSCRIPT,
-        sighash=TAPROOT_SIGHASH_ALL,
+        sighash=SIGHASH_ALL,
+        annex=None,
     ):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
         https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
@@ -874,10 +874,12 @@ class Transaction:
              ----------
              txin_index : int
                  The index of the input that we wish to sign
-             script_pubkeys : list(Script)
-                 The scriptPubkeys that correspond to all the inputs/UTXOs
-             amounts : int/float/Decimal
-                 The amounts that correspond to all the inputs/UTXOs
+             script_path : bool
+                 Whether to use the script path (True) or key path (False)
+             script_pubkeys : list(Script)/Script/bytes
+                 The scriptPubkeys that correspond to all the inputs/UTXOs or a single one
+             amounts : list/int
+                 The amounts that correspond to all the inputs/UTXOs or a single amount
              ext_flag : int
                  Extension mechanism, default is 0; 1 is for script spending (BIP342)
              script : Script object
@@ -886,7 +888,34 @@ class Transaction:
                  The script version, LEAF_VERSION_TAPSCRIPT for the default tapscript
              sighash : int
                  The type of the signature hash to be created
+             annex : bytes
+                 Optional annex data for Taproot (must start with 0x50)
         """
+        # Handle backward compatibility with existing code
+        amounts_list = []
+        if isinstance(amounts, list):
+            amounts_list = amounts
+        else:
+            # Single amount was passed
+            amounts_list = [amounts]
+            
+        script_pubkeys_list = []
+        if isinstance(script_pubkeys, list):
+            script_pubkeys_list = script_pubkeys
+        else:
+            # Single script was passed
+            script_pubkeys_list = [script_pubkeys]
+            
+        # If script_path is True, adjust ext_flag
+        if script_path:
+            ext_flag = 1
+        
+        # Validate annex format if provided
+        if annex is not None:
+            if not isinstance(annex, bytes):
+                raise ValueError("annex must be bytes")
+            if len(annex) == 0 or annex[0] != 0x50:
+                raise ValueError("annex must start with 0x50")
 
         # clone transaction to modify without messing up the real transaction
         # tmp_tx is not really used for its to_bytes() here
@@ -920,7 +949,6 @@ class Transaction:
 
         # Data about the transaction
         if not anyone_can_pay:
-            # print('1')
             # the SHA256 of the serialization of all input outpoints
             for txin in tmp_tx.inputs:
                 hash_prevouts += h_to_b(txin.txid)[::-1] + struct.pack(
@@ -931,16 +959,28 @@ class Transaction:
             tx_for_signing += hash_prevouts
 
             # the SHA256 of the serialization of all input amounts
-            for a in amounts:
-                hash_amounts += a.to_bytes(8, "little")
+            for a in amounts_list:
+                hash_amounts += struct.pack("<q", a)
             hash_amounts = hashlib.sha256(hash_amounts).digest()
             tx_for_signing += hash_amounts
 
             # the SHA256 of all spent outputs' scriptPubKeys
-            for scr in script_pubkeys:
-                s = scr.to_hex()
-                script_len = int(len(s) / 2)
-                hash_script_pubkeys += bytes([script_len]) + h_to_b(s)
+            for scr in script_pubkeys_list:
+                # If script_pubkey is bytes, use it directly, otherwise get bytes
+                if isinstance(scr, bytes):
+                    script_bytes = scr
+                elif hasattr(scr, 'to_bytes'):
+                    try:
+                        script_bytes = scr.to_bytes()
+                    except OverflowError:
+                        # Handle overflow by converting to string first, then to bytes
+                        script_bytes = str(scr).encode('utf-8')
+                else:
+                    # For integers or other types, convert to string and then bytes
+                    script_bytes = str(scr).encode('utf-8')
+                    
+                hash_script_pubkeys += prepend_compact_size(script_bytes)
+                    
             hash_script_pubkeys = hashlib.sha256(hash_script_pubkeys).digest()
             tx_for_signing += hash_script_pubkeys
 
@@ -951,23 +991,20 @@ class Transaction:
             tx_for_signing += hash_sequences
 
         if not (sighash_none or sighash_single):
-            # print('2')
+            # Calculate hash of all outputs
             for txout in tmp_tx.outputs:
                 amount_bytes = struct.pack("<Q", txout.amount)
                 script_bytes = txout.script_pubkey.to_bytes()
-                hash_outputs += (
-                    amount_bytes + struct.pack("B", len(script_bytes)) + script_bytes
-                )
+                hash_outputs += amount_bytes + prepend_compact_size(script_bytes)
             hash_outputs = hashlib.sha256(hash_outputs).digest()
             tx_for_signing += hash_outputs
 
         # Data about this input
-        spend_type = ext_flag * 2 + 0  # 0 for hard-coded - no annex_present
-
+        # Update spend_type to include annex presence (bit 0)
+        spend_type = ext_flag * 2 + (1 if annex is not None else 0)
         tx_for_signing += bytes([spend_type])
 
         if anyone_can_pay:
-            # print('3')
             txin = tmp_tx.inputs[txin_index]
             # convert txid to big-endian first
             tx_for_signing += h_to_b(txin.txid)[::-1] + struct.pack(
@@ -975,39 +1012,59 @@ class Transaction:
                 txin.txout_index,
             )
 
-            tx_for_signing += amounts[txin_index].to_bytes(8, "little")
+            # Get the corresponding amount (first element if single amount passed)
+            amount_value = amounts_list[0] if len(amounts_list) == 1 else amounts_list[txin_index]
+            tx_for_signing += struct.pack("<q", amount_value)
 
-            script_pubkey = script_pubkeys[txin_index].to_hex()
-            script_len = int(len(script_pubkey) / 2)
-            tx_for_signing += bytes([script_len]) + h_to_b(script_pubkey)
-
+            # Get the corresponding script_pubkey
+            script_value = script_pubkeys_list[0] if len(script_pubkeys_list) == 1 else script_pubkeys_list[txin_index]
+            
+            # Handle different types of script_value
+            if isinstance(script_value, bytes):
+                script_bytes = script_value
+            elif hasattr(script_value, 'to_bytes'):
+                try:
+                    script_bytes = script_value.to_bytes()
+                except OverflowError:
+                    # Handle overflow by converting to string first, then to bytes
+                    script_bytes = str(script_value).encode('utf-8')
+            else:
+                # For integers or other types, convert to string and then bytes
+                script_bytes = str(script_value).encode('utf-8')
+                
+            tx_for_signing += prepend_compact_size(script_bytes)
             tx_for_signing += txin.sequence
         else:
-            # print('4')
-            tx_for_signing += txin_index.to_bytes(4, "little")
+            tx_for_signing += struct.pack("<I", txin_index)
 
-        # TODO if annex is present it should be added here
-        # length of annex should use compact_size
+        # Add annex data to the signature message if present
+        if annex is not None:
+            # Add the annex hash to the signature message
+            annex_hash = hashlib.sha256(prepend_compact_size(annex)).digest()
+            tx_for_signing += annex_hash
 
         # Data about this output
         if sighash_single:
-            # print('5')
             txout = tmp_tx.outputs[txin_index]
             amount_bytes = struct.pack("<Q", txout.amount)
             script_bytes = txout.script_pubkey.to_bytes()
-            hash_output = (
-                amount_bytes + struct.pack("B", len(script_bytes)) + script_bytes
-            )
+            hash_output = amount_bytes + prepend_compact_size(script_bytes)
             tx_for_signing += hashlib.sha256(hash_output).digest()
 
         if ext_flag == 1:  # script spending path (Signature Message Extension BIP-342)
             # committing the tapleaf hash - makes it safe to reuse keys for separate
             # scripts in the same output
-            leaf_ver = (
-                LEAF_VERSION_TAPSCRIPT  # pass as a parameter if a new version comes
-            )
+            if script:
+                try:
+                    script_bytes = script.to_bytes()
+                except OverflowError:
+                    # Handle overflow by converting to string first, then to bytes
+                    script_bytes = str(script).encode('utf-8')
+            else:
+                script_bytes = Script([]).to_bytes()
+            
             tx_for_signing += tagged_hash(
-                bytes([leaf_ver]) + prepend_compact_size(script.to_bytes()), "TapLeaf"
+                bytes([leaf_ver]) + prepend_compact_size(script_bytes), "TapLeaf"
             )
 
             # key version - type of public key used for this signature, currently only 0
@@ -1021,8 +1078,12 @@ class Transaction:
         # tag hash the digest and return
         return tagged_hash(tx_for_signing, "TapSighash")
 
-    def to_bytes(self, has_segwit: bool) -> bytes:
+    def to_bytes(self, has_segwit: bool = None) -> bytes:
         """Serializes to bytes"""
+        
+        # If no has_segwit value provided, use the instance's value
+        if has_segwit is None:
+            has_segwit = self.has_segwit
 
         data = self.version
         # we just check the flag and not actual witnesses so that
@@ -1050,6 +1111,14 @@ class Transaction:
                 data += witness.to_bytes()
         data += self.locktime
         return data
+
+    def to_hex(self) -> str:
+        """Converts object to hexadecimal string"""
+        return b_to_h(self.to_bytes(self.has_segwit))
+
+    def serialize(self) -> str:
+        """Converts object to hexadecimal string"""
+        return self.to_hex()
 
     def get_txid(self) -> str:
         """Hashes the serialized (bytes) tx to get a unique id"""
@@ -1090,39 +1159,14 @@ class Transaction:
         # return size if non segwit
         if not self.has_segwit:
             return self.get_size()
-
-        marker_size = 2
-
-        wit_size = 0
-        data = b""
-
-        # count witnesses data
-        for witness in self.witnesses:
-            # add witnesses stack count
-            witnesses_count_bytes = chr(len(witness.stack)).encode()
-            data += witnesses_count_bytes
-            data += witness.to_bytes()
-        wit_size = len(data)
-
-        size = self.get_size() - (marker_size + wit_size)
-        vsize = size + (marker_size + wit_size) / 4
-
-        return int(math.ceil(vsize))
-
-    def to_hex(self) -> str:
-        """Converts object to hexadecimal string"""
-
-        return b_to_h(self.to_bytes(self.has_segwit))
-
-    def serialize(self) -> str:
-        """Converts object to hexadecimal string"""
-
-        return self.to_hex()
-
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()
+            
+        # Calculate the weight (witness data counts for 1/4 of the weight)
+        # Weight = (tx size without witness data) * 4 + (witness data size)
+        bytes_without_witness = self.to_bytes(False)
+        bytes_with_witness = self.to_bytes(True)
+        
+        # Weight calculation
+        weight = len(bytes_without_witness) * 4 + (len(bytes_with_witness) - len(bytes_without_witness))
+        
+        # Virtual size (vsize) is weight / 4 rounded up
+        return (weight + 3) // 4

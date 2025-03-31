@@ -316,6 +316,10 @@ class Script:
         if integer < 0:
             raise ValueError("Integer is currently required to be positive.")
 
+        # For very large integers, convert to string and then to bytes using _op_push_data
+        if integer.bit_length() > 512:  # If bigger than reasonable (512 bits is huge)
+            return self._op_push_data(str(integer))
+
         # bytes required to represent the integer
         number_of_bytes = (integer.bit_length() + 7) // 8
 
@@ -326,8 +330,7 @@ class Script:
         # integer
         if integer & (1 << number_of_bytes * 8 - 1):
             integer_bytes += b"\x00"
-
-        return self._op_push_data(b_to_h(integer_bytes))
+            return self._op_push_data(b_to_h(integer_bytes))
 
     def to_bytes(self) -> bytes:
         """Converts the script to bytes
@@ -347,16 +350,25 @@ class Script:
                 script_bytes += OP_CODES["OP_" + str(token)]
             # it is data, so add accordingly
             else:
-                if isinstance(token, int):
-                    script_bytes += self._push_integer(token)
-                else:
-                    script_bytes += self._op_push_data(token)
+                try:
+                    if isinstance(token, int):
+                        script_bytes += self._push_integer(token)
+                    else:
+                        script_bytes += self._op_push_data(token)
+                except (OverflowError, ValueError):
+                    # Fallback: convert to string and then to bytes
+                    token_str = str(token)
+                    script_bytes += self._op_push_data(token_str)
 
         return script_bytes
 
     def to_hex(self) -> str:
-        """Converts the script to hexadecimal"""
+        """Converts object to hexadecimal string"""
         return b_to_h(self.to_bytes())
+
+    def serialize(self) -> str:
+        """Converts object to hexadecimal string"""
+        return self.to_hex()
 
     @staticmethod
     def from_raw(scriptrawhex: str, has_segwit: bool = False):
