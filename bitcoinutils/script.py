@@ -12,7 +12,7 @@
 import copy
 import hashlib
 import struct
-from typing import Any
+from typing import Any, Union
 
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
@@ -359,7 +359,7 @@ class Script:
         return b_to_h(self.to_bytes())
 
     @staticmethod
-    def from_raw(scriptrawhex: str, has_segwit: bool = False):
+    def from_raw(scriptrawhex: Union[str, bytes], has_segwit: bool = False):
         """
         Imports a Script commands list from raw hexadecimal data
             Attributes
@@ -369,7 +369,13 @@ class Script:
             has_segwit : boolean
                 Is the Tx Input segwit or not
         """
-        scriptraw = h_to_b(scriptrawhex)
+        if isinstance(scriptrawhex, str):
+            scriptraw = h_to_b(scriptrawhex)
+        elif isinstance(scriptrawhex, bytes):
+            scriptraw = scriptrawhex
+        else:
+            raise TypeError("Input must be a hexadecimal string or bytes")
+        
         commands = []
         index = 0
 
