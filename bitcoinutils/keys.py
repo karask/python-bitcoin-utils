@@ -466,14 +466,11 @@ class PrivateKey:
             # byte_key = bytes.fromhex(negated_key)
             byte_key = self.key.to_string()
 
-        # deterministic signing nonce is random and RFC6979-like
-        # it is the hash of the tx_digest and private key
-        # TODO not identical to Bitcoin Core's signature, rand_aux
-        # needs to change if we want identical signatures!
+        # a value in rand_aux will make the signatures different from bitcoin core
         # if rand_aux is None:
         #     rand_aux = hashlib.sha256(tx_digest + byte_key).digest()
 
-        # Currently bitcoin core is passing 32 bytes data as randam aux
+        # Currently bitcoin core is just passing 32 bytes data as randam aux
         # https://github.com/bitcoin/bitcoin/blob/master/src/script/sign.cpp#L88
         rand_aux = bytes(32)
 
