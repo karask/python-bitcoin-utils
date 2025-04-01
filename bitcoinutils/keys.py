@@ -470,7 +470,12 @@ class PrivateKey:
         # it is the hash of the tx_digest and private key
         # TODO not identical to Bitcoin Core's signature, rand_aux
         # needs to change if we want identical signatures!
-        rand_aux = hashlib.sha256(tx_digest + byte_key).digest()
+        # if rand_aux is None:
+        #     rand_aux = hashlib.sha256(tx_digest + byte_key).digest()
+
+        # Currently bitcoin core is passing 32 bytes data as randam aux
+        # https://github.com/bitcoin/bitcoin/blob/master/src/script/sign.cpp#L88
+        rand_aux = bytes(32)
 
         # use BIP-340 python's reference implementation for signing
         sig = schnorr_sign(tx_digest, byte_key, rand_aux)
@@ -534,7 +539,7 @@ class PublicKey:
         ----------
         hex_str : str, optional
             the public key in hex string
-        
+
         In case of generating public key from message and signature:-
         message : str, optional
             The original message that was signed
@@ -611,7 +616,7 @@ class PublicKey:
         elif message or signature:
             if not message:
                 raise ValueError("Empty message provided for public key recovery.")
-            
+
             if(len(signature) != 65):
                 raise ValueError("Invalid signature length, must be exactly 65 bytes")
 
@@ -620,9 +625,9 @@ class PublicKey:
             recovery_id = signature[0] - 31
             if not (0 <= recovery_id <= 3): # A valid recovery ID is between 0 and 3
                 raise ValueError(f"Invalid recovery ID: expected 31-34, got {signature[0]}")
-            
+
             signature = signature[1:] #Remove recovery id from signature
-            
+
             # All bitcoin signatures include the magic prefix. It is just a string
             # added to the message to distinguish Bitcoin-specific messages.
             message_magic = add_magic_prefix(message)
@@ -687,7 +692,7 @@ class PublicKey:
         tweak_int = calculate_tweak(self, scripts)
 
         # keep x-only coordinate
-        tweak_and_odd = tweak_taproot_pubkey(self.key.to_string(), tweak_int) 
+        tweak_and_odd = tweak_taproot_pubkey(self.key.to_string(), tweak_int)
         pubkey = tweak_and_odd[0][:32]
         is_odd = tweak_and_odd[1]
 
