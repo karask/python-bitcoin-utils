@@ -12,6 +12,8 @@ import hashlib
 
 
 def calculate_wtxid(tx_hex):
+    # note: normal transaction id's do not include the witness data
+    # unlike witness transaction id's  which include the witness data
     tx_binary = bytes.fromhex(tx_hex)
     hash_once = hashlib.sha256(tx_binary).digest()
     hash_twice = hashlib.sha256(hash_once).digest()
@@ -33,7 +35,7 @@ def calculate_merkle_root(txid_list):
 
     # Convert each txid from big-endian hex to little-endian bytes.
     current_layer = [bytes.fromhex(txid)[::-1] for txid in txid_list]
-
+    
     while len(current_layer) > 1:
         next_layer = []
         for i in range(0, len(current_layer), 2):
@@ -113,11 +115,11 @@ def create_block(coinbase_tx, tx1):
     prev_block_hash = bytes.fromhex(
         "0000000000000000000000000000000000000000000000000000000000000000"
     )
-
-    version = "20000000"
+    # version https://learnmeabitcoin.com/technical/block/version/
+    version = "40000000"
     version = int.from_bytes(bytes.fromhex(version), byteorder="little")
     timestamp = int(time.time())
-    # resource: learn me a bitcoin's target to bit converter.
+    # resource: https://learnmeabitcoin.com/technical/block/bits/
     bits = "1f00ffff"
     bits = int.from_bytes(bytes.fromhex(bits), byteorder="big")
 
@@ -184,7 +186,8 @@ def mine_block(block_header_bytes, target_hex):
 
 def main():
 
-    #mock transaction details
+    # mock transaction details, this transaction would be the first transaction
+    # of the block after the coinbase transaction
     tx_details = {
         "txid": "00000a2d1a9e29116b539b85b6e893213b1ed95a08b7526a8d59a4b088fc6571",
         "version": 1,
@@ -239,19 +242,19 @@ def main():
 
 
     setup("mainnet")
-
+    # mock requirements
     from_txid = "0000000000000000000000000000000000000000000000000000000000000000"
     to_addr = "bc1pvh7n6s375348q5zjfrde38nnq2lmhhtyaeqe8hv6t8mf398smeyqnug47s"
     to_addr = P2trAddress(to_addr)
 
-    # create a coinbase transaction
+    # First create a coinbase transaction which is the first transaction of the block
+    # The witness reserved value is a 32-byte value that is reserved for future use.
+    # and the coinbase transaction must have it in its input's witness
     witness_reserved_value = (
         "0000000000000000000000000000000000000000000000000000000000000000"
     )
-    witness_root_hash = ""
 
-    # The commitment is constructed as:
-    # commitment = "6a24aa21a9ed" + doublesha256(witness_root_hash, witness_reserved_value)
+    # Constructing the coinbase transaction
     tx1 = Transaction()
     tx1 = tx1.from_raw(tx_details["hex"])
     txinp = TxInput(
@@ -259,10 +262,17 @@ def main():
         txout_index=0,
         script_sig=Script([witness_reserved_value]),
     )
+
+    # Witness stack contains the list of witness data for the transaction
+    # learn more: https://learnmeabitcoin.com/technical/upgrades/segregated-witness/
     witness_stack = [witness_reserved_value]
 
+    # wtxid is different from txid 
     wtxid = calculate_wtxid(tx_details["hex"])
     print("Wtx id :", wtxid)
+
+    # Coinbase wtxid must be set to all zeros to avoid circular reference
+    # Learn more: https://learnmeabitcoin.com/technical/transaction/wtxid/
     coinbase_wtxid = "0" * 64
 
     witness_root_hash = calculate_witness_root_hash([coinbase_wtxid, wtxid])
@@ -274,13 +284,27 @@ def main():
         witness_root_hash, witness_reserved_value
     )
 
-    # Prepending the witness commitment header
+    # The commitment is constructed as:
+    # commitment = "6a24aa21a9ed" + doublesha256(witness_root_hash, witness_reserved_value)
+    # where commitment is made of (source BIP 141): 
+    # 1-byte - OP_RETURN (0x6a)
+    # 1-byte - Push the following 36 bytes (0x24)
+    # 4-byte - Commitment header (0xaa21a9ed)
+    # 32-byte - Commitment hash: Double-SHA256(witness root hash|witness reserved value)
     commitment = "6a24aa21a9ed" + witness_commitment_hash
 
     print("Witness Commitment :", commitment)
     # note: to_addr defined at the top. Taken from the first transaction
-    txout1 = TxOutput(to_satoshis(0.001), to_addr.to_script_pub_key())
-    witness_commitment_script = Script([])
+    # coinbase transactions must contain at least two outputs
+    # the first output is the block reward and the second output is the commitment
+    # The block reward is reward for the miner for mining the block + fees
+    # block reward = block subsidy (currently 3.125 BTC) + transaction fees
+    # Learn more: https://learnmeabitcoin.com/technical/mining/block-reward/
+    txout1 = TxOutput(to_satoshis(3.125+0.01), to_addr.to_script_pub_key())
+
+    # The commitment script is described above 
+    # and is added to the second output of the coinbase transaction
+    witness_commitment_script = Script([])  
     witness_commitment_script = witness_commitment_script.from_raw(commitment)
     print("witness commitment script : ", witness_commitment_script)
     txout2 = TxOutput(to_satoshis(0), witness_commitment_script)
@@ -290,21 +314,29 @@ def main():
         has_segwit=True,
         witnesses=[TxWitnessInput(witness_stack)],
     )
-    # example difficulty target
+    # Example difficulty target
+    # learn more: https://learnmeabitcoin.com/technical/mining/target/
+    # Note, this is even higher then the genesis block example
+    # to prevent the mining process from running for a long time
     difficulty_target = (
         "0000ffff00000000000000000000000000000000000000000000000000000000"
     )
     # Creating a block that includes the coinbase transaction and tx1.
     block = create_block(coinbase_tx, tx1)
+
     print("block header: ", block.header)
     # getting the block header bytes
-
+    # Note: only the header is hashed and compared to the difficulty in mining
     serialized_header = block.header.serialize_header()
     print("Serialized header : ", serialized_header)
 
-    # mining the block
+    # mining the block using mine_block returns the nonce 
+    # nonce is the value in the header that can be changed iteratively
+    # to get a hash that is less than the target
     nonce, mined_hash = mine_block(serialized_header, difficulty_target)
     print("NONCE: ", nonce)
+
+    # Replace the last 4 bytes of the header with the current nonce in little-endian format.
     serialized_header = serialized_header[:-4] + nonce.to_bytes(4, byteorder="little")
 
     print("hex of serialized header ", serialized_header.hex())
