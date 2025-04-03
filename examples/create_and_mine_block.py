@@ -11,15 +11,6 @@ from bitcoinutils.block import Block, BlockHeader
 import hashlib
 
 
-def calculate_wtxid(tx_hex):
-    # note: normal transaction id's do not include the witness data
-    # unlike witness transaction id's  which include the witness data
-    tx_binary = bytes.fromhex(tx_hex)
-    hash_once = hashlib.sha256(tx_binary).digest()
-    hash_twice = hashlib.sha256(hash_once).digest()
-    return hash_twice[::-1].hex()
-
-
 def calculate_merkle_root(txid_list):
     """
     Calculates merkel root by hashing pairwise txids till only 1 is left.
@@ -268,7 +259,7 @@ def main():
     witness_stack = [witness_reserved_value]
 
     # wtxid is different from txid 
-    wtxid = calculate_wtxid(tx_details["hex"])
+    wtxid = tx1.get_wtxid();
     print("Wtx id :", wtxid)
 
     # Coinbase wtxid must be set to all zeros to avoid circular reference
@@ -291,7 +282,7 @@ def main():
     # 1-byte - Push the following 36 bytes (0x24)
     # 4-byte - Commitment header (0xaa21a9ed)
     # 32-byte - Commitment hash: Double-SHA256(witness root hash|witness reserved value)
-    commitment = "6a24aa21a9ed" + witness_commitment_hash
+    commitment = "6a24"+ "aa21a9ed" + witness_commitment_hash
 
     print("Witness Commitment :", commitment)
     # note: to_addr defined at the top. Taken from the first transaction
@@ -304,8 +295,9 @@ def main():
 
     # The commitment script is described above 
     # and is added to the second output of the coinbase transaction
-    witness_commitment_script = Script([])  
-    witness_commitment_script = witness_commitment_script.from_raw(commitment)
+    witness_commitment_script = Script(["OP_RETURN", "aa21a9ed"+witness_commitment_hash]);
+
+    print("1 : ", witness_commitment_script);
     print("witness commitment script : ", witness_commitment_script)
     txout2 = TxOutput(to_satoshis(0), witness_commitment_script)
     coinbase_tx = Transaction(
