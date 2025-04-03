@@ -296,8 +296,6 @@ def main():
     # The commitment script is described above 
     # and is added to the second output of the coinbase transaction
     witness_commitment_script = Script(["OP_RETURN", "aa21a9ed"+witness_commitment_hash]);
-
-    print("1 : ", witness_commitment_script);
     print("witness commitment script : ", witness_commitment_script)
     txout2 = TxOutput(to_satoshis(0), witness_commitment_script)
     coinbase_tx = Transaction(
