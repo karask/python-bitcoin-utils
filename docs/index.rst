@@ -17,6 +17,12 @@ Contents:
    usage/proxy
    usage/addresses
    usage/segwit
+   usage/hdwallet
+   usage/bech32
+   usage/block
+   usage/schnorr
+   usage/constants
+   usage/utils
    
 Indices and tables
 ==================
