@@ -12,7 +12,7 @@
 import copy
 import hashlib
 import struct
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.constants import (
@@ -400,19 +400,25 @@ class Script:
         return b_to_h(self.to_bytes())
 
     @classmethod
-    def from_raw(cls, scriptrawhex: str, has_segwit: bool = False, script_type: str = SCRIPT_TYPE_LEGACY):
+    def from_raw(cls, scriptrawhex: Union[str, bytes], has_segwit: bool = False, script_type: str = SCRIPT_TYPE_LEGACY):
         """
         Imports a Script commands list from raw hexadecimal data
             Attributes
             ----------
-            txinputraw : string (hex)
-                The hexadecimal raw string representing the Script commands
+            scriptrawhex : Union[str, bytes]
+                The hexadecimal raw string or bytes representing the Script commands
             has_segwit : boolean
                 Is the Tx Input segwit or not
             script_type : str
                 The type of script (legacy, segwit_v0, or tapscript)
         """
-        scriptraw = h_to_b(scriptrawhex)
+        if isinstance(scriptrawhex, str):
+            scriptraw = h_to_b(scriptrawhex)
+        elif isinstance(scriptrawhex, bytes):
+            scriptraw = scriptrawhex
+        else:
+            raise TypeError("Input must be a hexadecimal string or bytes")
+        
         commands = []
         index = 0
 

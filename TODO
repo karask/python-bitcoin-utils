@@ -1,3 +1,6 @@
+PRIORITY
+- use the TODO thoughts of this file to create Github issues so that contributors can consult and implement
+
 SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - python-ecdsa is vulnerable to minerva timing attacks
@@ -10,10 +13,14 @@ SHORT-TERM
   . other tapscript changes?
   . think: how to differentiate tapscript in code? (right now addchecksig can be used in any script)
 
+Transaction-related
+- think how to add/remove existing inputs/outputs to a Tx object
+  . will need to add add_input/output (same as append)
+  . allow to update an input/output from any index
+  . allow to remove an input/output altogether
+  . influences set_witness (add_input should add the empty witness immediately?)
+
 SEGWIT-related
-- A '00' byte needs to be added for non-witness inputs in between witness (inputs-witnesses are 1-1!) automatically?
-  . currently adding it manually works fine (see 3 inputs 1 output example)
-  . think of clean way of automating this (auto-magically adding them could confuse users!)
 - segwit v0 and v1 address object instantiates from address, witness program and script
   . are all used? test?
 - add annex to signature hash (easy, just add in bytes or hex in the method and include)
@@ -30,6 +37,7 @@ IMPROVE
 - make a new proxy object from scratch (test with at least 2/3 of bitcoin core RPC)
 
 DOC-related
+- update contributions file when required
 - add explicit documentation for each module before members...
 - commit docs/usage/proxy.rst
 - segwit in documentation

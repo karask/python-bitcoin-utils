@@ -12,7 +12,7 @@
 import math
 import hashlib
 import struct
-from typing import Optional
+from typing import Optional, Union
 
 from bitcoinutils.constants import (
     DEFAULT_TX_SEQUENCE,
@@ -141,7 +141,7 @@ class TxInput:
         return self.__str__()
 
     @staticmethod
-    def from_raw(txinputrawhex: str, cursor: int = 0, has_segwit: bool = False):
+    def from_raw(txinputrawhex: Union[str, bytes], cursor: int = 0, has_segwit: bool = False):
         """
         Imports a TxInput from a Transaction's hexadecimal data
 
@@ -154,7 +154,12 @@ class TxInput:
         has_segwit : boolean
             Is the Tx Input segwit or not
         """
-        txinputraw = h_to_b(txinputrawhex)
+        if isinstance(txinputrawhex, str):
+            txinputraw = h_to_b(txinputrawhex)
+        elif isinstance(txinputrawhex, bytes):
+            txinputraw = txinputrawhex
+        else:
+            raise TypeError("Input must be a hexadecimal string or bytes")
 
         # Unpack transaction ID (hash) in bytes and output index
         txid, vout = struct.unpack_from('<32sI', txinputraw, cursor)
@@ -286,7 +291,7 @@ class TxOutput:
         return data
 
     @staticmethod
-    def from_raw(txoutputrawhex: str, cursor: int = 0, has_segwit: bool = False):
+    def from_raw(txoutputrawhex: Union[str, bytes], cursor: int = 0, has_segwit: bool = False):
         """
         Imports a TxOutput from a Transaction's hexadecimal data
 
@@ -299,7 +304,13 @@ class TxOutput:
         has_segwit : boolean
             Is the Tx Output segwit or not
         """
-        txoutputraw = h_to_b(txoutputrawhex)
+        if isinstance(txoutputrawhex, str):
+            txoutputraw = h_to_b(txoutputrawhex)
+        elif isinstance(txoutputrawhex, bytes):
+            txoutputraw = txoutputrawhex
+        else:
+            raise TypeError("Input must be a hexadecimal string or bytes")
+        
 
         # Unpack the amount of the TxOutput directly in bytes
         amount_format = "<Q"  # Little-endian unsigned long long (8 bytes)
@@ -526,7 +537,7 @@ class Transaction:
         self.version = version
 
     @staticmethod
-    def from_raw(rawtxhex: str):
+    def from_raw(rawtxhex: Union[str, bytes]):
         """
         Imports a Transaction from hexadecimal data.
 
@@ -535,7 +546,13 @@ class Transaction:
         rawtxhex : string (hex)
             The hexadecimal raw string of the Transaction.
         """
-        rawtx = h_to_b(rawtxhex)
+        if isinstance(rawtxhex, str):
+            rawtx = h_to_b(rawtxhex)
+        elif isinstance(rawtxhex, bytes):
+            rawtx = rawtxhex
+        else:
+            raise TypeError("Input must be a hexadecimal string or bytes")
+        
 
         # Read version (4 bytes)
         version = rawtx[0:4]
@@ -567,9 +584,11 @@ class Transaction:
             output, cursor = TxOutput.from_raw(rawtx.hex(), cursor, has_segwit)
             outputs.append(output)
 
-        # Handle witnesses if SegWit is enabled
+        # Handle witnesses if SegWit is enabled and if they are present i.e. if
+        # remaining payload length is greater than last tx field length (locktime)
+        has_witness_field = True if len(rawtx) - cursor > 4 else False
         witnesses = []
-        if has_segwit:
+        if has_segwit and has_witness_field:
             for _ in range(n_inputs):
                 n_items, size = parse_compact_size(rawtx[cursor:])
                 cursor += size
