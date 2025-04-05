@@ -73,6 +73,7 @@ git checkout -b feature-name
 - Include type hints for function parameters and return values.
 - Maximum line length should be 88 characters.
 - Use descriptive variable names that explain the purpose.
+- Don't change the versioning in __init__; the maintainer would do that periodically
 
 ### 5. Writing Tests
 
@@ -90,15 +91,6 @@ If you add new features, create corresponding test cases under the `tests/` dire
 ### 6. Documentation Contributions
 
 Help improve the documentation by submitting corrections, clarifications, or examples. Update the README or other documentation files as needed.
-
-### 7. Release Process
-
-The project follows semantic versioning (MAJOR.MINOR.PATCH):
-- MAJOR version for incompatible API changes
-- MINOR version for new functionality in a backward-compatible manner
-- PATCH version for backward-compatible bug fixes
-
-When contributing changes that would necessitate a version bump, please indicate the suggested version change in your PR description.
 
 ## Code of Conduct
 
