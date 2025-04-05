@@ -84,12 +84,9 @@ def main():
     sig2 = priv2.sign_input(tx, 1, utxos_script_pubkeys[1])
     sig3 = priv3.sign_taproot_input(tx, 2, utxos_script_pubkeys, amounts)
 
-    tx.witnesses.append(TxWitnessInput([sig1]))
+    tx.set_witness(0, TxWitnessInput([sig1]))
     txin2.script_sig = Script([sig2, pub2.to_hex()])
-    # the second input is not segwit but we still need to add an empty
-    # witness input script
-    tx.witnesses.append(TxWitnessInput([]))
-    tx.witnesses.append(TxWitnessInput([sig3]))
+    tx.set_witness(2, TxWitnessInput([sig3]))
 
     # print raw signed transaction ready to be broadcasted
     print("\nRaw signed transaction:\n" + tx.serialize())
