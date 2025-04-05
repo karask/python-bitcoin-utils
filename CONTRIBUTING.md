@@ -37,15 +37,15 @@ We welcome pull requests! To contribute code:
 
 #### Step 2: Create a Feature Branch
 
-Create a new branch for your changes: (Optional)
+Create a new branch for your changes:
 
 ```sh
- git checkout -b feature-name
+git checkout -b feature-name
 ```
 
 #### Step 3: Make Changes and Test
 
-- Follow the project’s coding style.
+- Follow the project's coding style.
 - Ensure your code is well-documented and includes meaningful commit messages.
 - Run tests before submitting a pull request:
   ```sh
@@ -59,7 +59,7 @@ Create a new branch for your changes: (Optional)
    ```sh
    git push origin feature-name
    ```
-2. Open a pull request from your fork’s branch to the `main` branch of the original repository.
+2. Open a pull request from your fork's branch to the `master` branch of the original repository.
 3. Provide a detailed description of your changes.
 4. Address any requested changes from maintainers.
 
@@ -68,6 +68,11 @@ Create a new branch for your changes: (Optional)
 - Follow PEP 8 for Python code styling.
 - Use meaningful variable and function names.
 - Maintain clear and concise documentation in the code.
+- Use 4 spaces for indentation, not tabs.
+- Use triple double quotes (""") for docstrings.
+- Include type hints for function parameters and return values.
+- Maximum line length should be 88 characters.
+- Use descriptive variable names that explain the purpose.
 
 ### 5. Writing Tests
 
@@ -77,11 +82,23 @@ Ensure new features and bug fixes include test cases. The project uses `pytest` 
 pytest
 ```
 
-If you add new features, create corresponding test cases under the `tests/` directory.
+If you add new features, create corresponding test cases under the `tests/` directory. Ensure your tests cover:
+- Normal expected operation
+- Edge cases
+- Error handling
 
 ### 6. Documentation Contributions
 
 Help improve the documentation by submitting corrections, clarifications, or examples. Update the README or other documentation files as needed.
+
+### 7. Release Process
+
+The project follows semantic versioning (MAJOR.MINOR.PATCH):
+- MAJOR version for incompatible API changes
+- MINOR version for new functionality in a backward-compatible manner
+- PATCH version for backward-compatible bug fixes
+
+When contributing changes that would necessitate a version bump, please indicate the suggested version change in your PR description.
 
 ## Code of Conduct
 
@@ -90,4 +107,3 @@ Be respectful and follow the open-source community guidelines. Maintain a collab
 ---
 
 Thank you for contributing! 🚀
-
