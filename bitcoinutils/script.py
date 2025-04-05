@@ -12,9 +12,15 @@
 import copy
 import hashlib
 import struct
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from bitcoinutils.ripemd160 import ripemd160
+from bitcoinutils.constants import (
+    SCRIPT_TYPE_LEGACY,
+    SCRIPT_TYPE_SEGWIT_V0,
+    SCRIPT_TYPE_TAPSCRIPT,
+    LEAF_VERSION_TAPSCRIPT
+)
 from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
 
 # import bitcoinutils.keys
@@ -231,6 +237,9 @@ CODE_OPS = {
     b"\xb2": "OP_CHECKSEQUENCEVERIFY",
 }
 
+# Define Tapscript-only opcodes
+TAPSCRIPT_ONLY_OPCODES = ["OP_CHECKSIGADD"]
+
 
 class Script:
     """Represents any script in Bitcoin
@@ -242,6 +251,8 @@ class Script:
     ----------
     script : list
         the list with all the script OP_CODES and data
+    script_type : str
+        the type of script (legacy, segwit_v0, or tapscript)
 
     Methods
     -------
@@ -265,22 +276,43 @@ class Script:
     to_p2wsh_script_pub_key()
         converts script to p2wsh scriptPubKey (locking script)
 
+    validate()
+        validates the script against its script_type
+
     Raises
     ------
     ValueError
         If string data is too large or integer is negative
     """
 
-    def __init__(self, script: list[Any]):
+    def __init__(self, script: list[Any], script_type: str = SCRIPT_TYPE_LEGACY):
         """See Script description"""
 
         self.script: list[Any] = script
+        self.script_type: str = script_type
+        self.validate()
+
+    def validate(self):
+        """Validates the script against its script_type
+        
+        Ensures that opcodes specific to certain script types are only used
+        in the correct context.
+        
+        Raises
+        ------
+        ValueError
+            If an opcode is used in an incorrect script type
+        """
+        if self.script_type != SCRIPT_TYPE_TAPSCRIPT:
+            for op in self.script:
+                if op in TAPSCRIPT_ONLY_OPCODES:
+                    raise ValueError(f"{op} can only be used in Tapscript (BIP342)")
 
     @classmethod
     def copy(cls, script: "Script") -> "Script":
         """Deep copy of Script"""
         scripts = copy.deepcopy(script.script)
-        return cls(scripts)
+        return cls(scripts, script.script_type)
 
     def _op_push_data(self, data: str) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
@@ -294,7 +326,16 @@ class Script:
         possible PUSHDATA operator must be used!
         """
         
-        data_bytes = h_to_b(data) # Assuming string is hexadecimal
+        # Check if data is already in bytes format
+        if isinstance(data, bytes):
+            data_bytes = data
+        else:
+            # Try to convert from hex, but if it fails, treat as regular string
+            try:
+                data_bytes = h_to_b(data)  # Assuming string is hexadecimal
+            except ValueError:
+                # If not valid hex, treat as a regular string and encode to bytes
+                data_bytes = data.encode('utf-8')
 
         if len(data_bytes) < 0x4C:
             return bytes([len(data_bytes)]) + data_bytes
@@ -358,16 +399,18 @@ class Script:
         """Converts the script to hexadecimal"""
         return b_to_h(self.to_bytes())
 
-    @staticmethod
-    def from_raw(scriptrawhex: Union[str, bytes], has_segwit: bool = False):
+    @classmethod
+    def from_raw(cls, scriptrawhex: Union[str, bytes], has_segwit: bool = False, script_type: str = SCRIPT_TYPE_LEGACY):
         """
         Imports a Script commands list from raw hexadecimal data
             Attributes
             ----------
-            txinputraw : string (hex)
-                The hexadecimal raw string representing the Script commands
+            scriptrawhex : Union[str, bytes]
+                The hexadecimal raw string or bytes representing the Script commands
             has_segwit : boolean
                 Is the Tx Input segwit or not
+            script_type : str
+                The type of script (legacy, segwit_v0, or tapscript)
         """
         if isinstance(scriptrawhex, str):
             scriptraw = h_to_b(scriptrawhex)
@@ -419,7 +462,7 @@ class Script:
                 )
                 index = index + data_size + size
 
-        return Script(script=commands)
+        return cls(script=commands, script_type=script_type)
 
     def get_script(self) -> list[Any]:
         """Returns script as array of strings"""
@@ -453,3 +496,58 @@ class Script:
         if not isinstance(_other, Script):
             return False
         return self.script == _other.script
+
+
+class TapscriptFactory:
+    """Helper class to create valid Tapscripts
+    
+    This class provides methods to create properly tagged Tapscript instances,
+    ensuring they're valid for use in Taproot outputs.
+    
+    Methods
+    -------
+    create_script(script_cmds)
+        Creates a Tapscript instance with the given commands
+        
+    is_valid_tapscript(script)
+        Validates if a script is a valid Tapscript
+    """
+    
+    @staticmethod
+    def create_script(script_cmds: list[Any]) -> Script:
+        """Creates a Tapscript with the proper script type
+        
+        Parameters
+        ----------
+        script_cmds : list
+            List of script commands to include in the Tapscript
+            
+        Returns
+        -------
+        Script
+            A Script instance with SCRIPT_TYPE_TAPSCRIPT type
+        """
+        return Script(script_cmds, script_type=SCRIPT_TYPE_TAPSCRIPT)
+    
+    @staticmethod
+    def is_valid_tapscript(script: Script) -> bool:
+        """Validates if a script is a valid Tapscript
+        
+        Parameters
+        ----------
+        script : Script
+            The script to validate
+            
+        Returns
+        -------
+        bool
+            True if the script is a valid Tapscript, False otherwise
+        """
+        # If not a Tapscript type, it's not valid
+        if script.script_type != SCRIPT_TYPE_TAPSCRIPT:
+            return False
+        
+        # Check for any additional Tapscript validation rules here
+        # Currently this just verifies the script_type, but can be extended
+        
+        return True
