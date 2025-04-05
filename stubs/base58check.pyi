@@ -1,0 +1,13 @@
+from typing import Union, overload
+
+@overload
+def b58encode(v: bytes) -> bytes: ...
+
+@overload
+def b58encode(v: str) -> str: ...
+
+@overload
+def b58decode(v: bytes) -> bytes: ...
+
+@overload
+def b58decode(v: str) -> str: ...

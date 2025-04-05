@@ -1,0 +1,26 @@
+{
+    "include": [
+      "bitcoinutils"
+    ],
+    "exclude": [
+      "**/node_modules",
+      "**/__pycache__",
+      "**/.*"
+    ],
+    "ignore": [],
+    "defineConstant": {
+      "DEBUG": true
+    },
+    "stubPath": "./stubs",
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": false,
+    "reportMissingImports": "warning",
+    "reportMissingTypeStubs": "warning",
+    "reportUnknownMemberType": "warning",
+    "reportUnknownVariableType": "warning",
+    "reportUnknownArgumentType": "warning",
+    "reportPrivateUsage": "warning",
+    "reportGeneralTypeIssues": "warning",
+    "pythonVersion": "3.7",
+    "pythonPlatform": "All"
+  }
