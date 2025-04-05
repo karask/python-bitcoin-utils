@@ -499,7 +499,7 @@ class Transaction:
         returns the transaction input's segwit digest that is to be signed
         according to sighash
     get_transaction_taproot_digest(txin_index, script_pubkeys, amounts, ext_flag,
-            script, leaf_ver, sighash)
+            script, leaf_ver, sighash, annex)
         returns the transaction input's taproot digest that is to be signed
         according to sighash
     """
@@ -560,52 +560,79 @@ class Transaction:
 
         # Detect and handle SegWit
         has_segwit = False
-        if rawtx[cursor:cursor + 2] == b'\x00\x01':
+        if cursor + 2 <= len(rawtx) and rawtx[cursor:cursor + 2] == b'\x00\x01':
             has_segwit = True
             cursor += 2  # Skipping past the marker and flag bytes
 
         # Read the number of inputs
+        if cursor >= len(rawtx):
+            raise ValueError("Truncated transaction: not enough data to read input count")
+            
         n_inputs, size = parse_compact_size(rawtx[cursor:])
         cursor += size
         inputs = []
 
         # Read inputs
         for _ in range(n_inputs):
-            inp, cursor = TxInput.from_raw(rawtx.hex(), cursor, has_segwit)
+            if cursor >= len(rawtx):
+                raise ValueError("Truncated transaction: not enough data to read input")
+                
+            inp, cursor = TxInput.from_raw(rawtx, cursor, has_segwit)
             inputs.append(inp)
 
         # Read the number of outputs using parse_compact_size
+        if cursor >= len(rawtx):
+            raise ValueError("Truncated transaction: not enough data to read output count")
+            
         n_outputs, size = parse_compact_size(rawtx[cursor:])
         cursor += size
         outputs = []
 
         # Read outputs
         for _ in range(n_outputs):
-            output, cursor = TxOutput.from_raw(rawtx.hex(), cursor, has_segwit)
+            if cursor >= len(rawtx):
+                raise ValueError("Truncated transaction: not enough data to read output")
+                
+            output, cursor = TxOutput.from_raw(rawtx, cursor, has_segwit)
             outputs.append(output)
 
-        # Handle witnesses if SegWit is enabled and if they are present i.e. if
-        # remaining payload length is greater than last tx field length (locktime)
-        has_witness_field = True if len(rawtx) - cursor > 4 else False
+        # Handle witnesses if SegWit is enabled and if they are present
+        # We need at least 4 more bytes for locktime after this
         witnesses = []
-        if has_segwit and has_witness_field:
+        if has_segwit and cursor < len(rawtx) - 4:
             for _ in range(n_inputs):
+                if cursor >= len(rawtx) - 4:
+                    break  # Not enough data for more witnesses, but we'll still try to read locktime
+                    
                 n_items, size = parse_compact_size(rawtx[cursor:])
                 cursor += size
                 witnesses_tmp = []
+                
                 for _ in range(n_items):
+                    if cursor >= len(rawtx) - 4:
+                        break  # Not enough data for more witness items
+                        
                     item_size, size = parse_compact_size(rawtx[cursor:])
                     cursor += size
+                    
+                    if cursor + item_size > len(rawtx):
+                        # This would go beyond the end of data
+                        break
+                        
                     witness_data = rawtx[cursor:cursor + item_size]
                     cursor += item_size
                     witnesses_tmp.append(witness_data.hex())
+                    
                 if witnesses_tmp:
                     witnesses.append(TxWitnessInput(stack=witnesses_tmp))
 
-        # Read locktime (4 bytes)
+        # Read locktime (4 bytes) - make sure there's enough data
+        if cursor + 4 > len(rawtx):
+            raise ValueError("Truncated transaction: not enough data to read locktime")
+            
         locktime = rawtx[cursor:cursor + 4]
 
-        #Returning the Transaction object
+        # Returning the Transaction object
         return Transaction(
             inputs=inputs,
             outputs=outputs,
@@ -862,8 +889,6 @@ class Transaction:
 
         return hashlib.sha256(hashlib.sha256(tx_for_signing).digest()).digest()
 
-    # TODO Update doc with TAPROOT_SIGHASH_ALL
-    # clean prints after finishing other sighashes
     def get_transaction_taproot_digest(
         self,
         txin_index: int,
@@ -873,6 +898,7 @@ class Transaction:
         script=Script([]),
         leaf_ver=LEAF_VERSION_TAPSCRIPT,
         sighash=TAPROOT_SIGHASH_ALL,
+        annex: Optional[bytes] = None,
     ):
         """Returns the segwit v1 (taproot) transaction's digest for signing.
         https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
@@ -905,6 +931,8 @@ class Transaction:
                  The script version, LEAF_VERSION_TAPSCRIPT for the default tapscript
              sighash : int
                  The type of the signature hash to be created
+             annex : bytes, optional
+                 Optional annex data (will be hashed as per BIP-341)
         """
 
         # clone transaction to modify without messing up the real transaction
@@ -981,7 +1009,9 @@ class Transaction:
             tx_for_signing += hash_outputs
 
         # Data about this input
-        spend_type = ext_flag * 2 + 0  # 0 for hard-coded - no annex_present
+        # Set annex_present flag in spend_type if annex is present
+        annex_present = 1 if annex is not None else 0
+        spend_type = ext_flag * 2 + annex_present
 
         tx_for_signing += bytes([spend_type])
 
@@ -1005,8 +1035,12 @@ class Transaction:
             # print('4')
             tx_for_signing += txin_index.to_bytes(4, "little")
 
-        # TODO if annex is present it should be added here
-        # length of annex should use compact_size
+        # Add annex if present
+        if annex_present:
+            # Encode annex with a TapLeaf prefix of 0x50 as per BIP-341
+            annex_bytes = b'\x50' + encode_varint(len(annex)) + annex
+            # Hash the annex and add to the signature message
+            tx_for_signing += hashlib.sha256(annex_bytes).digest()
 
         # Data about this output
         if sighash_single:
@@ -1039,7 +1073,7 @@ class Transaction:
 
         # tag hash the digest and return
         return tagged_hash(tx_for_signing, "TapSighash")
-
+        
     def to_bytes(self, has_segwit: bool) -> bytes:
         """Serializes to bytes"""
 
