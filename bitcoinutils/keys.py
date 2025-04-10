@@ -13,14 +13,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Tuple
+    from typing import Tuple, List, Union, Any
 
 import re
 import struct
 import hashlib
 from abc import ABC, abstractmethod
 from base64 import b64encode, b64decode
-from typing import Optional
+from typing import Optional, List, Tuple, Union, cast
 from base58check import b58encode, b58decode  # type: ignore
 from ecdsa import (  # type: ignore
     SigningKey,
@@ -138,18 +138,18 @@ class PrivateKey:
         return self.key.to_string()
 
     @classmethod
-    def from_wif(cls, wif: str):
+    def from_wif(cls, wif: str) -> 'PrivateKey':
         """Creates key from WIFC or WIF format key"""
 
         return cls(wif=wif)
 
     @classmethod
-    def from_bytes(cls, b: bytes):
+    def from_bytes(cls, b: bytes) -> 'PrivateKey':
         """Creates a key directly from 32 raw bytes"""
 
         return cls(b=b)
 
-    def _from_bytes(self, b: bytes):
+    def _from_bytes(self, b: bytes) -> None:
         """Creates a key directly from 32 raw bytes"""
 
         if len(b) != 32:
@@ -157,7 +157,7 @@ class PrivateKey:
         self.key = SigningKey.from_string(b, curve=SECP256k1)
 
     # expects wif in hex string
-    def _from_wif(self, wif: str):
+    def _from_wif(self, wif: str) -> None:
         """Creates key from WIFC or WIF format key
 
         Check to_wif for the detailed process. From WIF is the reverse.
@@ -196,7 +196,7 @@ class PrivateKey:
         else:
             self.key = SigningKey.from_string(key_bytes, curve=SECP256k1)
 
-    def to_wif(self, compressed: bool = True):
+    def to_wif(self, compressed: bool = True) -> str:
         """Returns key in WIFC or WIF string
 
         |  Pseudocode:
@@ -276,8 +276,8 @@ class PrivateKey:
         return None
 
     def sign_input(
-        self, tx: Transaction, txin_index: int, script: Script, sighash=SIGHASH_ALL
-    ):
+        self, tx: Transaction, txin_index: int, script: Script, sighash: int = SIGHASH_ALL
+    ) -> str:
         # get the digest from the transaction object and sign
         tx_digest = tx.get_transaction_digest(txin_index, script, sighash)
         return self._sign_input(tx_digest, sighash)
@@ -289,7 +289,7 @@ class PrivateKey:
         script: Script,
         amount: int,
         sighash: int = SIGHASH_ALL,
-    ):
+    ) -> str:
         # get the digest from the transaction object and sign
         tx_digest = tx.get_transaction_segwit_digest(
             txin_index, script, amount, sighash
@@ -304,10 +304,10 @@ class PrivateKey:
         amounts: list[int],
         script_path: bool = False,
         tapleaf_script: Script = Script([]),
-        tapleaf_scripts: Optional[Script | list[Script] | list[list[Script]]] | bytes = None,
+        tapleaf_scripts: Optional[Union[Script, List[Script], List[List[Script]], bytes]] = None,
         sighash: int = TAPROOT_SIGHASH_ALL,
         tweak: bool = True,
-    ):
+    ) -> str:
         # get the digest from the transaction object and sign
         # note that when signing a tapleaf we typically won't use tweaked
         # keys - so tweak should be set to False
@@ -439,7 +439,7 @@ class PrivateKey:
         self,
         tx_digest: bytes,
         sighash: int = SIGHASH_ALL,
-        scripts: Optional[Script | list[Script] | list[list[Script]]] = None,
+        scripts: Optional[Union[Script, List[Script], List[List[Script]], bytes]] = None,
         tweak: bool = True,
     ) -> str:
         """Signs a taproot transaction input with the private key
@@ -483,7 +483,7 @@ class PrivateKey:
 
         return b_to_h(sig)
 
-    def get_public_key(self) -> PublicKey:
+    def get_public_key(self) -> 'PublicKey':
         """Returns the corresponding PublicKey"""
 
         verifying_key = b_to_h(self.key.get_verifying_key().to_string())
@@ -530,7 +530,7 @@ class PublicKey:
         returns the corresponding P2trAddress object
     """
 
-    def __init__(self, hex_str: str = None, message: str = None, signature: bytes = None) -> None:
+    def __init__(self, hex_str: Optional[str] = None, message: Optional[str] = None, signature: Optional[bytes] = None) -> None:
         """
         Parameters
         ----------
@@ -614,7 +614,7 @@ class PublicKey:
             if not message:
                 raise ValueError("Empty message provided for public key recovery.")
 
-            if(len(signature) != 65):
+            if not signature or len(signature) != 65:
                 raise ValueError("Invalid signature length, must be exactly 65 bytes")
 
             # The compressed signature is of the format: recovery_id (1 byte) | r (32 bytes) | s (32 bytes)
@@ -639,7 +639,7 @@ class PublicKey:
             raise TypeError("Either 'hex_str' or ('message', 'signature') must be provided.")
 
     @classmethod
-    def from_hex(cls, hex_str: str) -> PublicKey:
+    def from_hex(cls, hex_str: str) -> 'PublicKey':
         """Creates a public key from a hex string (SEC format)"""
 
         return cls(hex_str)
@@ -674,7 +674,7 @@ class PublicKey:
         return key_hex[:64]
 
     def to_taproot_hex(
-        self, scripts: Optional[Script | list[Script] | list[list[Script]]] = None
+        self, scripts: Optional[Union[Script, List[Script], List[List[Script]]]] = None
     ) -> Tuple[str, bool]:
         """Returns the tweaked x coordinate of the public key as a hex string.
 
@@ -706,7 +706,7 @@ class PublicKey:
         return y % 2 == 0
 
     @classmethod
-    def from_message_signature(cls, message, signature):
+    def from_message_signature(cls, message: str, signature: bytes) -> 'PublicKey':
         """Recovers a public key from a Bitcoin-signed message and a 65-byte compressed signature.
         """
         #Note: Only works for compressed signatures because DER encoding does not contain the recovery id
@@ -831,14 +831,14 @@ class PublicKey:
 
         return b_to_h(self._to_hash160(compressed))
 
-    def get_address(self, compressed: bool = True) -> P2pkhAddress:
+    def get_address(self, compressed: bool = True) -> 'P2pkhAddress':
         """Returns the corresponding P2PKH Address (default compressed)"""
 
         hash160 = self._to_hash160(compressed)
         addr_string_hex = b_to_h(hash160)
         return P2pkhAddress(hash160=addr_string_hex)
 
-    def get_segwit_address(self) -> P2wpkhAddress:
+    def get_segwit_address(self) -> 'P2wpkhAddress':
         """Returns the corresponding P2WPKH address
 
         Only compressed is allowed. It is otherwise identical to normal P2PKH
@@ -849,8 +849,8 @@ class PublicKey:
         return P2wpkhAddress(witness_program=addr_string_hex)
 
     def get_taproot_address(
-        self, scripts: Optional[Script | list[Script] | list[list[Script]]] | bytes = None
-    ) -> P2trAddress:
+        self, scripts: Optional[Union[Script, List[Script], List[List[Script]], bytes]] = None
+    ) -> 'P2trAddress':
         """Returns the corresponding P2TR address
 
         Only compressed is allowed. Taproot uses x-only public key with
@@ -943,19 +943,19 @@ class Address(ABC):
             raise TypeError("A valid address or hash160 is required.")
 
     @classmethod
-    def from_address(cls, address: str) -> Address:
+    def from_address(cls, address: str) -> 'Address':
         """Creates an address object from an address string"""
 
         return cls(address=address)
 
     @classmethod
-    def from_hash160(cls, hash160: str) -> Address:
+    def from_hash160(cls, hash160: str) -> 'Address':
         """Creates an address object from a hash160 string"""
 
         return cls(hash160=hash160)
 
     @classmethod
-    def from_script(cls, script: Script) -> Address:
+    def from_script(cls, script: Script) -> 'Address':
         """Creates an address object from a Script object"""
 
         return cls(script=script)
@@ -1121,7 +1121,7 @@ class P2shAddress(Address):
         address: Optional[str] = None,
         hash160: Optional[str] = None,
         script: Optional[Script] = None,
-    ):
+    ) -> None:
         super().__init__(address=address, hash160=hash160, script=script)
 
     def to_script_pub_key(self) -> Script:
@@ -1219,19 +1219,19 @@ class SegwitAddress(ABC):
             raise TypeError("A valid address or witness program is required.")
 
     @classmethod
-    def from_address(cls, address: str) -> SegwitAddress:
+    def from_address(cls, address: str) -> 'SegwitAddress':
         """Creates an address object from an address string"""
 
         return cls(address=address)
 
     @classmethod
-    def from_witness_program(cls, witness_program: str) -> SegwitAddress:
+    def from_witness_program(cls, witness_program: str) -> 'SegwitAddress':
         """Creates an address object from a hash string"""
 
         return cls(witness_program=witness_program)
 
     @classmethod
-    def from_script(cls, script: Script) -> SegwitAddress:
+    def from_script(cls, script: Script) -> 'SegwitAddress':
         """Creates an address object from a Script object"""
 
         return cls(script=script)
