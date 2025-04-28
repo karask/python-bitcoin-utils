@@ -25,7 +25,6 @@ from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 import struct
 
 
-# clean whatever is not used!
 class Secp256k1Params:
     # ECDSA curve using secp256k1 is defined by: y**2 = x**3 + 7
     # This is done modulo p which (secp256k1) is:
@@ -431,21 +430,6 @@ def negate_privkey(key: bytes) -> str:
 
     return f"{negated_key:064x}"
 
-
-# def negate_pubkey(key: bytes) -> str:
-#    '''Negate public key, if necessary'''
-#
-#    # convert public key bytes to tuple Point
-#    x = h_to_i( key[:32].hex() )
-#    y = h_to_i( key[32:].hex() )
-#
-#    # negate public key if necessary
-#    if y % 2 != 0:
-#        y = Secp256k1Params._field - y
-#
-#    return f'{x:064x}{y:064x}'
-
-
 def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, bool]:
     """
     Tweaks the public key with the specified tweak. Required to create the
@@ -530,11 +514,6 @@ def h_to_i(hex_str: str) -> int:
 def i_to_h64(i: int) -> str:
     """Converts an int to a string hexadecimal (padded to 64 hex chars)"""
     return f"{i:064x}"
-
-
-# def i_to_h(i: int) -> str:
-#    """Converts an int to a string hexadecimal (no padding)"""
-#    return f"{i:x}"
 
 
 # to convert hashes to ints we need byteorder BIG...
