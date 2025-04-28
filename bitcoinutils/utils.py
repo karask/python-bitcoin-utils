@@ -104,7 +104,7 @@ class ControlBlock:
         pub_key = bytes.fromhex(self.pubkey.to_x_only_hex())
         return leaf_version + pub_key + self.merkle_path
 
-    def to_hex(self):
+    def to_hex(self) -> str:
         """Converts object to hexadecimal string"""
         return b_to_h(self.to_bytes())
 
