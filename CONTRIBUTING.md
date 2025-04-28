@@ -7,7 +7,6 @@ Thank you for considering contributing to the `python-bitcoin-utils` project! Yo
 ### 1. Reporting Issues
 
 If you encounter any bugs, unexpected behavior, or have feature requests, please open an issue on the [GitHub Issues](https://github.com/karask/python-bitcoin-utils/issues) page. When reporting a bug, provide the following information:
-
 - A clear description of the issue.
 - Steps to reproduce the issue.
 - Expected behavior.
@@ -26,19 +25,18 @@ We welcome pull requests! To contribute code:
 
 1. Fork the repository on GitHub.
 2. Clone your fork to your local machine:
-   ```sh
-   git clone https://github.com/your-username/python-bitcoin-utils.git
-   cd python-bitcoin-utils
-   ```
+ ```sh
+git clone https://github.com/your-username/python-bitcoin-utils.git
+cd python-bitcoin-utils
+ ```
 3. Add the upstream repository to keep your fork updated:
-   ```sh
-   git remote add upstream https://github.com/karask/python-bitcoin-utils.git
-   ```
+ ```sh
+git remote add upstream https://github.com/karask/python-bitcoin-utils.git
+ ```
 
 #### Step 2: Create a Feature Branch
 
 Create a new branch for your changes:
-
 ```sh
 git checkout -b feature-name
 ```
@@ -47,6 +45,11 @@ git checkout -b feature-name
 
 - Follow the project's coding style.
 - Ensure your code is well-documented and includes meaningful commit messages.
+- Install the package in development mode before running tests:
+  ```sh
+  pip install -e .
+  ```
+  This creates an editable installation linking to your local code, which is necessary for the tests to properly discover and import modules.
 - Run tests before submitting a pull request:
   ```sh
   pytest tests/
@@ -56,9 +59,9 @@ git checkout -b feature-name
 #### Step 4: Submit a Pull Request
 
 1. Push your changes to your fork's branch:
-   ```sh
-   git push origin feature-name
-   ```
+ ```sh
+git push origin feature-name
+ ```
 2. Open a pull request from your fork's branch to the `master` branch of the original repository.
 3. Provide a detailed description of your changes.
 4. Address any requested changes from maintainers.
@@ -78,11 +81,9 @@ git checkout -b feature-name
 ### 5. Writing Tests
 
 Ensure new features and bug fixes include test cases. The project uses `pytest` for testing. Run all tests with:
-
 ```sh
 pytest
 ```
-
 If you add new features, create corresponding test cases under the `tests/` directory. Ensure your tests cover:
 - Normal expected operation
 - Edge cases
@@ -92,10 +93,19 @@ If you add new features, create corresponding test cases under the `tests/` dire
 
 Help improve the documentation by submitting corrections, clarifications, or examples. Update the README or other documentation files as needed.
 
+### 7. Troubleshooting Test Failures
+
+If you encounter test failures when running the test suite, check for these common issues:
+
+- **Module import errors**: Make sure you've installed the package in development mode with `pip install -e .`
+- **API mismatch errors**: If tests are failing with TypeError or similar errors about function signatures, check if there have been recent API changes in the corresponding modules.
+- **Transaction hex mismatches**: Assertion errors in transaction tests with hex string differences often indicate changes in transaction serialization or signature generation logic.
+
+For specific test failures, please refer to the test file and the corresponding implementation to understand the expected behavior.
+
 ## Code of Conduct
 
 Be respectful and follow the open-source community guidelines. Maintain a collaborative and inclusive environment.
 
 ---
-
 Thank you for contributing! 🚀
