@@ -495,6 +495,8 @@ class Transaction:
         Calculates the tx segwit size
     copy()
         creates a copy of the object (classmethod)
+    set_witness(txin_index, witness)
+        sets the witness for a particular input index
     get_transaction_digest(txin_index, script, sighash)
         returns the transaction input's digest that is to be signed according
     get_transaction_segwit_digest(txin_index, script, amount, sighash)
@@ -639,6 +641,26 @@ class Transaction:
         outs = [TxOutput.copy(txout) for txout in tx.outputs]
         wits = [TxWitnessInput.copy(witness) for witness in tx.witnesses]
         return cls(ins, outs, tx.locktime, tx.version, tx.has_segwit, wits)
+
+    # this sets empty witness slots (if necessary)
+    # makes length of witness equal to the number of inputs, to prevent expliclty defining empty witness inputs
+    # for non segwit inputs
+    def set_witness(self, txin_index: int, witness: TxWitnessInput):
+        """Safely set a witness at the specified index"""
+        if not self.has_segwit:
+            raise RuntimeError(
+                "Transaction should be segwit in order to set segwit slots"
+            )
+        witness_len = len(self.witnesses)
+        input_len = len(self.inputs)
+        if witness_len < input_len:
+            # append empty witness inputs if input_len>witness_len
+            for _ in range(input_len - witness_len):
+                self.witnesses.append(TxWitnessInput([]))
+
+        if txin_index < 0 or txin_index >= len(self.inputs):
+            raise IndexError("txin_index out of range")
+        self.witnesses[txin_index] = witness
 
     def get_transaction_digest(
         self, txin_index: int, script: Script, sighash: int = SIGHASH_ALL
