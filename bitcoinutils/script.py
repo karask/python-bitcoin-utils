@@ -225,10 +225,11 @@ CODE_OPS = {
     b"\xaf": "OP_CHECKMULTISIGVERIFY",
     b"\xba": "OP_CHECKSIGADD", # added this new OPCODE
     # locktime
-    b"\xb1": "OP_NOP2",
-    b"\xb1": "OP_CHECKLOCKTIMEVERIFY",
-    b"\xb2": "OP_NOP3",
-    b"\xb2": "OP_CHECKSEQUENCEVERIFY",
+    # Fixed duplicate keys by keeping only one mapping for each byte value
+    # OP_NOP2 and OP_CHECKLOCKTIMEVERIFY refer to the same opcode (0xb1)
+    b"\xb1": "OP_CHECKLOCKTIMEVERIFY",  # Same as OP_NOP2
+    # OP_NOP3 and OP_CHECKSEQUENCEVERIFY refer to the same opcode (0xb2)
+    b"\xb2": "OP_CHECKSEQUENCEVERIFY",  # Same as OP_NOP3
 }
 
 
