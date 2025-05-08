@@ -105,8 +105,14 @@ class ControlBlock:
         pub_key = bytes.fromhex(self.pubkey.to_x_only_hex())
         return leaf_version + pub_key + self.merkle_path
 
-    def to_hex(self):
-        """Converts object to hexadecimal string"""
+    def to_hex(self) -> str:
+        """Converts object to hexadecimal string
+        
+        Returns
+        -------
+        str
+            The control block as a hexadecimal string
+        """
         return b_to_h(self.to_bytes())
 
 
@@ -302,8 +308,17 @@ def get_transaction_length(data: bytes) -> int:
 
 
 def is_address_bech32(address: str) -> bool:
-    """
-    Returns if an address (string) is bech32 or not
+    """Returns if an address (string) is bech32 or not
+    
+    Parameters
+    ----------
+    address : str
+        The address to check
+        
+    Returns
+    -------
+    bool
+        True if the address is bech32, False otherwise
     """
     if not address:
         return False
@@ -398,7 +413,18 @@ def calculate_tweak(
 
 
 def tapleaf_tagged_hash(script: Script) -> bytes:
-    """Calculates the tagged hash for a tapleaf"""
+    """Calculates the tagged hash for a tapleaf
+    
+    Parameters
+    ----------
+    script : Script
+        The script to calculate the tagged hash for
+        
+    Returns
+    -------
+    bytes
+        The tagged hash of the tapleaf
+    """
     script_part = bytes([LEAF_VERSION_TAPSCRIPT]) + prepend_compact_size(
         script.to_bytes()
     )
@@ -406,7 +432,20 @@ def tapleaf_tagged_hash(script: Script) -> bytes:
 
 
 def tapbranch_tagged_hash(thashed_a: bytes, thashed_b: bytes) -> bytes:
-    """Calculates the tagged hash for a tapbranch"""
+    """Calculates the tagged hash for a tapbranch
+    
+    Parameters
+    ----------
+    thashed_a : bytes
+        First tagged hash
+    thashed_b : bytes
+        Second tagged hash
+        
+    Returns
+    -------
+    bytes
+        The tagged hash of the tapbranch
+    """
     # order - smaller left side
     if thashed_a < thashed_b:
         return tagged_hash(thashed_a + thashed_b, "TapBranch")
