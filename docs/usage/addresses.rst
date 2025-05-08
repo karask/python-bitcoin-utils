@@ -1,7 +1,7 @@
-Address Object
-==============
+Address Objects
+===============
 
-The Address object in the Python Bitcoin Utils library provides a unified interface for working with different Bitcoin address formats. It supports creation, validation, conversion, and management of various address types including legacy addresses, SegWit addresses, and Taproot addresses.
+There are several Address objects in the Python Bitcoin Utils library that correspond to the different different Bitcoin address formats. It supports creation, validation, conversion, and management of various address types including legacy addresses, SegWit addresses, and Taproot addresses.
 
 Address Types Supported
 ----------------------
@@ -12,9 +12,9 @@ The library supports the following address types:
 2. **P2SH (Pay to Script Hash)**: Script hash addresses
 3. **P2WPKH (Pay to Witness Public Key Hash)**: Native SegWit v0 addresses for single signatures
 4. **P2WSH (Pay to Witness Script Hash)**: Native SegWit v0 addresses for scripts
-5. **P2TR (Pay to Taproot)**: Taproot addresses (SegWit v1)
-6. **P2SH-P2WPKH**: Nested SegWit addresses for single signatures
-7. **P2SH-P2WSH**: Nested SegWit addresses for scripts
+5. **P2SH-P2WPKH**: Nested SegWit addresses for single signatures
+6. **P2SH-P2WSH**: Nested SegWit addresses for scripts
+7. **P2TR (Pay to Taproot)**: Taproot addresses (SegWit v1)
 
 Class Hierarchy
 --------------
@@ -272,7 +272,7 @@ Each address type can generate its corresponding scriptPubKey:
 Converting Between Address Types
 -----------------------------
 
-While there's no direct "convert" method, you can convert between address types using the intermediate objects:
+While there's no direct "convert" method, you can get different addresses by using your key pair:
 
 .. code-block:: python
 
@@ -284,8 +284,7 @@ While there's no direct "convert" method, you can convert between address types 
     # Start with a P2PKH address
     p2pkh_addr = P2pkhAddress('mzF2sbdxcMqKFLoakdBcvZpUXMjgiXGZW1')
     
-    # To convert, first we'd need the underlying public key
-    # In a real application, you'd have the private key
+    # To get in other address formats you would need the private (or public) key
     private_key = PrivateKey('your_private_key_wif')
     public_key = private_key.get_public_key()
     
@@ -354,3 +353,4 @@ The library supports both mainnet and testnet addresses:
     print(f"Testnet P2PKH: {testnet_p2pkh.to_string()}")  # Starts with 'm' or 'n'
     print(f"Testnet P2WPKH: {testnet_p2wpkh.to_string()}")  # Starts with 'tb1q'
     print(f"Testnet P2TR: {testnet_p2tr.to_string()}")    # Starts with 'tb1p'
+    

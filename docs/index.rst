@@ -11,12 +11,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   usage/addresses
+   usage/segwit
    usage/keys
    usage/transactions
    usage/script
    usage/proxy
-   usage/addresses
-   usage/segwit
    
 Indices and tables
 ==================
