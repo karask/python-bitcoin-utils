@@ -225,10 +225,10 @@ CODE_OPS = {
     b"\xaf": "OP_CHECKMULTISIGVERIFY",
     b"\xba": "OP_CHECKSIGADD", # added this new OPCODE
     # locktime
-    b"\xb1": "OP_NOP2",
-    b"\xb1": "OP_CHECKLOCKTIMEVERIFY",
-    b"\xb2": "OP_NOP3",
-    b"\xb2": "OP_CHECKSEQUENCEVERIFY",
+    # This used to be OP_NOP2
+    b"\xb1": "OP_CHECKLOCKTIMEVERIFY",  
+    # This used to be OP_NOP3
+    b"\xb2": "OP_CHECKSEQUENCEVERIFY",  
 }
 
 
