@@ -48,13 +48,13 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # P2PKH to P2WSH
         self.txin1 = TxInput(
-            "6e9a0692ed4b3328909d66d41531854988dc39edba5df186affaefda91824e69", 0
+            "6e9a0692ed4b3328909d66d41531854988dc39edba5df186affaefda91824e69", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txout1 = TxOutput(to_satoshis(0.0097), self.p2wsh_addr.to_script_pub_key())
 
         # P2WSH to P2PKH
         self.txin_spend = TxInput(
-            "6233aca9f2d6165da2d7b4e35d73b039a22b53f58ce5af87dddee7682be937ea", 0
+            "6233aca9f2d6165da2d7b4e35d73b039a22b53f58ce5af87dddee7682be937ea", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin_spend_amount = to_satoshis(0.0097)
         self.txout2 = TxOutput(to_satoshis(0.0096), self.p2pkh_addr.to_script_pub_key())
@@ -63,17 +63,17 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
         # Multiple input multiple output
         # P2PKH UTXO
         self.txin1_multiple = TxInput(
-            "24d949f8c77d7fc0cd09c8d5fccf7a0249178c16170c738da19f6c4b176c9f4b", 0
+            "24d949f8c77d7fc0cd09c8d5fccf7a0249178c16170c738da19f6c4b176c9f4b", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin1_multiple_amount = to_satoshis(0.005)
         # P2WSH UTXO
         self.txin2_multiple = TxInput(
-            "65f4d69c91a8de54dc11096eaa315e84ef91a389d1d1c17a691b72095100a3a4", 0
+            "65f4d69c91a8de54dc11096eaa315e84ef91a389d1d1c17a691b72095100a3a4", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin2_multiple_amount = to_satoshis(0.0069)
         # P2WPKH UTXO
         self.txin3_multiple = TxInput(
-            "6c8fc6453a2a3039c2b5b55dcc59587e8b0afa52f92607385b5f4c7e84f38aa2", 0
+            "6c8fc6453a2a3039c2b5b55dcc59587e8b0afa52f92607385b5f4c7e84f38aa2", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin3_multiple_amount = to_satoshis(0.0079)
 

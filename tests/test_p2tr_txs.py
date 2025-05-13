@@ -35,7 +35,7 @@ class TestCreateP2trTransaction(unittest.TestCase):
         self.priv02 = PrivateKey("cV3R88re3AZSBnWhBBNdiCKTfwpMKkYYjdiR13HQzsU7zoRNX7JL")
         self.pub02 = self.priv02.get_public_key()
         self.txin02 = TxInput(
-            "7b6412a0eed56338731e83c606f13ebb7a3756b3e4e1dbbe43a7db8d09106e56", 1
+            "7b6412a0eed56338731e83c606f13ebb7a3756b3e4e1dbbe43a7db8d09106e56", 1, sequence=b"\xff\xff\xff\xff"
         )
         self.amount02 = to_satoshis(0.00005)
         self.script_pubkey02 = Script(["OP_1", self.pub02.to_taproot_hex()[0]])
@@ -62,7 +62,7 @@ class TestCreateP2trTransaction(unittest.TestCase):
         self.priv03 = PrivateKey("cNxX8M7XU8VNa5ofd8yk1eiZxaxNrQQyb7xNpwAmsrzEhcVwtCjs")
         self.pub03 = self.priv03.get_public_key()
         self.txin03 = TxInput(
-            "2a28f8bd8ba0518a86a390da310073a30b7df863d04b42a9c487edf3a8b113af", 1
+            "2a28f8bd8ba0518a86a390da310073a30b7df863d04b42a9c487edf3a8b113af", 1, sequence=b"\xff\xff\xff\xff"
         )
         self.amount02 = to_satoshis(0.00005)
         self.script_pubkey03 = Script(["OP_1", self.pub03.to_taproot_hex()[0]])
@@ -211,7 +211,7 @@ class TestCreateP2trWithSingleTapScript(unittest.TestCase):
         self.from_pub2 = self.from_priv2.get_public_key()
         self.from_address2 = self.from_pub2.get_taproot_address([self.tr_script_p2pk1])
         self.tx_in2 = TxInput(
-            "3d4c9d73c4c65772e645ff26493590ae4913d9c37125b72398222a553b73fa66", 0
+            "3d4c9d73c4c65772e645ff26493590ae4913d9c37125b72398222a553b73fa66", 0, sequence=b"\xff\xff\xff\xff",
         )
 
         self.to_priv2 = PrivateKey(
@@ -307,7 +307,7 @@ class TestCreateP2trWithTwoTapScripts(unittest.TestCase):
         )
 
         self.tx_in = TxInput(
-            "808ec85db7b005f1292cea744b24e9d72ba4695e065e2d968ca17744b5c5c14d", 0
+            "808ec85db7b005f1292cea744b24e9d72ba4695e065e2d968ca17744b5c5c14d", 0, sequence=b"\xff\xff\xff\xff"
         )
 
         self.to_priv = PrivateKey(
@@ -393,7 +393,7 @@ class TestCreateP2trWithThreeTapScripts(unittest.TestCase):
         self.from_address = self.from_pub.get_taproot_address(self.scripts)
 
         self.tx_in = TxInput(
-            "9b8a01d0f333b2440d4d305d26641e14e0e1932ebc3c4f04387c0820fada87d3", 0
+            "9b8a01d0f333b2440d4d305d26641e14e0e1932ebc3c4f04387c0820fada87d3", 0, sequence=b"\xff\xff\xff\xff"
         )
 
         self.to_priv = PrivateKey(

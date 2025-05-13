@@ -24,7 +24,7 @@ class TestCreateP2shTransaction(unittest.TestCase):
         setup("testnet")
         # values for testing create non std tx
         self.txin = TxInput(
-            "e2d08a63a540000222d6a92440436375d8b1bc89a2638dc5366833804287c83f", 1
+            "e2d08a63a540000222d6a92440436375d8b1bc89a2638dc5366833804287c83f", 1, sequence=b"\xff\xff\xff\xff"
         )
         self.to_addr = P2pkhAddress("msXP94TBncQ9usP6oZNpGweE24biWjJs2d")
         self.sk = PrivateKey("cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA")
@@ -44,7 +44,7 @@ class TestCreateP2shTransaction(unittest.TestCase):
 
         # values for testing create non std tx
         self.txin_spend = TxInput(
-            "4d9a6baf45d4b57c875fe83d5e0834568eae4b5ef6e61d13720ef6685168e663", 0
+            "4d9a6baf45d4b57c875fe83d5e0834568eae4b5ef6e61d13720ef6685168e663", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin_spend.script_sig = Script(["OP_2", "OP_3"])
         self.txout_spend = TxOutput(

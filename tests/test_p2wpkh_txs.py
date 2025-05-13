@@ -41,7 +41,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # P2PKH to P2WPKH
         self.txin1 = TxInput(
-            "5a7b3aaa66d6b7b7abcdc9f1d05db4eee94a700297a319e19454e143875e1078", 0
+            "5a7b3aaa66d6b7b7abcdc9f1d05db4eee94a700297a319e19454e143875e1078", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txout1 = TxOutput(
             to_satoshis(0.0099), self.p2wpkh_addr.to_script_pub_key()
@@ -49,7 +49,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # P2WPKH to P2PKH
         self.txin_spend = TxInput(
-            "b3ca1c4cc778380d1e5376a5517445104e46e97176e40741508a3b07a6483ad3", 0
+            "b3ca1c4cc778380d1e5376a5517445104e46e97176e40741508a3b07a6483ad3", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin_spend_amount = to_satoshis(0.0099)
         self.txout2 = TxOutput(to_satoshis(0.0098), self.p2pkh_addr.to_script_pub_key())
@@ -65,12 +65,12 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # P2WPKH P2PKH to P2PKH
         self.txin_spend_p2pkh = TxInput(
-            "1e2a5279c868d61fb2ff0b1c2b04aa3eff02cd74952a8b4e799532635a9132cc", 0
+            "1e2a5279c868d61fb2ff0b1c2b04aa3eff02cd74952a8b4e799532635a9132cc", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin_spend_p2pkh_amount = to_satoshis(0.01)
 
         self.txin_spend_p2wpkh = TxInput(
-            "fff39047310fbf04bdd0e0bc75dde4267ae4d25219d8ad95e0ca1cee907a60da", 0
+            "fff39047310fbf04bdd0e0bc75dde4267ae4d25219d8ad95e0ca1cee907a60da", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin_spend_p2wpkh_amount = to_satoshis(0.0095)
 
@@ -78,7 +78,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # SIGHASH NONE type send
         self.txin1_signone = TxInput(
-            "fb4c338a00a75d73f9a6bd203ed4bd8884edeb111fac25a7946d5df6562f1942", 0
+            "fb4c338a00a75d73f9a6bd203ed4bd8884edeb111fac25a7946d5df6562f1942", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin1_signone_amount = to_satoshis(0.01)
 
@@ -91,7 +91,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # SIGHASH SINGLE type send
         self.txin1_sigsingle = TxInput(
-            "b04909d4b5239a56d676c1d9d722f325a86878c9aa535915aa0df97df47cedeb", 0
+            "b04909d4b5239a56d676c1d9d722f325a86878c9aa535915aa0df97df47cedeb", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin1_sigsingle_amount = to_satoshis(0.0193)
 
@@ -104,12 +104,12 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # SIGHASH_ALL | SIGHASH_ANYONECANPAY type send
         self.txin1_siganyonecanpay_all = TxInput(
-            "f67e97a2564dceed405e214843e3c954b47dd4f8b26ea48f82382f51f7626036", 0
+            "f67e97a2564dceed405e214843e3c954b47dd4f8b26ea48f82382f51f7626036", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin1_siganyonecanpay_all_amount = to_satoshis(0.0018)
 
         self.txin2_siganyonecanpay_all = TxInput(
-            "f4afddb77cd11a79bed059463085382c50d60c7f9e4075d8469cfe60040f68eb", 0
+            "f4afddb77cd11a79bed059463085382c50d60c7f9e4075d8469cfe60040f68eb", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin2_siganyonecanpay_all_amount = to_satoshis(0.0018)
 
@@ -122,12 +122,12 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # SIGHASH_NONE | SIGHASH_ANYONECANPAY type send
         self.txin1_siganyonecanpay_none = TxInput(
-            "d2ae5d4a3f390f108769139c9b5757846be6693b785c4e21eab777eec7289095", 0
+            "d2ae5d4a3f390f108769139c9b5757846be6693b785c4e21eab777eec7289095", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin1_siganyonecanpay_none_amount = to_satoshis(0.009)
 
         self.txin2_siganyonecanpay_none = TxInput(
-            "ee5062d426677372e6de96e2eb47d572af5deaaef3ef225f3179dfa1ece3f4f5", 0
+            "ee5062d426677372e6de96e2eb47d572af5deaaef3ef225f3179dfa1ece3f4f5", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin2_siganyonecanpay_none_amount = to_satoshis(0.007)
 
@@ -140,7 +140,7 @@ class TestCreateP2wpkhTransaction(unittest.TestCase):
 
         # SIGHASH_SINGLE | SIGHASH_ANYONECANPAY type send
         self.txin1_siganyonecanpay_single = TxInput(
-            "c7bb5672266c8a5b64fe91e953a9e23e3206e3b1a2ddc8e5999b607b82485042", 0
+            "c7bb5672266c8a5b64fe91e953a9e23e3206e3b1a2ddc8e5999b607b82485042", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.txin1_siganyonecanpay_single_amount = to_satoshis(0.01)
 

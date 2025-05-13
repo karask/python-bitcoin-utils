@@ -33,7 +33,7 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
         # values for testing unsigned tx, signed tx all, signed tx with low s,
         # sighash none
         self.txin = TxInput(
-            "fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c", 0
+            "fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.addr = P2pkhAddress("n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR")
         self.txout = TxOutput(
@@ -99,10 +99,10 @@ class TestCreateP2pkhTransaction(unittest.TestCase):
         # values for testing sighash single and sighash all/none/single with
         # anyonecanpay
         self.sig_txin1 = TxInput(
-            "76464c2b9e2af4d63ef38a77964b3b77e629dddefc5cb9eb1a3645b1608b790f", 0
+            "76464c2b9e2af4d63ef38a77964b3b77e629dddefc5cb9eb1a3645b1608b790f", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.sig_txin2 = TxInput(
-            "76464c2b9e2af4d63ef38a77964b3b77e629dddefc5cb9eb1a3645b1608b790f", 1
+            "76464c2b9e2af4d63ef38a77964b3b77e629dddefc5cb9eb1a3645b1608b790f", 1, sequence=b"\xff\xff\xff\xff"
         )
         self.sig_from_addr1 = P2pkhAddress("n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR")
         self.sig_from_addr2 = P2pkhAddress("mmYNBho9BWQB2dSniP1NJvnPoj5EVWw89w")

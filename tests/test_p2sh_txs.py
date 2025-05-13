@@ -24,7 +24,7 @@ class TestCreateP2shTransaction(unittest.TestCase):
     def setUp(self):
         setup("testnet")
         self.txin = TxInput(
-            "76464c2b9e2af4d63ef38a77964b3b77e629dddefc5cb9eb1a3645b1608b790f", 0
+            "76464c2b9e2af4d63ef38a77964b3b77e629dddefc5cb9eb1a3645b1608b790f", 0, sequence=b"\xff\xff\xff\xff"
         )
         self.from_addr = P2pkhAddress("n4bkvTyU1dVdzsrhWBqBw8fEMbHjJvtmJR")
         self.sk = PrivateKey("cTALNpTpRbbxTCJ2A5Vq88UxT44w1PE2cYqiB3n4hRvzyCev1Wwo")
@@ -47,7 +47,7 @@ class TestCreateP2shTransaction(unittest.TestCase):
         )
 
         self.txin_spend = TxInput(
-            "7db363d5a7fabb64ccce154e906588f1936f34481223ea8c1f2c935b0a0c945b", 0
+            "7db363d5a7fabb64ccce154e906588f1936f34481223ea8c1f2c935b0a0c945b", 0, sequence=b"\xff\xff\xff\xff"
         )
         # self.p2pk_sk , self.p2pk_redeem_script from above
         self.to_addr = self.from_addr
