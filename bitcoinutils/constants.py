@@ -71,7 +71,7 @@ DEFAULT_TX_LOCKTIME = b"\x00\x00\x00\x00"
 EMPTY_TX_SEQUENCE = b"\x00\x00\x00\x00"
 DEFAULT_TX_SEQUENCE = b"\xfd\xff\xff\xff"
 ABSOLUTE_TIMELOCK_SEQUENCE = b"\xfe\xff\xff\xff"
-SEQUENCE_FINAL = b"\xff\xff\xff\xff"
+FINAL_TX_SEQUENCE = b"\xff\xff\xff\xff"
 
 REPLACE_BY_FEE_SEQUENCE = b"\x01\x00\x00\x00"
 
