@@ -61,17 +61,21 @@ SIGHASH_SINGLE = 0x03
 SIGHASH_ANYONECANPAY = 0x80
 
 
-# Constants for time lock and RB
+# Constants for time lock and RBF
 TYPE_ABSOLUTE_TIMELOCK = 0x101
 TYPE_RELATIVE_TIMELOCK = 0x201
 TYPE_REPLACE_BY_FEE = 0x301
 
 DEFAULT_TX_LOCKTIME = b"\x00\x00\x00\x00"
 
+# required for signing
 EMPTY_TX_SEQUENCE = b"\x00\x00\x00\x00"
-DEFAULT_TX_SEQUENCE = b"\xfd\xff\xff\xff"
-ABSOLUTE_TIMELOCK_SEQUENCE = b"\xfe\xff\xff\xff"
+# was the default before full-RBF
 FINAL_TX_SEQUENCE = b"\xff\xff\xff\xff"
+# after full RBF
+DEFAULT_TX_SEQUENCE = b"\xfd\xff\xff\xff"
+
+ABSOLUTE_TIMELOCK_SEQUENCE = b"\xfe\xff\xff\xff"
 
 REPLACE_BY_FEE_SEQUENCE = b"\x01\x00\x00\x00"
 
@@ -93,8 +97,8 @@ NEGATIVE_SATOSHI = -1
 HEADER_SIZE = 80
 
 BLOCK_MAGIC_NUMBER = {
-    "f9beb4d9" : "mainnet",
-    "0b110907" : "testnet",
-    "fabfb5da" : "regtest",
-    "0a03cf40" : "signet"
+    "f9beb4d9": "mainnet",
+    "0b110907": "testnet",
+    "fabfb5da": "regtest",
+    "0a03cf40": "signet",
 }
