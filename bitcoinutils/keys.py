@@ -583,7 +583,7 @@ class PublicKey:
 
                 # compressed - SEC FORMAT: 0x02|0x03 + x coordinate (if 02 then y
                 # is even else y is odd. Calculate y and then instantiate the ecdsa key
-                x_coord = int(hex_str[2:], 16)
+                x_coord = int(hex_str if taproot else hex_str[2:], 16)
 
                 # y = modulo_square_root( (x**3 + 7) mod p ) -- there will be 2 y values
                 y_values = sqrt_mod(
