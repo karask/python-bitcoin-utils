@@ -72,8 +72,18 @@ class TestPublicKeys(unittest.TestCase):
             b"\xd9Y\xf2\x81[\x16\xf8\x17\x98H:\xdaw&\xa3\xc4e]\xa4\xfb\xfc\x0e\x11"
             b"\x08\xa8\xfd\x17\xb4H\xa6\x85T\x19\x9cG\xd0\x8f\xfb\x10\xd4\xb8"
         )
+
+        self.public_key_xonly = (
+            "1baf348d377cf9a73b39807b051bd7e6921bd9e5f4e78e5640803f1fd9b90501"
+        )
+        self.public_key_xonly_bytes = (
+            b"\x1b\xaf4\x8d7|\xf9\xa7;9\x80{\x05\x1b\xd7\xe6\x92\x1b\xd9\xe5\xf4\xe7"
+            b"\x8eV@\x80?\x1f\xd9\xb9\x05\x016\xee2\x0c\xfa\xb9\xaa\x93\xb5\xbf\x82"
+            b",'\xa9\xe7\xd5\xc3cN\xb9\xad~rh\xc5\xb0\x14\xaeY\xa0Y\xc4"
+        )
+
         self.address = "1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm"
-        
+
         # Message public key recovery tests
         self.valid_message = "Hello, Bitcoin!"
         # 65-byte Bitcoin signature (1-byte recovery ID + 64-byte ECDSA signature)
@@ -86,6 +96,10 @@ class TestPublicKeys(unittest.TestCase):
         self.assertEqual(pub1.to_bytes(), self.public_key_bytes)
         pub2 = PublicKey(self.public_key_hexc)
         self.assertEqual(pub2.to_bytes(), self.public_key_bytes)
+
+    def test_pubkey_creation_xonly(self):
+        xonly = PublicKey(self.public_key_xonly)
+        self.assertEqual(xonly.to_bytes(), self.public_key_xonly_bytes)
 
     def test_pubkey_uncompressed(self):
         pub = PublicKey(self.public_key_hex)
@@ -106,7 +120,7 @@ class TestPublicKeys(unittest.TestCase):
     def test_pubkey_x_only(self):
         pub = PublicKey(self.public_key_hex)
         self.assertEqual(pub.to_x_only_hex(), self.public_key_hex[2:66])
-    
+
     #Tests for PublicKey recovery from message and signature
     def test_public_key_recovery_valid(self):
         """Test successful public key recovery from a valid message and signature"""
@@ -351,6 +365,6 @@ class TestHDWallet(unittest.TestCase):
         hdw.from_path("m/44'/1'/0'/0/3")
         address = hdw.get_private_key().get_public_key().get_address()
         self.assertTrue(address.to_string(), self.legacy_address_m_44_1h_0h_0_3)
-        
+
 if __name__ == "__main__":
     unittest.main()
