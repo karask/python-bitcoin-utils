@@ -10,20 +10,24 @@
 # in the LICENSE file.
 
 """
-Example of creating a 2-of-3 multisig PSBT that can be signed by multiple parties using REAL TESTNET UTXOs.
+Example of creating a 2-of-3 multisig PSBT using REAL TESTNET4 UTXOs.
 
 This example demonstrates:
 1. Creating a 2-of-3 multisig P2WSH address (Segwit multisig)
-2. Creating a PSBT for spending from that address using real testnet UTXOs
+2. Creating a PSBT for spending from that address using real Testnet4 UTXOs
 3. Setting up the PSBT with proper input information for signing
 
-IMPORTANT: This uses REAL TESTNET transactions that can be verified on:
+IMPORTANT: This uses REAL TESTNET4 transactions that can be verified on:
 https://blockstream.info/testnet/
 
+Note: This script uses bitcoinutils with setup('testnet'), which defaults to Testnet3.
+      For Testnet4 compatibility, ensure your UTXOs are from Testnet4 and verify
+      using a Testnet4-compatible explorer or wallet.
+
 Before running this example:
-1. Get testnet coins from a faucet (e.g., https://coinfaucet.eu/en/btc-testnet/)
+1. Get Testnet4 coins from a faucet (e.g., https://faucet.testnet4.dev/)
 2. Create the multisig address shown below
-3. Send testnet coins to that address
+3. Send Testnet4 coins to that address
 4. Update the UTXO details below with your real transaction
 """
 
@@ -38,18 +42,18 @@ from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 
 def get_real_testnet_utxo():
     """
-    STEP-BY-STEP GUIDE TO GET REAL TESTNET UTXO:
+    STEP-BY-STEP GUIDE TO GET REAL TESTNET4 UTXO:
     
-    1. Visit https://blockstream.info/testnet/tx/recent
+    1. Visit a Testnet4 block explorer (e.g., https://blockstream.info/testnet/)
     2. Find any recent transaction with outputs
     3. Click on a transaction, copy its TXID
-    4. Replace the values below with real data
-    5. Verify the TXID works: https://blockstream.info/testnet/tx/YOUR_TXID
+    4. Replace the values below with real Testnet4 data
+    5. Verify the TXID works on a Testnet4-compatible explorer
     
     EXAMPLE OF HOW TO FIND REAL DATA:
-    - Go to https://blockstream.info/testnet/
+    - Go to a Testnet4-compatible explorer
     - Click "Recent Transactions"
-    - Pick any transaction (e.g. click on a TXID)
+    - Pick any transaction (e.g., click on a TXID)
     - Copy the TXID from the URL
     - Check the outputs for amount and vout index
     """
@@ -61,7 +65,7 @@ def get_real_testnet_utxo():
     if create_own_funding:
         # TODO: After running this script once:
         # 1. Note the multisig address printed below
-        # 2. Get testnet coins from faucet
+        # 2. Get Testnet4 coins from faucet
         # 3. Send coins to the multisig address
         # 4. Update these values with YOUR funding transaction
         utxo_details = {
@@ -72,10 +76,10 @@ def get_real_testnet_utxo():
             'is_placeholder': True  # Set to False when using real data
         }
     else:
-        # METHOD 2: Use any existing testnet UTXO (not recommended for production)
+        # METHOD 2: Use any existing Testnet4 UTXO (not recommended for production)
         # This is just for demonstration - don't spend other people's UTXOs!
         utxo_details = {
-            'txid': 'SOME_EXISTING_TESTNET_TXID',
+            'txid': 'SOME_EXISTING_TESTNET4_TXID',
             'vout': 0,
             'amount': to_satoshis(0.001),
             'address': None,
@@ -85,15 +89,15 @@ def get_real_testnet_utxo():
     # Validation
     if utxo_details['is_placeholder']:
         print(" PLACEHOLDER DATA DETECTED!")
-        print("   This PSBT uses placeholder data and won't work on testnet.")
-        print("   Follow these steps to use real testnet data:")
+        print("   This PSBT uses placeholder data and won't work on Testnet4.")
+        print("   Follow these steps to use real Testnet4 data:")
         print()
-        print("   STEP 1: Get testnet coins")
-        print("   • Visit: https://coinfaucet.eu/en/btc-testnet/")
+        print("   STEP 1: Get Testnet4 coins")
+        print("   • Visit: https://faucet.testnet4.dev/")
         print("   • Request coins to any address you control")
         print()
         print("   STEP 2: Fund the multisig (run this script first to get address)")
-        print("   • Send testnet coins to the multisig address")
+        print("   • Send Testnet4 coins to the multisig address")
         print("   • Wait for confirmation")
         print()
         print("   STEP 3: Update this function")
@@ -103,7 +107,7 @@ def get_real_testnet_utxo():
         print("   • Set utxo_details['is_placeholder'] = False")
         print()
         print("   STEP 4: Verify")
-        print("   • Check: https://blockstream.info/testnet/tx/your_real_txid")
+        print("   • Check on a Testnet4-compatible explorer")
         print("   • Confirm the UTXO exists and amount is correct")
         print()
     
@@ -111,11 +115,11 @@ def get_real_testnet_utxo():
 
 
 def main():
-    # Always call setup() first - using testnet for real transactions
+    # Always call setup() first - using testnet (Testnet3, compatible with Testnet4 with real UTXOs)
     setup('testnet')
     
     print("=" * 70)
-    print("Creating 2-of-3 Multisig PSBT with REAL TESTNET UTXOs")
+    print("Creating 2-of-3 Multisig PSBT with REAL TESTNET4 UTXOs")
     print("=" * 70)
     
     # Step 1: Create three private keys (representing Alice, Bob, and Charlie)
@@ -157,10 +161,10 @@ def main():
     # Create P2WSH address from the witness script
     p2wsh_address = witness_script.to_p2wsh_script_pub_key().to_address()
     print(f"P2WSH Multisig Address: {p2wsh_address}")
-    print(f" Check this address on: https://blockstream.info/testnet/address/{p2wsh_address}")
+    print(f" Check this address on a Testnet4-compatible explorer")
     
-    # Step 3: Get real testnet UTXO details
-    print("\n3. Getting real testnet UTXO details...")
+    # Step 3: Get real Testnet4 UTXO details
+    print("\n3. Getting real Testnet4 UTXO details...")
     utxo = get_real_testnet_utxo()
     utxo['address'] = p2wsh_address
     
@@ -171,16 +175,16 @@ def main():
     print(f"  Address: {utxo['address']}")
     
     if utxo['is_placeholder']:
-        print(f" PLACEHOLDER: https://blockstream.info/testnet/tx/{utxo['txid']}")
+        print(f" PLACEHOLDER: This TXID is not verifiable")
         print(f"   This TXID won't verify - it's just an example format")
     else:
-        print(f" VERIFY: https://blockstream.info/testnet/tx/{utxo['txid']}")
-        print(f"   This should show a real testnet transaction")
+        print(f" VERIFY: Check on a Testnet4-compatible explorer")
+        print(f"   This should show a real Testnet4 transaction")
     
     # Step 4: Create transaction inputs and outputs
     print("\n4. Setting up transaction...")
     
-    # Input: Real testnet UTXO
+    # Input: Real Testnet4 UTXO
     txin = TxInput(utxo['txid'], utxo['vout'])
     
     # Output: Send to Charlie's P2WPKH address (modern Segwit address)
@@ -214,28 +218,25 @@ def main():
     print(f"PSBT base64: {psbt.to_base64()}")
     
     # Step 6: Display verification information
-    print("\n6. TESTNET VERIFICATION")
+    print("\n6. TESTNET4 VERIFICATION")
     print("=" * 50)
     
     if utxo['is_placeholder']:
         print(" USING PLACEHOLDER DATA - NOT VERIFIABLE")
         print("   Current TXID is fake and won't verify on explorer")
         print("   To fix this:")
-        print("   1. Get real testnet coins from faucet")
+        print("   1. Get real Testnet4 coins from faucet")
         print("   2. Send to the multisig address above")
         print("   3. Update get_real_testnet_utxo() with real data")
         print()
-        print(" When ready, verify with:")
-        print(f"   https://blockstream.info/testnet/tx/YOUR_REAL_TXID")
+        print(" When ready, verify with a Testnet4-compatible explorer")
     else:
-        print(" REAL TESTNET DATA - VERIFIABLE")
-        print(" Verify input transaction:")
-        print(f"   https://blockstream.info/testnet/tx/{utxo['txid']}")
+        print(" REAL TESTNET4 DATA - VERIFIABLE")
+        print(" Verify input transaction on a Testnet4-compatible explorer")
         
-    print(f" Check multisig address balance:")
-    print(f"   https://blockstream.info/testnet/address/{p2wsh_address}")
+    print(f" Check multisig address balance on a Testnet4-compatible explorer")
     print(f" After signing and broadcasting, check output:")
-    print(f"   https://blockstream.info/testnet/address/{charlie_p2wpkh_address}")
+    print(f"   Address: {charlie_p2wpkh_address}")
     
     # Step 7: Display signing workflow
     print("\n7. SIGNING WORKFLOW")
@@ -255,8 +256,8 @@ def main():
     print("3.  Finalize and broadcast:")
     print("   - Combine signatures (2 of 3 threshold met)")
     print("   - Finalize PSBT to create broadcastable transaction")
-    print("   - Broadcast to testnet")
-    print("   - Monitor on blockstream.info/testnet")
+    print("   - Broadcast to Testnet4")
+    print("   - Monitor on a Testnet4-compatible explorer")
     
     # Step 8: Show the structure for educational purposes
     print("\n8. PSBT STRUCTURE ANALYSIS")
@@ -280,33 +281,32 @@ def main():
     print(f"  - Recipient: {charlie_p2wpkh_address}")
     print(f"  - Script type: P2WPKH")
     
-    # Step 9: How to get real testnet coins
-    print("\n9. HOW TO GET REAL TESTNET COINS & TXID")
+    # Step 9: How to get real Testnet4 coins
+    print("\n9. HOW TO GET REAL TESTNET4 COINS & TXID")
     print("=" * 50)
-    print("COMPLETE WORKFLOW FOR REAL TESTNET DATA:")
+    print("COMPLETE WORKFLOW FOR REAL TESTNET4 DATA:")
     print()
     print("PHASE 1: Setup")
     print("1.  Run this script AS-IS to get your multisig address")
     print("2.  Copy the P2WSH address from the output above")
     print()
-    print("PHASE 2: Get testnet coins")
-    print("3.  Visit testnet faucet:")
-    print("   • https://coinfaucet.eu/en/btc-testnet/")
-    print("   • https://testnet.help/en/btcfaucet/testnet")
+    print("PHASE 2: Get Testnet4 coins")
+    print("3.  Visit Testnet4 faucet:")
+    print("   • https://faucet.testnet4.dev/")
     print("   • Request 0.001+ BTC to any address you control")
     print()
     print("PHASE 3: Fund multisig")
-    print("4.  Send testnet coins to your multisig address:")
+    print("4.  Send Testnet4 coins to your multisig address:")
     print(f"   • Send to: {p2wsh_address}")
     print("   • Amount: 0.001 BTC (or whatever you got from faucet)")
     print("   • Wait for 1+ confirmations")
     print()
     print("PHASE 4: Get real TXID")
     print("5.  Find your funding transaction:")
-    print("   • Go to: https://blockstream.info/testnet/")
+    print("   • Use a Testnet4-compatible explorer")
     print("   • Search for your multisig address")
     print("   • Click on the funding transaction")
-    print("   • Copy the TXID from the URL")
+    print("   • Copy the TXID")
     print()
     print("PHASE 5: Update code")
     print("6.   Edit get_real_testnet_utxo() function:")
@@ -316,18 +316,18 @@ def main():
     print()
     print("PHASE 6: Verify & test")
     print("7.  Re-run this script")
-    print("   • Should show  REAL TESTNET DATA")
-    print("   • TXID link should work in browser")
+    print("   • Should show REAL TESTNET4 DATA")
+    print("   • TXID should be verifiable on a Testnet4 explorer")
     print("   • PSBT should be ready for signing")
     print()
-    print("EXAMPLE of real testnet TXID format:")
+    print("EXAMPLE of real Testnet4 TXID format:")
     print("b4c1a58d7f8e9a2b3c4d5e6f1234567890abcdef1234567890abcdef12345678")
     print("(64 hex characters - yours will look similar)")
     print()
     print(" Your mentor can then verify:")
-    print("• Paste your TXID into testnet explorer")
+    print("• Paste your TXID into a Testnet4-compatible explorer")
     print("• See real transaction with real UTXOs") 
-    print("• Confirm PSBT references actual blockchain data")
+    print("• Confirm PSBT references actual Testnet4 blockchain data")
     
     return psbt, {
         'multisig_address': p2wsh_address,
@@ -346,12 +346,11 @@ if __name__ == "__main__":
     print(f" PSBT (base64): {created_psbt.to_base64()}")
     print()
     print(" NEXT STEPS:")
-    print("1. Fund the multisig address with real testnet coins")
+    print("1. Fund the multisig address with real Testnet4 coins")
     print("2. Update the UTXO details in get_real_testnet_utxo()")
     print("3. Re-run this script")
     print("4. Sign the PSBT with 2 of the 3 private keys")
-    print("5. Broadcast to testnet and verify on blockstream.info")
+    print("5. Broadcast to Testnet4 and verify on a Testnet4-compatible explorer")
     print()
     print(f" Multisig address: {info['multisig_address']}")
-    print(f" Check balance: https://blockstream.info/testnet/address/{info['multisig_address']}")
-
+    print(f" Check balance on a Testnet4-compatible explorer")
