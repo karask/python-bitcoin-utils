@@ -1,3 +1,26 @@
+"""
+Partially Signed Bitcoin Transaction (PSBT) implementation following
+BIP-174.
+
+This module provides the PSBT class which represents a partially signed
+bitcoin transaction that can be shared between multiple parties for signing
+before broadcasting to the network.
+
+A PSBT contains:
+- The unsigned transaction
+- Input metadata needed for signing (UTXOs, scripts, keys, etc.)
+- Output metadata for validation
+- Partial signatures from different signers
+
+The PSBT workflow typically involves:
+1. Creator: Creates the PSBT with the unsigned transaction
+2. Updater: Adds input/output metadata needed for signing
+3. Signer: Signs inputs they can sign (sign_input() handles all script types automatically)
+4. Combiner: Combines multiple PSBTs with different signatures
+5. Finalizer: Finalizes the PSBT by adding final scriptSig/witness
+6. Extractor: Extracts the final signed transaction
+"""
+
 import struct
 from io import BytesIO
 import ecdsa
@@ -11,6 +34,28 @@ from bitcoinutils.utils import encode_varint
 from bitcoinutils.utils import read_varint
 
 class PSBTInput:
+    """Represents a single input in a PSBT with all associated metadata.
+    
+    This class holds all the data associated with a single input in a PSBT,
+    including UTXO information, partial signatures, scripts, and derivation paths.
+    
+    Attributes:
+        non_witness_utxo: The complete previous transaction for non-witness inputs
+        witness_utxo: The previous transaction output for witness inputs
+        partial_sigs: Dictionary mapping public keys to their signatures
+        sighash_type: The signature hash type to use for this input
+        redeem_script: The redeem script for P2SH inputs
+        witness_script: The witness script for P2WSH or P2SH-P2WSH inputs
+        bip32_derivs: Dictionary mapping public keys to their BIP32 derivation paths
+        final_scriptsig: The finalized scriptSig for this input
+        final_scriptwitness: The finalized witness stack for this input
+        ripemd160_preimages: Preimages for RIPEMD160 hashes
+        sha256_preimages: Preimages for SHA256 hashes
+        hash160_preimages: Preimages for HASH160 hashes
+        hash256_preimages: Preimages for HASH256 hashes
+        proprietary: Proprietary key-value pairs
+        unknown: Unknown key-value pairs
+    """
 
     def __init__(self):
         # BIP-174 defined fields
@@ -35,6 +80,18 @@ class PSBTInput:
         self.unknown: Dict[bytes, bytes] = {}
 
 class PSBTOutput:
+    """Represents a single output in a PSBT with all associated metadata.
+    
+    This class holds all the data associated with a single output in a PSBT,
+    including scripts and derivation paths.
+    
+    Attributes:
+        redeem_script: The redeem script for P2SH outputs
+        witness_script: The witness script for P2WSH or P2SH-P2WSH outputs
+        bip32_derivs: Dictionary mapping public keys to their BIP32 derivation paths
+        proprietary: Proprietary key-value pairs
+        unknown: Unknown key-value pairs
+    """
 
     def __init__(self):
         # BIP-174 defined fields
@@ -47,18 +104,39 @@ class PSBTOutput:
         self.unknown: Dict[bytes, bytes] = {}
 
 class PSBT:
+    """Bitcoin Partially Signed Bitcoin Transaction (PSBT) implementation as per BIP-174.
+    
+    This class provides a complete implementation of the PSBT format, allowing for
+    the creation, parsing, signing, combining, and finalization of PSBTs.
+    
+    PSBTs are useful for constructing transactions in a collaborative manner,
+    where multiple parties may need to provide signatures or where signing
+    happens on offline/hardware devices.
+    
+    Attributes:
+        tx: The unsigned transaction
+        inputs: List of PSBTInput objects containing input-specific data
+        outputs: List of PSBTOutput objects containing output-specific data
+        version: PSBT version number
+        xpubs: Dictionary mapping extended public keys to derivation paths
+        proprietary: Global proprietary key-value pairs
+        unknown: Global unknown key-value pairs
+    """
+
     # PSBT magic bytes and version
     MAGIC = b'psbt'
     VERSION = 0
 
     # Key types as defined in BIP-174
     class GlobalTypes:
+        """Global key types for PSBT as defined in BIP-174."""
         UNSIGNED_TX = 0x00
         XPUB = 0x01
         VERSION = 0xFB
         PROPRIETARY = 0xFC
 
     class InputTypes:
+        """Input key types for PSBT as defined in BIP-174."""
         NON_WITNESS_UTXO = 0x00
         WITNESS_UTXO = 0x01
         PARTIAL_SIG = 0x02
@@ -75,12 +153,24 @@ class PSBT:
         PROPRIETARY = 0xFC
 
     class OutputTypes:
+        """Output key types for PSBT as defined in BIP-174."""
         REDEEM_SCRIPT = 0x00
         WITNESS_SCRIPT = 0x01
         BIP32_DERIVATION = 0x02
         PROPRIETARY = 0xFC
 
     def _safe_to_bytes(self, obj):
+        """Safely convert various object types to bytes.
+        
+        Args:
+            obj: Object to convert to bytes
+            
+        Returns:
+            bytes: The object converted to bytes
+            
+        Raises:
+            TypeError: If the object cannot be converted to bytes
+        """
         if isinstance(obj, Script):
             return obj.to_bytes()
         elif hasattr(obj, 'to_bytes'):
@@ -94,7 +184,14 @@ class PSBT:
 
 
     def _safe_serialize_transaction(self, tx) -> bytes:
-        """Safely serialize a transaction to bytes."""
+        """Safely serialize a transaction to bytes.
+        
+        Args:
+            tx: Transaction to serialize
+            
+        Returns:
+            bytes: Serialized transaction
+        """
         if isinstance(tx, bytes):
             return tx
         
@@ -104,6 +201,12 @@ class PSBT:
         return serialized
 
     def __init__(self, unsigned_tx: Optional[Transaction] = None):
+        """
+        Initialize a new PSBT.
+
+        Args:
+            unsigned_tx: The unsigned transaction. If None, an empty transaction is created.
+        """
         if unsigned_tx is None:
             # Create empty transaction
             self.tx = Transaction([], [])
@@ -129,12 +232,34 @@ class PSBT:
 
     @classmethod
     def from_base64(cls, psbt_str: str) -> 'PSBT':
+        """Create a PSBT from a base64-encoded string.
+        
+        Args:
+            psbt_str: Base64-encoded PSBT string
+            
+        Returns:
+            PSBT: Decoded PSBT object
+            
+        Raises:
+            ValueError: If the string is not a valid base64-encoded PSBT
+        """
         import base64
         psbt_bytes = base64.b64decode(psbt_str)
         return cls.from_bytes(psbt_bytes)
 
     @classmethod
     def from_bytes(cls, psbt_bytes: bytes) -> 'PSBT':
+        """Create a PSBT from raw bytes.
+        
+        Args:
+            psbt_bytes: Raw PSBT bytes
+            
+        Returns:
+            PSBT: Parsed PSBT object
+            
+        Raises:
+            ValueError: If the bytes do not represent a valid PSBT
+        """
         stream = BytesIO(psbt_bytes)
 
         # Read and verify magic
@@ -162,10 +287,20 @@ class PSBT:
         return psbt
 
     def to_base64(self) -> str:
+        """Encode the PSBT as a base64 string.
+        
+        Returns:
+            str: Base64-encoded PSBT
+        """
         import base64
         return base64.b64encode(self.to_bytes()).decode('ascii')
 
     def to_bytes(self) -> bytes:
+        """Serialize the PSBT to raw bytes.
+        
+        Returns:
+            bytes: Serialized PSBT
+        """
         result = BytesIO()
 
         # Write magic and separator
@@ -186,6 +321,13 @@ class PSBT:
         return result.getvalue()
 
     def add_input(self, tx_input: TxInput, psbt_input: Optional[PSBTInput] = None) -> None:
+        """Add an input to the PSBT.
+        
+        Args:
+            tx_input: Transaction input to add
+            psbt_input: Optional PSBTInput with metadata. If not provided,
+                       an empty PSBTInput will be created.
+        """
         # Create clean input without scriptSig
         clean_input = TxInput(tx_input.txid, tx_input.txout_index)
         self.tx.inputs.append(clean_input)
@@ -195,6 +337,13 @@ class PSBT:
         self.inputs.append(psbt_input)
 
     def add_output(self, tx_output: TxOutput, psbt_output: Optional[PSBTOutput] = None) -> None:
+        """Add an output to the PSBT.
+        
+        Args:
+            tx_output: Transaction output to add
+            psbt_output: Optional PSBTOutput with metadata. If not provided,
+                        an empty PSBTOutput will be created.
+        """
         self.tx.outputs.append(tx_output)
 
         if psbt_output is None:
@@ -202,9 +351,35 @@ class PSBT:
         self.outputs.append(psbt_output)
 
     def sign(self, private_key: PrivateKey, input_index: int, sighash_type: int = 1) -> bool:
+        """Sign a specific input in the PSBT.
+        
+        This is a convenience method that calls sign_input.
+        
+        Args:
+            private_key: Private key to sign with
+            input_index: Index of the input to sign
+            sighash_type: Signature hash type (default: SIGHASH_ALL = 1)
+            
+        Returns:
+            bool: True if signing was successful, False otherwise
+        """
         return self.sign_input(input_index, private_key, sighash_type)
 
     def sign_input(self, input_index: int, private_key: PrivateKey, sighash_type: int = 1) -> bool:
+        """Sign a specific input in the PSBT.
+        
+        This method adds a partial signature for the specified input using the
+        provided private key. It automatically detects the script type and
+        handles both legacy and SegWit inputs.
+        
+        Args:
+            input_index: Index of the input to sign
+            private_key: Private key to sign with
+            sighash_type: Signature hash type (default: SIGHASH_ALL = 1)
+            
+        Returns:
+            bool: True if signing was successful, False otherwise
+        """
         try:
             psbt_input = self.inputs[input_index]
 
@@ -271,6 +446,19 @@ class PSBT:
             return False
 
     def _get_signature_for_input(self, input_index: int, private_key: PrivateKey, sighash_type: int) -> bytes:
+        """Get a signature for a specific input.
+        
+        This internal method generates a signature for the specified input,
+        handling different script types appropriately.
+        
+        Args:
+            input_index: Index of the input to sign
+            private_key: Private key to sign with
+            sighash_type: Signature hash type
+            
+        Returns:
+            bytes: The signature, or None if signing failed
+        """
         input_data = self.inputs[input_index]
         tx_input = self.tx.inputs[input_index]
 
@@ -399,21 +587,42 @@ class PSBT:
 
 
     def _is_p2pkh_script(self, script) -> bool:
-        """Check if script is P2PKH (OP_DUP OP_HASH160 <pubkeyhash> OP_EQUALVERIFY OP_CHECKSIG)."""
+        """Check if script is P2PKH (OP_DUP OP_HASH160 <pubkeyhash> OP_EQUALVERIFY OP_CHECKSIG).
+        
+        Args:
+            script: Script to check
+            
+        Returns:
+            bool: True if script is P2PKH, False otherwise
+        """
         try:
             return script.is_p2pkh() if hasattr(script, 'is_p2pkh') else False
         except:
             return False
 
     def _is_p2wpkh_script(self, script) -> bool:
-        """Check if script is P2WPKH (OP_0 <20-byte-pubkeyhash>)."""
+        """Check if script is P2WPKH (OP_0 <20-byte-pubkeyhash>).
+        
+        Args:
+            script: Script to check
+            
+        Returns:
+            bool: True if script is P2WPKH, False otherwise
+        """
         try:
             return script.is_p2wpkh() if hasattr(script, 'is_p2wpkh') else False
         except:
             return False
 
     def _is_p2tr_script(self, script_pubkey: Script) -> bool:
-        """Check if script is P2TR (Taproot)."""
+        """Check if script is P2TR (Taproot).
+        
+        Args:
+            script_pubkey: Script to check
+            
+        Returns:
+            bool: True if script is P2TR, False otherwise
+        """
         if not hasattr(script_pubkey, 'script'):
             return False
         
@@ -425,18 +634,43 @@ class PSBT:
                 len(script_ops[1]) == 32)
 
     def _is_input_finalized(self, psbt_input: PSBTInput) -> bool:
-        """Check if an input is already finalized."""
+        """Check if an input is already finalized.
+        
+        Args:
+            psbt_input: Input to check
+            
+        Returns:
+            bool: True if input is finalized, False otherwise
+        """
         return (psbt_input.final_scriptsig is not None or 
                 psbt_input.final_scriptwitness is not None)
 
     def _apply_final_fields(self, tx_input: TxInput, input_data: PSBTInput) -> None:
+        """Apply finalized fields to a transaction input.
+        
+        Args:
+            tx_input: Transaction input to update
+            input_data: PSBT input data containing finalized fields
+        """
         if input_data.final_scriptsig:
             tx_input.script_sig = input_data.final_scriptsig
         else:
             tx_input.script_sig = Script([])
 
     def _validate_final_tx(self, final_tx) -> dict:
-        """Validate the finalized transaction."""
+        """Validate the finalized transaction.
+        
+        Args:
+            final_tx: Transaction to validate
+            
+        Returns:
+            dict: Validation information including:
+                - valid: Whether the transaction is valid
+                - errors: List of error messages
+                - warnings: List of warning messages
+                - size: Transaction size in bytes
+                - vsize: Virtual size for fee calculation
+        """
         validation_info = {
             'valid': True,
             'errors': [],
@@ -495,7 +729,14 @@ class PSBT:
         return validation_info
 
     def _serialize_transaction_without_witness(self, tx) -> bytes:
-        """Serialize transaction without witness data for vsize calculation."""
+        """Serialize transaction without witness data for vsize calculation.
+        
+        Args:
+            tx: Transaction to serialize
+            
+        Returns:
+            bytes: Serialized transaction without witness data
+        """
         try:
             # Create a copy of the transaction without witness data
             from bitcoinutils.transactions import Transaction
@@ -534,6 +775,21 @@ class PSBT:
             return serialized
 
     def combine(self, other: 'PSBT') -> 'PSBT':
+        """Combine this PSBT with another PSBT.
+        
+        PSBTs can be combined when they represent the same unsigned transaction.
+        The resulting PSBT will contain all the data from both PSBTs, with data
+        from 'other' taking precedence in case of conflicts.
+        
+        Args:
+            other: Another PSBT to combine with this one
+            
+        Returns:
+            PSBT: A new PSBT containing combined data from both PSBTs
+            
+        Raises:
+            ValueError: If the PSBTs have different unsigned transactions
+        """
         # Ensure both PSBTs have the same unsigned transaction
         if self.tx.serialize() != other.tx.serialize():
             raise ValueError("Cannot combine PSBTs with different transactions")
@@ -610,12 +866,69 @@ class PSBT:
         return combined
 
     def combine_psbts(self, other_psbts: List['PSBT']) -> 'PSBT':
+        """Combines this PSBT with multiple other PSBTs.
+
+        Wraps the pairwise `combine()` method in a loop for batch combining.
+        All PSBTs must have the same unsigned transaction.
+
+        Parameters
+        ----------
+        other_psbts : List[PSBT]
+            A list of PSBTs to combine with this one
+
+        Returns
+        -------
+        PSBT
+            The final combined PSBT containing all partial signatures and
+            metadata from all input PSBTs
+
+        Raises
+        ------
+        ValueError
+            If any PSBT has a different unsigned transaction
+        """
         combined = self
         for other in other_psbts:
             combined = combined.combine(other)
         return combined
 
     def finalize(self, validate: bool = False) -> Union[Transaction, Tuple[Transaction, Dict]]:
+        """Finalizes all inputs and creates the final broadcastable transaction.
+
+        Attempts to finalize all inputs by converting partial signatures into
+        final scriptSig/scriptWitness fields. If successful, produces a fully
+        signed transaction ready for broadcast.
+
+        Parameters
+        ----------
+        validate : bool, optional
+            If True, validates the final transaction and returns validation
+            info along with the transaction (default: False)
+
+        Returns
+        -------
+        Transaction or Tuple[Transaction, Dict]
+            If validate=False: Transaction object ready for broadcast, or None
+            if not all inputs could be finalized
+            If validate=True: Tuple of (Transaction, validation_info dict)
+            containing the transaction and validation details
+
+        Raises
+        ------
+        ValueError
+            If not all inputs can be finalized when validate=True
+
+        Notes
+        -----
+        The validation_info dict contains:
+        - 'valid': bool indicating if transaction is valid
+        - 'errors': List of error messages
+        - 'warnings': List of warning messages
+        - 'txid': Transaction ID if computable
+        - 'size': Transaction size in bytes
+        - 'vsize': Virtual size for fee calculation
+        """
+
         # Count successfully finalized inputs
         finalized_count = 0
         for i in range(len(self.inputs)):
@@ -675,6 +988,26 @@ class PSBT:
             return final_tx
 
     def finalize_input(self, input_index: int) -> bool:
+        """Finalizes a specific input.
+
+        Converts partial signatures for a single input into final
+        scriptSig/scriptWitness fields.
+
+        Parameters
+        ----------
+        input_index : int
+            The index of the input to finalize
+
+        Returns
+        -------
+        bool
+            True if the input was successfully finalized, False otherwise
+
+        Raises
+        ------
+        ValueError
+            If input_index is out of range
+        """
         
         if input_index >= len(self.inputs):
             raise ValueError(f"Input index {input_index} out of range")
@@ -682,6 +1015,21 @@ class PSBT:
         return self._finalize_input(input_index)
 
     def _finalize_input(self, input_index: int) -> bool:
+        """Internal method for finalizing a single input.
+
+        Handles the actual finalization logic for different script types
+        including P2PKH, P2WPKH, P2SH, P2WSH, and P2TR.
+
+        Parameters
+        ----------
+        input_index : int
+            The index of the input to finalize
+
+        Returns
+        -------
+        bool
+            True if the input was successfully finalized
+        """
        
         psbt_input = self.inputs[input_index]
 
@@ -722,7 +1070,19 @@ class PSBT:
         return False
 
     def _finalize_p2pkh(self, psbt_input: PSBTInput) -> bool:
-        """Finalize P2PKH input."""
+        """Finalizes a P2PKH (Pay-to-PubKey-Hash) input.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input to finalize
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+        """
+
         if len(psbt_input.partial_sigs) != 1:
             return False
 
@@ -731,7 +1091,19 @@ class PSBT:
         return True
 
     def _finalize_p2wpkh(self, psbt_input: PSBTInput) -> bool:
-        """Finalize P2WPKH input."""
+        """Finalizes a P2WPKH (Pay-to-Witness-PubKey-Hash) input.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input to finalize
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+        """
+
         if len(psbt_input.partial_sigs) != 1:
             return False
 
@@ -741,7 +1113,20 @@ class PSBT:
         return True
 
     def _finalize_p2sh(self, psbt_input: PSBTInput) -> bool:
-        """Finalize P2SH input with support for nested SegWit."""
+        """Finalizes a P2SH (Pay-to-Script-Hash) input.
+
+        Handles both regular P2SH and P2SH-wrapped SegWit scripts.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input to finalize
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+        """
         if not psbt_input.redeem_script:
             return False
 
@@ -762,7 +1147,18 @@ class PSBT:
             return success
 
     def _finalize_p2sh_p2wpkh(self, psbt_input: PSBTInput) -> bool:
-        """Finalize P2SH-wrapped P2WPKH input."""
+        """Finalizes a P2SH-wrapped P2WPKH input.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input to finalize
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+        """
         if len(psbt_input.partial_sigs) != 1:
             return False
 
@@ -779,7 +1175,18 @@ class PSBT:
         return True
 
     def _finalize_p2sh_p2wsh(self, psbt_input: PSBTInput) -> bool:
-        """Finalize P2SH-wrapped P2WSH input."""
+        """Finalizes a P2SH-wrapped P2WSH input.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input to finalize
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+        """
         if not psbt_input.witness_script:
             return False
 
@@ -795,14 +1202,38 @@ class PSBT:
         return success
 
     def _finalize_p2wsh(self, psbt_input: PSBTInput) -> bool:
-        """Finalize P2WSH input."""
+        """Finalizes a P2WSH (Pay-to-Witness-Script-Hash) input.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input to finalize
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+        """
         if not psbt_input.witness_script:
             return False
 
         return self._finalize_script(psbt_input, psbt_input.witness_script, is_witness=True)
 
     def _finalize_p2tr(self, psbt_input: PSBTInput) -> bool:
-        """Finalize P2TR (Taproot) input."""
+        """Finalizes a P2TR (Pay-to-Taproot) input.
+
+        Currently supports only key-path spending.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input to finalize
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+        """
         if len(psbt_input.partial_sigs) != 1:
             return False
 
@@ -813,8 +1244,30 @@ class PSBT:
         return True
 
     def _finalize_script(self, psbt_input: PSBTInput, script: Script, is_witness: bool) -> bool:
-        """
-        Finalize a script by constructing the appropriate scriptSig or witness.
+        """Finalizes a script with enhanced multisig support.
+
+        Handles the finalization of complex scripts, particularly multisig
+        scripts, by properly ordering signatures according to the public
+        keys in the script.
+
+        Parameters
+        ----------
+        psbt_input : PSBTInput
+            The PSBT input containing partial signatures
+        script : Script
+            The script to finalize against
+        is_witness : bool
+            Whether this is a witness script (affects output format)
+
+        Returns
+        -------
+        bool
+            True if finalization was successful
+
+        Notes
+        -----
+        For multisig scripts, signatures must be provided in the same order
+        as their corresponding public keys appear in the script.
         """
         script_ops = script.script if hasattr(script, "script") else []
 
@@ -896,7 +1349,21 @@ class PSBT:
         return False
 
     def _parse_global_section(self, stream: BytesIO) -> None:
-        """Parse the global section of a PSBT."""
+        """Parses the global section of a PSBT from a byte stream.
+
+        Reads and processes global key-value pairs including the unsigned
+        transaction, extended public keys, version, and proprietary data.
+
+        Parameters
+        ----------
+        stream : BytesIO
+            The byte stream positioned at the start of the global section
+
+        Raises
+        ------
+        ValueError
+            If required fields are missing or malformed
+        """
         while True:
             # Read key-value pair
             key_data = self._read_key_value_pair(stream)
@@ -921,7 +1388,23 @@ class PSBT:
                 self.unknown[key_data] = value_data
 
     def _parse_input_section(self, stream: BytesIO, input_index: int) -> None:
-        """Parse an input section of a PSBT."""
+        """Parses an input section of a PSBT from a byte stream.
+
+        Reads and processes all key-value pairs for a specific input including
+        UTXOs, partial signatures, scripts, and derivation paths.
+
+        Parameters
+        ----------
+        stream : BytesIO
+            The byte stream positioned at the start of the input section
+        input_index : int
+            The index of the input being parsed
+
+        Raises
+        ------
+        ValueError
+            If the stream ends unexpectedly or data is malformed
+        """
         psbt_input = self.inputs[input_index]
         
         while True:
@@ -973,7 +1456,23 @@ class PSBT:
                 psbt_input.unknown[key_data] = value_data
 
     def _parse_output_section(self, stream: BytesIO, output_index: int) -> None:
-        """Parse an output section of a PSBT."""
+        """Parses an output section of a PSBT from a byte stream.
+
+        Reads and processes all key-value pairs for a specific output including
+        scripts and derivation paths.
+
+        Parameters
+        ----------
+        stream : BytesIO
+            The byte stream positioned at the start of the output section
+        output_index : int
+            The index of the output being parsed
+
+        Raises
+        ------
+        ValueError
+            If the stream ends unexpectedly or data is malformed
+        """
         psbt_output = self.outputs[output_index]
         
         while True:
@@ -997,7 +1496,16 @@ class PSBT:
                 psbt_output.unknown[key_data] = value_data
 
     def _serialize_global_section(self, result: BytesIO) -> None:
-        """Serialize the global section of a PSBT."""
+        """Serializes the global section of a PSBT to a byte stream.
+
+        Writes all global key-value pairs including the unsigned transaction,
+        extended public keys, version, and proprietary data.
+
+        Parameters
+        ----------
+        result : BytesIO
+            The byte stream to write the serialized data to
+        """
         
         # Unsigned transaction (required)
         if self.tx:
@@ -1029,11 +1537,23 @@ class PSBT:
         result.write(b'\x00')
 
     def _read_key_value_pair(self, stream: BytesIO) -> Optional[Tuple[int, bytes, bytes]]:
-        """
-        Read a key-value pair from the stream.
-        
-        Returns:
-            Tuple of (key_type, key_data, value_data) or None if separator found
+        """Reads a single key-value pair from a PSBT byte stream.
+
+        Parameters
+        ----------
+        stream : BytesIO
+            The byte stream to read from
+
+        Returns
+        -------
+        Optional[Tuple[int, bytes, bytes]]
+            Tuple of (key_type, key_data, value_data) or None if a separator
+            (0x00) is encountered
+
+        Raises
+        ------
+        ValueError
+            If the stream ends unexpectedly while reading
         """
         # Read key length
         key_len_bytes = stream.read(1)
@@ -1068,7 +1588,18 @@ class PSBT:
         return key_type, key_data, value
 
     def _serialize_input_section(self, result: BytesIO, input_index: int) -> None:
-        """Serialize an input section."""
+        """Serializes an input section of a PSBT to a byte stream.
+
+        Writes all key-value pairs for a specific input including UTXOs,
+        partial signatures, scripts, derivation paths, and finalized scripts.
+
+        Parameters
+        ----------
+        result : BytesIO
+            The byte stream to write the serialized data to
+        input_index : int
+            The index of the input to serialize
+        """
         psbt_input = self.inputs[input_index]
 
         # Ensure scripts are Script objects, not bytes
@@ -1181,7 +1712,19 @@ class PSBT:
         result.write(b'\x00')
 
     def _serialize_output_section(self, result: BytesIO, output_index: int) -> None:
-        """Serialize an output section."""
+        """Serializes an output section of a PSBT to a byte stream.
+
+        Writes all key-value pairs for a specific output including scripts
+        and derivation paths.
+
+        Parameters
+        ----------
+        result : BytesIO
+            The byte stream to write the serialized data to
+        output_index : int
+            The index of the output to serialize
+        """
+
         psbt_output = self.outputs[output_index]
 
         # Ensure scripts are Script objects, not bytes
@@ -1220,7 +1763,22 @@ class PSBT:
         result.write(b'\x00')
 
     def _write_key_value_pair(self, result: BytesIO, key_type: int, key_data: bytes, value_data: bytes) -> None:
-        """Write a key-value pair to the stream."""
+        """Writes a key-value pair to a PSBT byte stream.
+
+        Formats and writes a single key-value pair according to the PSBT
+        specification, including proper length encoding.
+
+        Parameters
+        ----------
+        result : BytesIO
+            The byte stream to write to
+        key_type : int
+            The type identifier for this key-value pair
+        key_data : bytes
+            Additional key data (may be empty)
+        value_data : bytes
+            The value data to write
+        """
         key = bytes([key_type]) + key_data
         result.write(encode_varint(len(key)))
         result.write(key)
