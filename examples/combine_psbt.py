@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
-
 """
-Combine multiple PSBTs (Partially Signed Bitcoin Transactions) into a single PSBT with merged signatures and metadata.
+Example of combining multiple PSBTs into a single PSBT.
 
-This script performs the combiner role defined in BIP-174, allowing multiple signers to contribute signatures separately,
-and then merge their PSBTs into one unified transaction.
+This example demonstrates how to:
+1. Load multiple PSBTs that contain partial signatures
+2. Combine them into a single PSBT with all signatures
+3. Output the combined PSBT
 
-Features:
-- Loads multiple base64-encoded PSBTs
-- Merges all inputs, outputs, and partial signatures
-- Validates consistency across PSBTs before combining
-- Outputs a single combined PSBT in base64 format
+This is typically used in multisig scenarios where different
+participants sign the same transaction independently and then
+combine their signatures.
 
 Usage:
     python combine_psbt.py <psbt1_base64> <psbt2_base64> [<psbt3_base64> ...]
 
-Returns:
-    Combined PSBT with merged data from all inputs
+Example:
+    # Combine Alice's and Bob's signed PSBTs
+    python combine_psbt.py cHNidP8BAH... cHNidP8BAH...
+
+Note: All PSBTs must be for the same transaction. The combine
+      operation merges all partial signatures and other data.
 """
 
 import sys
@@ -24,20 +27,23 @@ from bitcoinutils.setup import setup
 from bitcoinutils.psbt import PSBT
 
 def main():
+    """Combine multiple PSBTs into one."""
+    
+    # Always set the network first
     setup('testnet')
     
     if len(sys.argv) < 3:
-        print("Usage: python combine_psbt.py <psbt1_base64> <psbt2_base64> [psbt3_base64] ...")
+        print("Usage: python combine_psbt.py <psbt1_base64> <psbt2_base64> [<psbt3_base64> ...]")
         return
     
-    # Load PSBTs from command line arguments
-    psbts = [PSBT.from_base64(psbt_base64) for psbt_base64 in sys.argv[1:]]
+    # Load first PSBT
+    psbt = PSBT.from_base64(sys.argv[1])
     
-    # Combine all PSBTs using the first one as base
-    combined_psbt = psbts[0].combine_psbts(psbts[1:])
+    # Load and combine with remaining PSBTs
+    other_psbts = [PSBT.from_base64(base64_str) for base64_str in sys.argv[2:]]
+    combined = psbt.combine_psbts(other_psbts)
     
-    # Output the combined PSBT
-    print(combined_psbt.to_base64())
+    print(combined.to_base64())
 
 if __name__ == "__main__":
     main()

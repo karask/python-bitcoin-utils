@@ -1,111 +1,75 @@
 #!/usr/bin/env python3
 """
-Finalize a PSBT (Partially Signed Bitcoin Transaction) to produce a broadcastable Bitcoin transaction.
+Example of finalizing a PSBT into a complete transaction.
 
-This script serves as the finalizer step (as defined in BIP-174), assembling signatures and scripts
-into a complete transaction ready for broadcast.
+This example demonstrates how to:
+1. Load a PSBT that has all required signatures
+2. Finalize it into a complete transaction
+3. Optionally validate the transaction
+4. Output the hex transaction ready for broadcast
 
-Features:
-- Loads a base64-encoded PSBT from string or file
-- Finalizes all inputs by constructing scriptSig/scriptWitness
-- Optionally validates that all inputs are fully signed before finalization
-- Outputs the raw hex-encoded Bitcoin transaction
+The finalization process extracts all signatures from the PSBT
+and constructs the final scriptSig and/or witness data.
 
 Usage:
-    python finalize_psbt.py <psbt_base64_string>
-    python finalize_psbt.py --file <psbt_file.txt>
-    python finalize_psbt.py --file <psbt_file.txt> --validate
+    python finalize_psbt.py <psbt_base64> [--validate]
 
-Arguments:
-    <psbt_base64_string>        PSBT data as a base64-encoded string
-    --file <psbt_file.txt>      Load PSBT from a file
-    --validate                  (Optional) Enforce validation before finalizing
+Example:
+    # Basic finalization
+    python finalize_psbt.py cHNidP8BAH...
+    
+    # With validation
+    python finalize_psbt.py cHNidP8BAH... --validate
 
-Returns:
-    Hex-encoded, fully signed Bitcoin transaction ready for broadcast
+Note: The PSBT must have all required signatures before finalization.
+      Use --validate to perform additional transaction validation.
 """
 
-
-import argparse
-import base64
 import sys
 from bitcoinutils.setup import setup
 from bitcoinutils.psbt import PSBT
 
-
 def main():
-    """
-    Main function for PSBT finalization.
+    """Finalize a PSBT into a complete transaction."""
     
-    Usage:
-        python finalize_psbt.py <psbt_base64_string>
-        python finalize_psbt.py --file <psbt_file.txt>
-        python finalize_psbt.py --file <psbt_file.txt> --validate
-    """
-    parser = argparse.ArgumentParser(description='Finalize a PSBT and create a transaction.')
-    parser.add_argument('psbt', nargs='?', help='Base64-encoded PSBT string')
-    parser.add_argument('--file', help='Text file containing base64 PSBT')
-    parser.add_argument('--validate', action='store_true', help='Validate finalized transaction')
-    parser.add_argument('--network', choices=['mainnet', 'testnet'], default='testnet', 
-                       help='Bitcoin network (default: testnet)')
+    # Always set the network first
+    setup('testnet')
     
-    args = parser.parse_args()
+    if len(sys.argv) < 2:
+        print("Usage: python finalize_psbt.py <psbt_base64> [--validate]")
+        return
     
-    # Setup the library for specified network
-    setup(args.network)
+    # Load PSBT
+    psbt = PSBT.from_base64(sys.argv[1])
     
-    try:
-        # Load PSBT from input
-        if args.file:
-            with open(args.file, 'r') as f:
-                psbt_b64 = f.read().strip()
-        elif args.psbt:
-            psbt_b64 = args.psbt
+    # Check if validation requested
+    validate = '--validate' in sys.argv
+    
+    # Finalize the PSBT
+    if validate:
+        final_tx, validation_info = psbt.finalize(validate=True)
+        if validation_info['valid']:
+            print(f"\nFinalized Transaction (hex):")
+            print(final_tx.to_hex())
+            print(f"\nTransaction ID: {final_tx.get_txid()}")
+            print(f"Size: {validation_info['size']} bytes")
+            print(f"Virtual Size: {validation_info['vsize']} vbytes")
+            
+            print(f"\nTo broadcast:")
+            print(f"  bitcoin-cli -testnet sendrawtransaction {final_tx.to_hex()[:50]}...")
         else:
-            print("Error: Provide either base64 string or --file option.")
-            print("Use --help for usage information.")
-            return 1
-        
-        # Create PSBT object
-        psbt = PSBT.from_base64(psbt_b64)
-        
-        # Finalize the PSBT
-        if args.validate:
-            final_tx, validation = psbt.finalize(validate=True)
-            
-            print("Finalized Transaction (Hex):")
-            print(final_tx.serialize())
-            
-            print("\nValidation Report:")
-            print(f"Valid: {validation['valid']}")
-            print(f"Transaction ID: {validation['txid']}")
-            print(f"Size: {validation['size']} bytes")
-            print(f"Virtual Size: {validation['vsize']} vbytes")
-            
-            if validation['errors']:
-                print("Errors:")
-                for error in validation['errors']:
-                    print(f"  - {error}")
-            
-            if validation['warnings']:
-                print("Warnings:")
-                for warning in validation['warnings']:
-                    print(f"  - {warning}")
-                    
+            print("Finalization failed - validation errors found")
+            sys.exit(1)
+    else:
+        final_tx = psbt.finalize(validate=False)
+        if final_tx:
+            print(final_tx.to_hex())
+            print(f"\nTransaction ID: {final_tx.get_txid()}")
+            print(f"\nTo broadcast:")
+            print(f"  bitcoin-cli -testnet sendrawtransaction {final_tx.to_hex()[:50]}...")
         else:
-            final_tx = psbt.finalize(validate=False)
-            print("Finalized Transaction (Hex):")
-            print(final_tx.serialize())
-            
-        print(f"\nTransaction ready to broadcast!")
-        print(f"Use 'bitcoin-cli sendrawtransaction {final_tx.serialize()}' to broadcast")
-        
-        return 0
-        
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return 1
-
+            print("Finalization failed - missing signatures or invalid PSBT")
+            sys.exit(1)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
