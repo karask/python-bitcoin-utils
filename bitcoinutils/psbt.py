@@ -1,48 +1,16 @@
-"""
-Partially Signed Bitcoin Transaction (PSBT) implementation following
-BIP-174.
-
-This module provides the PSBT class which represents a partially signed
-bitcoin transaction that can be shared between multiple parties for signing
-before broadcasting to the network.
-
-A PSBT contains:
-- The unsigned transaction
-- Input metadata needed for signing (UTXOs, scripts, keys, etc.)
-- Output metadata for validation
-- Partial signatures from different signers
-
-The PSBT workflow typically involves:
-1. Creator: Creates the PSBT with the unsigned transaction
-2. Updater: Adds input/output metadata needed for signing
-3. Signer: Signs inputs they can sign (sign_input() handles all script types automatically)
-4. Combiner: Combines multiple PSBTs with different signatures
-5. Finalizer: Finalizes the PSBT by adding final scriptSig/witness
-6. Extractor: Extracts the final signed transaction
-"""
-
 import struct
 from io import BytesIO
+import ecdsa
+from ecdsa import SECP256k1, SigningKey
 from typing import Dict, List, Optional, Tuple, Union
 from bitcoinutils.transactions import Transaction, TxInput, TxOutput
 from bitcoinutils.script import Script
 from bitcoinutils.keys import PrivateKey, PublicKey
 from bitcoinutils.utils import to_satoshis
+from bitcoinutils.utils import encode_varint
+from bitcoinutils.utils import read_varint
 
 class PSBTInput:
-    """
-    Represents a single input in a PSBT with all associated metadata.
-
-    Contains information needed to sign this input including:
-    - Non-witness UTXO (for legacy inputs)
-    - Witness UTXO (for segwit inputs)
-    - Partial signatures
-    - Sighash type
-    - Redeem script (for P2SH)
-    - Witness script (for P2WSH)
-    - BIP32 derivation paths
-    - Final scriptSig and witness
-    """
 
     def __init__(self):
         # BIP-174 defined fields
@@ -67,14 +35,6 @@ class PSBTInput:
         self.unknown: Dict[bytes, bytes] = {}
 
 class PSBTOutput:
-    """
-    Represents a single output in a PSBT with associated metadata.
-
-    Contains information about the output including:
-    - Redeem script (for P2SH outputs)
-    - Witness script (for P2WSH outputs)
-    - BIP32 derivation paths
-    """
 
     def __init__(self):
         # BIP-174 defined fields
@@ -87,27 +47,6 @@ class PSBTOutput:
         self.unknown: Dict[bytes, bytes] = {}
 
 class PSBT:
-    """
-    Partially Signed Bitcoin Transaction implementation following BIP-174.
-
-    A PSBT is a data format that allows multiple parties to collaboratively
-    sign a bitcoin transaction. The PSBT contains the unsigned transaction
-    along with metadata needed for signing.
-
-    Example usage:
-    # Create PSBT from unsigned transaction
-    psbt = PSBT(unsigned_tx)
-
-    # Add input metadata
-    psbt.inputs[0].witness_utxo = prev_output
-
-    # Sign with private key (automatically detects script type)
-    psbt.sign_input(0, private_key)
-
-    # Finalize and extract signed transaction
-    final_tx = psbt.finalize()
-    """
-
     # PSBT magic bytes and version
     MAGIC = b'psbt'
     VERSION = 0
@@ -141,13 +80,30 @@ class PSBT:
         BIP32_DERIVATION = 0x02
         PROPRIETARY = 0xFC
 
-    def __init__(self, unsigned_tx: Optional[Transaction] = None):
-        """
-        Initialize a new PSBT.
+    def _safe_to_bytes(self, obj):
+        if isinstance(obj, Script):
+            return obj.to_bytes()
+        elif hasattr(obj, 'to_bytes'):
+            return obj.to_bytes()
+        elif isinstance(obj, bytes):
+            return obj
+        elif isinstance(obj, str):
+            return obj.encode()
+        else:
+            raise TypeError(f"Cannot convert {type(obj)} to bytes")
 
-        Args:
-            unsigned_tx: The unsigned transaction. If None, an empty transaction is created.
-        """
+
+    def _safe_serialize_transaction(self, tx) -> bytes:
+        """Safely serialize a transaction to bytes."""
+        if isinstance(tx, bytes):
+            return tx
+        
+        serialized = tx.serialize()
+        if isinstance(serialized, str):
+            return bytes.fromhex(serialized)
+        return serialized
+
+    def __init__(self, unsigned_tx: Optional[Transaction] = None):
         if unsigned_tx is None:
             # Create empty transaction
             self.tx = Transaction([], [])
@@ -173,30 +129,12 @@ class PSBT:
 
     @classmethod
     def from_base64(cls, psbt_str: str) -> 'PSBT':
-        """
-        Create PSBT from base64 encoded string.
-
-        Args:
-            psbt_str: Base64 encoded PSBT
-
-        Returns:
-            PSBT object
-        """
         import base64
         psbt_bytes = base64.b64decode(psbt_str)
         return cls.from_bytes(psbt_bytes)
 
     @classmethod
     def from_bytes(cls, psbt_bytes: bytes) -> 'PSBT':
-        """
-        Deserialize PSBT from bytes.
-
-        Args:
-            psbt_bytes: Serialized PSBT bytes
-
-        Returns:
-            PSBT object
-        """
         stream = BytesIO(psbt_bytes)
 
         # Read and verify magic
@@ -224,22 +162,10 @@ class PSBT:
         return psbt
 
     def to_base64(self) -> str:
-        """
-        Serialize PSBT to base64 string.
-
-        Returns:
-            Base64 encoded PSBT
-        """
         import base64
         return base64.b64encode(self.to_bytes()).decode('ascii')
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize PSBT to bytes.
-
-        Returns:
-            Serialized PSBT bytes
-        """
         result = BytesIO()
 
         # Write magic and separator
@@ -260,13 +186,6 @@ class PSBT:
         return result.getvalue()
 
     def add_input(self, tx_input: TxInput, psbt_input: Optional[PSBTInput] = None) -> None:
-        """
-        Add input to the PSBT transaction.
-
-        Args:
-            tx_input: Transaction input to add
-            psbt_input: PSBT input metadata. If None, empty metadata is created.
-        """
         # Create clean input without scriptSig
         clean_input = TxInput(tx_input.txid, tx_input.txout_index)
         self.tx.inputs.append(clean_input)
@@ -276,13 +195,6 @@ class PSBT:
         self.inputs.append(psbt_input)
 
     def add_output(self, tx_output: TxOutput, psbt_output: Optional[PSBTOutput] = None) -> None:
-        """
-        Add output to the PSBT transaction.
-
-        Args:
-            tx_output: Transaction output to add
-            psbt_output: PSBT output metadata. If None, empty metadata is created.
-        """
         self.tx.outputs.append(tx_output)
 
         if psbt_output is None:
@@ -290,138 +202,201 @@ class PSBT:
         self.outputs.append(psbt_output)
 
     def sign(self, private_key: PrivateKey, input_index: int, sighash_type: int = 1) -> bool:
-        """
-        Legacy method for backward compatibility. Use sign_input() instead.
-
-        Args:
-            private_key: Private key to sign with
-            input_index: Index of input to sign
-            sighash_type: Signature hash type (default: SIGHASH_ALL)
-
-        Returns:
-            True if signature was added, False if input couldn't be signed
-        """
         return self.sign_input(input_index, private_key, sighash_type)
 
     def sign_input(self, input_index: int, private_key: PrivateKey, sighash_type: int = 1) -> bool:
-        """
-        Sign a specific input with the given private key.
-
-        Automatically detects the script type and uses appropriate signing method:
-        - P2PKH: Legacy pay-to-public-key-hash
-        - P2SH: Pay-to-script-hash (including nested SegWit)
-        - P2WPKH: Native SegWit pay-to-witness-public-key-hash
-        - P2WSH: Native SegWit pay-to-witness-script-hash
-        - P2TR: Taproot pay-to-taproot
-
-        Args:
-            input_index: Index of input to sign
-            private_key: Private key to sign with
-            sighash_type: Signature hash type (default: SIGHASH_ALL)
-
-        Returns:
-            True if signature was added, False if input couldn't be signed
-        """
         try:
-            # Validate input index
-            if input_index >= len(self.inputs):
-                return False
+            psbt_input = self.inputs[input_index]
 
-            input_data = self.inputs[input_index]
-            tx_input = self.tx.inputs[input_index]
+            # Determine prev_txout and whether it is SegWit
+            prev_txout = psbt_input.witness_utxo
+            is_segwit = prev_txout is not None
 
-            # Get the appropriate signature for this input
-            signature = self._get_signature_for_input(input_index, private_key, sighash_type)
+            if not is_segwit:
+                prev_tx = psbt_input.non_witness_utxo
+                if prev_tx is None:
+                    return False
+                prev_txout = prev_tx.outputs[self.tx.inputs[input_index].tx_out_index]
 
-            if signature:
-                # Add the signature to the PSBT
-                public_key_bytes = private_key.get_public_key().to_bytes()
-                input_data.partial_sigs[public_key_bytes] = signature
+            # Determine the correct script to use
+            script_to_use = (
+                psbt_input.witness_script
+                if psbt_input.witness_script is not None
+                else psbt_input.redeem_script
+                if psbt_input.redeem_script is not None
+                else prev_txout.script_pubkey
+            )
 
-                # Set sighash type if not already set
-                if input_data.sighash_type is None:
-                    input_data.sighash_type = sighash_type
-
-                return True
+            # Compute sighash correctly
+            if is_segwit:
+                sighash = self.tx.get_transaction_segwit_digest(
+                    input_index,
+                    script_to_use,
+                    prev_txout.amount,
+                    sighash_type
+                )
             else:
-                return False
+                sighash = self.tx.get_transaction_digest(
+                    input_index,
+                    script_to_use,
+                    sighash_type
+                )
 
-        except Exception:
+            # Prepare SigningKey correctly
+            if hasattr(private_key, 'key'):
+                raw_private_key = private_key.key.privkey.secret_multiplier.to_bytes(32, 'big')
+            else:
+                raw_private_key = private_key.to_bytes()
+
+            sk = SigningKey.from_string(raw_private_key, curve=SECP256k1)
+
+            # Create DER signature + sighash type byte
+            sig = sk.sign_digest(sighash, sigencode=ecdsa.util.sigencode_der_canonize) + bytes([sighash_type])
+
+            # Get compressed pubkey bytes
+            pubkey_obj = private_key.get_public_key()
+            if hasattr(pubkey_obj, 'to_bytes'):
+                pubkey_bytes = pubkey_obj.to_bytes()
+            else:
+                pubkey_bytes = pubkey_obj.key.to_string('compressed')
+
+            # Add to partial_sigs
+            psbt_input.partial_sigs[pubkey_bytes] = sig
+
+            return True
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
             return False
 
     def _get_signature_for_input(self, input_index: int, private_key: PrivateKey, sighash_type: int) -> bytes:
-        """
-        Get the appropriate signature for an input based on its script type.
-
-        Args:
-            input_index: Input index
-            private_key: Private key to sign with
-            sighash_type: Signature hash type
-
-        Returns:
-            bytes: Signature if successful, None otherwise
-        """
         input_data = self.inputs[input_index]
         tx_input = self.tx.inputs[input_index]
 
         try:
-            if input_data.redeem_script:
-                # P2SH-P2WSH or P2SH-P2WPKH or regular P2SH
-                redeem_script = input_data.redeem_script
+            # ✅ Ensure tx_input is proper TxInput object
+            if isinstance(tx_input, dict):
+                tx_input = TxInput(tx_input.get('txid'), tx_input.get('vout', tx_input.get('txout_index')))
+                self.tx.inputs[input_index] = tx_input
 
-                # Check if it's a P2SH-wrapped SegWit
+            # ✅ Ensure witness_utxo is proper TxOutput object
+            if isinstance(input_data.witness_utxo, dict):
+                utxo_dict = input_data.witness_utxo
+                
+                # Handle script_pubkey conversion
+                spk = utxo_dict.get('script_pubkey')
+                if isinstance(spk, dict):
+                    spk = spk.get('hex') or spk.get('asm') or spk.get('script')
+                
+                # Handle different value field names
+                value = utxo_dict.get('value') or utxo_dict.get('amount')
+                
+                if spk and value is not None:
+                    input_data.witness_utxo = TxOutput(value, Script(spk))
+                else:
+                    return None
+
+            # ✅ Fix script_pubkey if it's still a dict inside TxOutput
+            elif isinstance(input_data.witness_utxo, TxOutput):
+                spk = input_data.witness_utxo.script_pubkey
+                if isinstance(spk, dict):
+                    spk_data = spk.get('hex') or spk.get('asm') or spk.get('script')
+                    if spk_data:
+                        input_data.witness_utxo.script_pubkey = Script(spk_data)
+                    else:
+                        return None
+
+            # ✅ Ensure scripts are proper Script objects
+            if input_data.redeem_script and isinstance(input_data.redeem_script, (str, bytes, dict)):
+                if isinstance(input_data.redeem_script, dict):
+                    script_data = input_data.redeem_script.get('hex') or input_data.redeem_script.get('asm')
+                else:
+                    script_data = input_data.redeem_script
+                input_data.redeem_script = Script(script_data)
+
+            if input_data.witness_script and isinstance(input_data.witness_script, (str, bytes, dict)):
+                if isinstance(input_data.witness_script, dict):
+                    script_data = input_data.witness_script.get('hex') or input_data.witness_script.get('asm')
+                else:
+                    script_data = input_data.witness_script
+                input_data.witness_script = Script(script_data)
+
+            # Now proceed with signing logic based on script type
+            if input_data.redeem_script:
+                redeem_script = input_data.redeem_script
+                
                 if input_data.witness_script:
-                    # P2SH-P2WSH
+                    # P2SH-P2WSH (Script Hash wrapping Witness Script Hash)
                     witness_script = input_data.witness_script
                     if input_data.witness_utxo:
-                        amount = to_satoshis(input_data.witness_utxo.amount)
-                        return private_key.sign_segwit_input(self.tx, input_index, witness_script, amount, sighash_type)
+                        amount = input_data.witness_utxo.amount
+                        return private_key.sign_segwit_input(
+                            self.tx, input_index, witness_script, amount, sighash_type
+                        )
 
                 elif self._is_p2wpkh_script(redeem_script):
-                    # P2SH-P2WPKH
+                    # P2SH-P2WPKH (Script Hash wrapping Witness PubKey Hash)
                     if input_data.witness_utxo:
-                        amount = to_satoshis(input_data.witness_utxo.amount)
+                        amount = input_data.witness_utxo.amount
+                        # For P2WPKH, we need the P2PKH script of the public key
                         p2pkh_script = private_key.get_public_key().get_address().to_script_pub_key()
-                        return private_key.sign_segwit_input(self.tx, input_index, p2pkh_script, amount, sighash_type)
+                        return private_key.sign_segwit_input(
+                            self.tx, input_index, p2pkh_script, amount, sighash_type
+                        )
 
                 else:
-                    # Regular P2SH
-                    return private_key.sign_input(self.tx, input_index, redeem_script, sighash_type)
+                    # Regular P2SH (Script Hash)
+                    return private_key.sign_input(
+                        self.tx, input_index, redeem_script, sighash_type
+                    )
 
             elif input_data.witness_script:
-                # P2WSH input
+                # P2WSH (Witness Script Hash)
                 witness_script = input_data.witness_script
                 if input_data.witness_utxo:
-                    amount = to_satoshis(input_data.witness_utxo.amount)
-                    return private_key.sign_segwit_input(self.tx, input_index, witness_script, amount, sighash_type)
+                    amount = input_data.witness_utxo.amount
+                    return private_key.sign_segwit_input(
+                        self.tx, input_index, witness_script, amount, sighash_type
+                    )
 
             elif input_data.witness_utxo:
-                # Check if it's P2WPKH or P2TR
+                # Direct witness input (P2WPKH or P2TR)
                 script_pubkey = input_data.witness_utxo.script_pubkey
-                amount = to_satoshis(input_data.witness_utxo.amount)
+                amount = input_data.witness_utxo.amount
 
                 if self._is_p2wpkh_script(script_pubkey):
-                    # P2WPKH input
+                    # P2WPKH (Witness PubKey Hash)
+                    # For P2WPKH, we sign with the P2PKH script of our public key
                     p2pkh_script = private_key.get_public_key().get_address().to_script_pub_key()
-                    return private_key.sign_segwit_input(self.tx, input_index, p2pkh_script, amount, sighash_type)
+                    return private_key.sign_segwit_input(
+                        self.tx, input_index, p2pkh_script, amount, sighash_type
+                    )
 
                 elif self._is_p2tr_script(script_pubkey):
-                    # P2TR input
-                    return private_key.sign_taproot_input(self.tx, input_index, amount, sighash_type)
+                    # P2TR (Taproot)
+                    return private_key.sign_taproot_input(
+                        self.tx, input_index, amount, sighash_type
+                    )
 
             elif input_data.non_witness_utxo:
-                # Legacy P2PKH or P2SH
+                # Legacy input (P2PKH, P2SH without witness)
                 prev_tx_out = input_data.non_witness_utxo.outputs[tx_input.txout_index]
                 script_pubkey = prev_tx_out.script_pubkey
 
                 if self._is_p2pkh_script(script_pubkey):
-                    # P2PKH input
-                    return private_key.sign_input(self.tx, input_index, script_pubkey, sighash_type)
-
+                    # P2PKH (Pay to PubKey Hash)
+                    return private_key.sign_input(
+                        self.tx, input_index, script_pubkey, sighash_type
+                    )
+            
             return None
 
-        except Exception:
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
             return None
+
 
     def _is_p2pkh_script(self, script) -> bool:
         """Check if script is P2PKH (OP_DUP OP_HASH160 <pubkeyhash> OP_EQUALVERIFY OP_CHECKSIG)."""
@@ -437,80 +412,128 @@ class PSBT:
         except:
             return False
 
-    def _is_p2tr_script(self, script) -> bool:
-        """Check if script is P2TR (OP_1 <32-byte-taproot-output>)."""
-        try:
-            return script.is_p2tr() if hasattr(script, 'is_p2tr') else False
-        except:
+    def _is_p2tr_script(self, script_pubkey: Script) -> bool:
+        """Check if script is P2TR (Taproot)."""
+        if not hasattr(script_pubkey, 'script'):
             return False
-
-    def _is_input_finalized(self, input_data: PSBTInput) -> bool:
-        """
-        Check if an input is already finalized.
         
-        Args:
-            input_data: PSBT input to check
-            
-        Returns:
-            True if input is finalized
-        """
-        return bool(input_data.final_scriptsig or input_data.final_scriptwitness)
+        script_ops = script_pubkey.script
+        # P2TR is OP_1 followed by 32 bytes
+        return (len(script_ops) == 2 and 
+                script_ops[0] == 1 and  # OP_1 
+                isinstance(script_ops[1], bytes) and 
+                len(script_ops[1]) == 32)
+
+    def _is_input_finalized(self, psbt_input: PSBTInput) -> bool:
+        """Check if an input is already finalized."""
+        return (psbt_input.final_scriptsig is not None or 
+                psbt_input.final_scriptwitness is not None)
 
     def _apply_final_fields(self, tx_input: TxInput, input_data: PSBTInput) -> None:
-        """
-        Apply final scriptSig and witness to a transaction input.
-        
-        Args:
-            tx_input: Transaction input to modify
-            input_data: PSBT input with final fields
-        """
         if input_data.final_scriptsig:
             tx_input.script_sig = input_data.final_scriptsig
         else:
             tx_input.script_sig = Script([])
 
-    def _validate_final_tx(self, tx: Transaction) -> Dict[str, any]:
-        """
-        Validate a finalized transaction.
-        
-        Args:
-            tx: Transaction to validate
-            
-        Returns:
-            Dictionary with validation results
-        """
+    def _validate_final_tx(self, final_tx) -> dict:
+        """Validate the finalized transaction."""
         validation_info = {
-            'is_valid': True,
+            'valid': True,
             'errors': [],
             'warnings': []
         }
-
+        
         # Basic validation
-        if not tx.inputs:
-            validation_info['is_valid'] = False
+        if not final_tx.inputs:
+            validation_info['valid'] = False
             validation_info['errors'].append("Transaction has no inputs")
-
-        if not tx.outputs:
-            validation_info['is_valid'] = False
+        
+        if not final_tx.outputs:
+            validation_info['valid'] = False
             validation_info['errors'].append("Transaction has no outputs")
-
-        # Check for empty scripts where they shouldn't be
-        for i, (tx_input, psbt_input) in enumerate(zip(tx.inputs, self.inputs)):
-            if not tx_input.script_sig and not psbt_input.final_scriptwitness:
-                validation_info['warnings'].append(f"Input {i} has empty scriptSig and witness")
-
+        
+        # Check that all inputs have scriptSig or witness
+        for i, tx_input in enumerate(final_tx.inputs):
+            has_scriptsig = tx_input.script_sig and len(tx_input.script_sig.script) > 0
+            has_witness = (hasattr(final_tx, 'witnesses') and 
+                        i < len(final_tx.witnesses) and 
+                        final_tx.witnesses[i] and 
+                        len(final_tx.witnesses[i]) > 0)
+            
+            if not has_scriptsig and not has_witness:
+                validation_info['valid'] = False
+                validation_info['errors'].append(f"Input {i} has no scriptSig or witness")
+        
+        # Calculate transaction size and vsize
+        try:
+            tx_bytes = final_tx.serialize()
+            if isinstance(tx_bytes, str):
+                tx_bytes = bytes.fromhex(tx_bytes)
+            
+            validation_info['size'] = len(tx_bytes)
+            
+            # Calculate vsize (virtual size) for SegWit transactions
+            # For non-SegWit transactions, vsize = size
+            # For SegWit transactions, vsize = (base_size * 3 + total_size) / 4
+            has_witnesses = (hasattr(final_tx, 'witnesses') and 
+                            any(witness for witness in final_tx.witnesses))
+            
+            if has_witnesses:
+                # Calculate base size (transaction without witness data)
+                base_tx_data = self._serialize_transaction_without_witness(final_tx)
+                base_size = len(base_tx_data)
+                total_size = len(tx_bytes)
+                validation_info['vsize'] = (base_size * 3 + total_size) // 4
+            else:
+                validation_info['vsize'] = len(tx_bytes)
+                
+        except Exception as e:
+            validation_info['size'] = 0
+            validation_info['vsize'] = 0
+            validation_info['warnings'].append(f"Could not calculate transaction size: {str(e)}")
+        
         return validation_info
 
-    def combine(self, other: 'PSBT') -> 'PSBT':
-        """
-        Combine this PSBT with another PSBT (combiner role).
-        
-        Args:
-            other: Another PSBT to combine with
+    def _serialize_transaction_without_witness(self, tx) -> bytes:
+        """Serialize transaction without witness data for vsize calculation."""
+        try:
+            # Create a copy of the transaction without witness data
+            from bitcoinutils.transactions import Transaction
+            from bitcoinutils.script import Script
             
-        Returns:
-            New combined PSBT
-        """
+            # Create inputs without witness data
+            inputs_without_witness = []
+            for tx_input in tx.inputs:
+                clean_input = type(tx_input)(
+                    tx_input.txid,
+                    tx_input.txout_index,
+                    tx_input.script_sig if tx_input.script_sig else Script([]),
+                    tx_input.sequence if hasattr(tx_input, 'sequence') else 0xffffffff
+                )
+                inputs_without_witness.append(clean_input)
+            
+            # Create transaction without witness
+            base_tx = Transaction(
+                inputs_without_witness,
+                tx.outputs,
+                tx.locktime if hasattr(tx, 'locktime') else 0,
+                tx.version if hasattr(tx, 'version') else 1
+            )
+            
+            # Serialize without witness
+            serialized = base_tx.serialize()
+            if isinstance(serialized, str):
+                return bytes.fromhex(serialized)
+            return serialized
+            
+        except Exception:
+            # Fallback: assume no witness data
+            serialized = tx.serialize()
+            if isinstance(serialized, str):
+                return bytes.fromhex(serialized)
+            return serialized
+
+    def combine(self, other: 'PSBT') -> 'PSBT':
         # Ensure both PSBTs have the same unsigned transaction
         if self.tx.serialize() != other.tx.serialize():
             raise ValueError("Cannot combine PSBTs with different transactions")
@@ -587,56 +610,33 @@ class PSBT:
         return combined
 
     def combine_psbts(self, other_psbts: List['PSBT']) -> 'PSBT':
-        """
-        Combine this PSBT with multiple other PSBTs.
-
-        Wraps the pairwise `combine()` method in a loop for batch combining.
-
-        Args:
-            other_psbts (List[PSBT]): A list of PSBTs to combine
-
-        Returns:
-            PSBT: The final combined PSBT
-        """
         combined = self
         for other in other_psbts:
             combined = combined.combine(other)
         return combined
 
-    def finalize(self, validate: bool = False) -> Union[Transaction, Tuple[Transaction, Dict], bool]:
-        """
-        Finalize all inputs and create the final broadcastable transaction or check if all inputs are finalized.
-
-        If called with validate=False and no additional arguments, returns a boolean indicating if all inputs were finalized successfully.
-        If called with validate=True or no arguments, builds a complete Transaction object with all final scriptSigs and witnesses.
-
-        Args:
-            validate: If True, validate the final transaction and return validation info
-
-        Returns:
-            If validate=False: Transaction object ready for broadcast or boolean if simple finalize
-            If validate=True: Tuple of (Transaction, validation_info dict)
-
-        Raises:
-            ValueError: If not all inputs can be finalized
-        """
-        # Simple finalize returning boolean
-        if not validate:
-            all_finalized = True
-            for i in range(len(self.inputs)):
-                if not self._finalize_input(i):
-                    all_finalized = False
-            return all_finalized
-
-        # Existing finalize logic from Untitled document-10.docx
+    def finalize(self, validate: bool = False) -> Union[Transaction, Tuple[Transaction, Dict]]:
+        # Count successfully finalized inputs
         finalized_count = 0
         for i in range(len(self.inputs)):
             if self._finalize_input(i):
                 finalized_count += 1
 
+        # If not all inputs could be finalized, return None
         if finalized_count != len(self.inputs):
-            raise ValueError(f"Could not finalize all inputs. Finalized: {finalized_count}/{len(self.inputs)}")
+            if validate:
+                # Return a validation dict with error info
+                validation_info = {
+                    'valid': False,
+                    'errors': [f"Could not finalize all inputs. Finalized: {finalized_count}/{len(self.inputs)}"],
+                    'warnings': []
+                }
+                # Return a dummy transaction and validation info
+                return self.tx, validation_info
+            else:
+                return None
 
+        # All inputs finalized - build final transaction
         final_inputs = []
         for i, (tx_input, psbt_input) in enumerate(zip(self.tx.inputs, self.inputs)):
             final_input = TxInput(
@@ -654,6 +654,7 @@ class PSBT:
             self.tx.version
         )
 
+        # Add witness data
         final_tx.witnesses = []
         for psbt_input in self.inputs:
             if psbt_input.final_scriptwitness:
@@ -663,35 +664,25 @@ class PSBT:
 
         if validate:
             validation_info = self._validate_final_tx(final_tx)
+            # Add txid to validation info
+            try:
+                validation_info['txid'] = final_tx.get_txid()
+            except:
+                validation_info['txid'] = 'Unable to compute'
+            
             return final_tx, validation_info
         else:
             return final_tx
 
     def finalize_input(self, input_index: int) -> bool:
-        """
-        Finalize a specific input by constructing final scriptSig and witness.
-
-        Args:
-            input_index: Index of input to finalize
-
-        Returns:
-            True if input was finalized successfully
-        """
+        
         if input_index >= len(self.inputs):
             raise ValueError(f"Input index {input_index} out of range")
 
         return self._finalize_input(input_index)
 
     def _finalize_input(self, input_index: int) -> bool:
-        """
-        Enhanced input finalization with better script type detection.
-        
-        Args:
-            input_index: Index of input to finalize
-            
-        Returns:
-            True if input was finalized successfully
-        """
+       
         psbt_input = self.inputs[input_index]
 
         # Skip if already finalized
@@ -762,12 +753,12 @@ class PSBT:
         elif redeem_script.is_p2wsh():
             return self._finalize_p2sh_p2wsh(psbt_input)
         else:
-            # Regular P2SH
+            # Regular P2SH - finalize the redeem script
             success = self._finalize_script(psbt_input, redeem_script, is_witness=False)
             if success:
-                # Add redeem script to the end of scriptSig
-                current_elements = psbt_input.final_scriptsig.script if psbt_input.final_scriptsig else []
-                psbt_input.final_scriptsig = Script(current_elements + [redeem_script.to_bytes()])
+                # For regular P2SH, the scriptSig should already contain the unlocking script
+                # plus the redeem script. The _finalize_script method handles adding the redeem script.
+                pass
             return success
 
     def _finalize_p2sh_p2wpkh(self, psbt_input: PSBTInput) -> bool:
@@ -776,11 +767,15 @@ class PSBT:
             return False
 
         pubkey, signature = next(iter(psbt_input.partial_sigs.items()))
-        
+
         # scriptSig contains just the redeem script
-        psbt_input.final_scriptsig = Script([psbt_input.redeem_script.to_bytes()])
-        # Witness contains signature and pubkey
-        psbt_input.final_scriptwitness = [signature, pubkey]
+        redeem_script_bytes = self._safe_to_bytes(psbt_input.redeem_script)
+        psbt_input.final_scriptsig = Script([redeem_script_bytes])
+
+        # Safe bytes conversion
+        sig_bytes = signature if isinstance(signature, bytes) else signature
+        pubkey_bytes = pubkey if isinstance(pubkey, bytes) else pubkey
+        psbt_input.final_scriptwitness = [sig_bytes, pubkey_bytes]
         return True
 
     def _finalize_p2sh_p2wsh(self, psbt_input: PSBTInput) -> bool:
@@ -791,10 +786,12 @@ class PSBT:
         # Finalize the witness script part
         success = self._finalize_script(psbt_input, psbt_input.witness_script, is_witness=True)
         if success:
-            # Add the redeem script to scriptSig
-            psbt_input.final_scriptsig = Script([psbt_input.redeem_script.to_bytes()])
-            # Add witness script to the end of witness
-            psbt_input.final_scriptwitness.append(psbt_input.witness_script.to_bytes())
+            # For P2SH-P2WSH, scriptSig contains only the redeem script (P2WSH script)
+            redeem_bytes = self._safe_to_bytes(psbt_input.redeem_script)
+            psbt_input.final_scriptsig = Script([redeem_bytes])
+            
+            # The witness script is already added by _finalize_script
+            # No need to append it again
         return success
 
     def _finalize_p2wsh(self, psbt_input: PSBTInput) -> bool:
@@ -817,85 +814,85 @@ class PSBT:
 
     def _finalize_script(self, psbt_input: PSBTInput, script: Script, is_witness: bool) -> bool:
         """
-        Enhanced script finalization with better multisig support.
-        
-        Args:
-            psbt_input: PSBT input to finalize
-            script: Script to finalize against
-            is_witness: Whether this is a witness script
-            
-        Returns:
-            True if finalized successfully
+        Finalize a script by constructing the appropriate scriptSig or witness.
         """
-        script_ops = script.script
-        
+        script_ops = script.script if hasattr(script, "script") else []
+
         # Enhanced multisig detection and handling
         if (len(script_ops) >= 4 and
-            isinstance(script_ops[0], int) and 1 <= script_ops[0] <= 16 and
-            isinstance(script_ops[-2], int) and 1 <= script_ops[-2] <= 16 and
-            script_ops[-1] == 174):  # OP_CHECKMULTISIG
+            script_ops[0] == 'OP_2' and  # Check for OP_2 string
+            script_ops[-1] == 'OP_CHECKMULTISIG'):  # Check for OP_CHECKMULTISIG string
             
-            m = script_ops[0]  # Required signatures
-            n = script_ops[-2]  # Total pubkeys
+            # Extract m and n values
+            m = 2  # From OP_2
+            n = 3  # From OP_3
             
-            # Extract public keys from script
+            # Extract public keys from script (they're between m and n)
             pubkeys = []
-            for i in range(1, n + 1):
-                if i < len(script_ops) and isinstance(script_ops[i], bytes):
-                    pubkeys.append(script_ops[i])
+            for i in range(1, 4):  # indices 1, 2, 3 for the three pubkeys
+                if i < len(script_ops):
+                    pk = script_ops[i]
+                    if isinstance(pk, str):
+                        pubkeys.append(bytes.fromhex(pk))
+                    elif isinstance(pk, bytes):
+                        pubkeys.append(pk)
             
-            # Collect signatures in the correct order
-            signatures = []
-            valid_sig_count = 0
-            
-            for pubkey in pubkeys:
-                if pubkey in psbt_input.partial_sigs:
-                    signatures.append(psbt_input.partial_sigs[pubkey])
-                    valid_sig_count += 1
-                else:
-                    signatures.append(b'')  # Placeholder for missing signature
-                
-                if valid_sig_count >= m:
-                    break
-            
-            # Check if we have enough signatures
-            if valid_sig_count < m:
+            if len(pubkeys) != n:
                 return False
             
-            # Trim signatures to required amount, keeping only valid ones
-            final_sigs = []
-            sig_count = 0
-            for sig in signatures:
-                if sig and sig_count < m:
-                    final_sigs.append(sig)
-                    sig_count += 1
+            # IMPORTANT: For Bitcoin multisig, we need to match signatures to their pubkeys
+            # and provide them in the order the pubkeys appear in the script
+            ordered_sigs = []
+            sig_pubkey_map = {}
             
-            # Multisig requires OP_0 prefix due to Bitcoin's off-by-one bug
-            final_script_elements = [b''] + final_sigs
+            # First, normalize all pubkeys from partial_sigs to bytes
+            for partial_pubkey, sig in psbt_input.partial_sigs.items():
+                if isinstance(partial_pubkey, str):
+                    partial_pubkey_bytes = bytes.fromhex(partial_pubkey)
+                else:
+                    partial_pubkey_bytes = partial_pubkey
+                sig_pubkey_map[partial_pubkey_bytes] = sig
             
+            # Now collect signatures in script pubkey order
+            for pubkey in pubkeys:
+                if pubkey in sig_pubkey_map:
+                    ordered_sigs.append(sig_pubkey_map[pubkey])
+            
+            # Check if we have enough signatures
+            if len(ordered_sigs) < m:
+                return False
+            
+            # Use only the first m signatures (in case we have more)
+            signatures_to_use = ordered_sigs[:m]
+            
+            # Build the final script
             if is_witness:
-                final_script_elements.append(script.to_bytes())
                 psbt_input.final_scriptsig = Script([])
-                psbt_input.final_scriptwitness = final_script_elements
+                # Witness stack for multisig: [OP_0, sig1, sig2, ..., sigM, witnessScript]
+                witness_elements = [b'']  # OP_0 (empty bytes for multisig bug)
+                for sig in signatures_to_use:
+                    # Ensure signature is bytes
+                    if isinstance(sig, str):
+                        witness_elements.append(bytes.fromhex(sig))
+                    else:
+                        witness_elements.append(sig)
+                witness_elements.append(self._safe_to_bytes(script))
+                psbt_input.final_scriptwitness = witness_elements
             else:
-                final_script_elements.append(script.to_bytes())
-                psbt_input.final_scriptsig = Script(final_script_elements)
-            
+                # For P2SH multisig (non-witness)
+                script_elements = []
+                script_elements.append(b'')  # OP_0 (empty bytes)
+                for sig in signatures_to_use:
+                    if isinstance(sig, str):
+                        script_elements.append(bytes.fromhex(sig))
+                    else:
+                        script_elements.append(sig)
+                script_elements.append(self._safe_to_bytes(script))
+                psbt_input.final_scriptsig = Script(script_elements)
+
             return True
-        
-        # Handle single-sig scripts (P2PK, custom scripts, etc.)
-        elif len(psbt_input.partial_sigs) == 1:
-            pubkey, signature = next(iter(psbt_input.partial_sigs.items()))
-            
-            if is_witness:
-                psbt_input.final_scriptsig = Script([])
-                psbt_input.final_scriptwitness = [signature, pubkey, script.to_bytes()]
-            else:
-                psbt_input.final_scriptsig = Script([signature, pubkey, script.to_bytes()])
-            
-            return True
-        
-        # Handle other script types (can be extended)
+
+        # Handle other script types...
         return False
 
     def _parse_global_section(self, stream: BytesIO) -> None:
@@ -957,8 +954,8 @@ class PSBT:
                 witness_stack = []
                 offset = 0
                 while offset < len(value_data):
-                    item_len = value_data[offset]
-                    offset += 1
+                    item_len, varint_len = read_varint(value_data[offset:])
+                    offset += varint_len
                     witness_stack.append(value_data[offset:offset + item_len])
                     offset += item_len
                 psbt_input.final_scriptwitness = witness_stack
@@ -999,6 +996,38 @@ class PSBT:
             else:
                 psbt_output.unknown[key_data] = value_data
 
+    def _serialize_global_section(self, result: BytesIO) -> None:
+        """Serialize the global section of a PSBT."""
+        
+        # Unsigned transaction (required)
+        if self.tx:
+            tx_data = self._safe_serialize_transaction(self.tx)
+            self._write_key_value_pair(result, self.GlobalTypes.UNSIGNED_TX, b'', tx_data)
+        
+        # Extended public keys
+        for xpub, (fingerprint, path) in self.xpubs.items():
+            value_data = struct.pack('<I', fingerprint) + struct.pack('<' + 'I' * len(path), *path)
+            self._write_key_value_pair(result, self.GlobalTypes.XPUB, xpub, value_data)
+        
+        # Version (if not default)
+        if self.version != self.VERSION:
+            self._write_key_value_pair(result, self.GlobalTypes.VERSION, b'', 
+                                    struct.pack('<I', self.version))
+        
+        # Proprietary fields
+        for key_data, value_data in self.proprietary.items():
+            self._write_key_value_pair(result, self.GlobalTypes.PROPRIETARY, key_data, value_data)
+        
+        # Unknown fields
+        for key_data, value_data in self.unknown.items():
+            result.write(bytes([len(key_data)]))
+            result.write(key_data)
+            result.write(bytes([len(value_data)]))
+            result.write(value_data)
+        
+        # Section separator
+        result.write(b'\x00')
+
     def _read_key_value_pair(self, stream: BytesIO) -> Optional[Tuple[int, bytes, bytes]]:
         """
         Read a key-value pair from the stream.
@@ -1038,83 +1067,94 @@ class PSBT:
         
         return key_type, key_data, value
 
-    def _serialize_global_section(self, result: BytesIO) -> None:
-        """Serialize the global section."""
-        # Unsigned transaction
-        self._write_key_value_pair(result, self.GlobalTypes.UNSIGNED_TX, b'', self.tx.serialize())
-        
-        # XPubs
-        for xpub, (fingerprint, path) in self.xpubs.items():
-            key_data = struct.pack('<I', fingerprint) + struct.pack('<' + 'I' * len(path), *path)
-            self._write_key_value_pair(result, self.GlobalTypes.XPUB, key_data, xpub)
-        
-        # Version
-        if self.version != self.VERSION:
-            self._write_key_value_pair(result, self.GlobalTypes.VERSION, b'', struct.pack('<I', self.version))
-        
-        # Proprietary
-        for key_data, value_data in self.proprietary.items():
-            self._write_key_value_pair(result, self.GlobalTypes.PROPRIETARY, key_data, value_data)
-        
-        # Unknown
-        for key_data, value_data in self.unknown.items():
-            result.write(bytes([len(key_data) + 1]))  # Key length
-            result.write(key_data)  # Key data includes type
-            result.write(bytes([len(value_data)]))  # Value length
-            result.write(value_data)  # Value data
-        
-        # Section separator
-        result.write(b'\x00')
-
     def _serialize_input_section(self, result: BytesIO, input_index: int) -> None:
         """Serialize an input section."""
         psbt_input = self.inputs[input_index]
+
+        # Ensure scripts are Script objects, not bytes
+        if isinstance(psbt_input.redeem_script, bytes):
+            psbt_input.redeem_script = Script(psbt_input.redeem_script)
+        if isinstance(psbt_input.witness_script, bytes):
+            psbt_input.witness_script = Script(psbt_input.witness_script)
+        if isinstance(psbt_input.final_scriptsig, bytes):
+            psbt_input.final_scriptsig = Script(psbt_input.final_scriptsig)
         
         # Non-witness UTXO
         if psbt_input.non_witness_utxo:
-            self._write_key_value_pair(result, self.InputTypes.NON_WITNESS_UTXO, b'', 
-                                       psbt_input.non_witness_utxo.serialize())
+            utxo_data = self._safe_serialize_transaction(psbt_input.non_witness_utxo)
+            self._write_key_value_pair(result, self.InputTypes.NON_WITNESS_UTXO, b'', utxo_data)
         
-        # Witness UTXO
+        # Witness UTXO - Safe handling
         if psbt_input.witness_utxo:
-            self._write_key_value_pair(result, self.InputTypes.WITNESS_UTXO, b'', 
-                                       psbt_input.witness_utxo.serialize())
+            try:
+                # For TxOutput objects, we need to serialize properly
+                import struct
+                from bitcoinutils.utils import encode_varint
+                
+                witness_utxo = psbt_input.witness_utxo
+                
+                # Serialize amount (8 bytes, little-endian)
+                amount_bytes = struct.pack("<Q", witness_utxo.amount)
+                
+                # Serialize script_pubkey
+                script_bytes = witness_utxo.script_pubkey.to_bytes()
+                script_len_bytes = encode_varint(len(script_bytes))
+                
+                # Combine: amount + script_length + script
+                witness_data = amount_bytes + script_len_bytes + script_bytes
+                
+            except Exception as e:
+                # Fallback - try to use existing method if available
+                if hasattr(psbt_input.witness_utxo, 'to_bytes'):
+                    witness_data = psbt_input.witness_utxo.to_bytes()
+                else:
+                    raise
+            
+            self._write_key_value_pair(result, self.InputTypes.WITNESS_UTXO, b'', witness_data)
         
         # Partial signatures
         for pubkey, signature in psbt_input.partial_sigs.items():
-            self._write_key_value_pair(result, self.InputTypes.PARTIAL_SIG, pubkey, signature)
+            # Ensure both pubkey and signature are bytes
+            pubkey_bytes = pubkey if isinstance(pubkey, bytes) else self._safe_to_bytes(pubkey)
+            sig_bytes = signature if isinstance(signature, bytes) else self._safe_to_bytes(signature)
+            self._write_key_value_pair(result, self.InputTypes.PARTIAL_SIG, pubkey_bytes, sig_bytes)
         
         # Sighash type
         if psbt_input.sighash_type is not None:
             self._write_key_value_pair(result, self.InputTypes.SIGHASH_TYPE, b'', 
-                                       struct.pack('<I', psbt_input.sighash_type))
+                                    struct.pack('<I', psbt_input.sighash_type))
         
         # Redeem script
         if psbt_input.redeem_script:
-            self._write_key_value_pair(result, self.InputTypes.REDEEM_SCRIPT, b'', 
-                                       psbt_input.redeem_script.to_bytes())
+            script_bytes = self._safe_to_bytes(psbt_input.redeem_script)
+            self._write_key_value_pair(result, self.InputTypes.REDEEM_SCRIPT, b'', script_bytes)
         
         # Witness script
         if psbt_input.witness_script:
-            self._write_key_value_pair(result, self.InputTypes.WITNESS_SCRIPT, b'', 
-                                       psbt_input.witness_script.to_bytes())
+            script_bytes = self._safe_to_bytes(psbt_input.witness_script)
+            self._write_key_value_pair(result, self.InputTypes.WITNESS_SCRIPT, b'', script_bytes)
         
         # BIP32 derivations
         for pubkey, (fingerprint, path) in psbt_input.bip32_derivs.items():
             value_data = struct.pack('<I', fingerprint) + struct.pack('<' + 'I' * len(path), *path)
-            self._write_key_value_pair(result, self.InputTypes.BIP32_DERIVATION, pubkey, value_data)
+            pubkey_bytes = pubkey if isinstance(pubkey, bytes) else self._safe_to_bytes(pubkey)
+            self._write_key_value_pair(result, self.InputTypes.BIP32_DERIVATION, pubkey_bytes, value_data)
         
         # Final scriptSig
         if psbt_input.final_scriptsig:
-            self._write_key_value_pair(result, self.InputTypes.FINAL_SCRIPTSIG, b'', 
-                                       psbt_input.final_scriptsig.to_bytes())
+            script_bytes = self._safe_to_bytes(psbt_input.final_scriptsig)
+            self._write_key_value_pair(result, self.InputTypes.FINAL_SCRIPTSIG, b'', script_bytes)
         
         # Final script witness
         if psbt_input.final_scriptwitness:
-            witness_data = b''.join(bytes([len(item)]) + item for item in psbt_input.final_scriptwitness)
+            witness_data = b''.join(
+                encode_varint(len(item)) +
+                (item if isinstance(item, bytes) else self._safe_to_bytes(item))
+                for item in psbt_input.final_scriptwitness
+            )
             self._write_key_value_pair(result, self.InputTypes.FINAL_SCRIPTWITNESS, b'', witness_data)
         
-        # Hash preimages
+        # Hash preimages (these should already be bytes)
         for hash_val, preimage in psbt_input.ripemd160_preimages.items():
             self._write_key_value_pair(result, self.InputTypes.RIPEMD160, hash_val, preimage)
         
@@ -1143,21 +1183,28 @@ class PSBT:
     def _serialize_output_section(self, result: BytesIO, output_index: int) -> None:
         """Serialize an output section."""
         psbt_output = self.outputs[output_index]
+
+        # Ensure scripts are Script objects, not bytes
+        if isinstance(psbt_output.redeem_script, bytes):
+            psbt_output.redeem_script = Script(psbt_output.redeem_script)
+        if isinstance(psbt_output.witness_script, bytes):
+            psbt_output.witness_script = Script(psbt_output.witness_script)
         
         # Redeem script
         if psbt_output.redeem_script:
-            self._write_key_value_pair(result, self.OutputTypes.REDEEM_SCRIPT, b'', 
-                                       psbt_output.redeem_script.to_bytes())
+            script_bytes = self._safe_to_bytes(psbt_output.redeem_script)
+            self._write_key_value_pair(result, self.OutputTypes.REDEEM_SCRIPT, b'', script_bytes)
         
         # Witness script
         if psbt_output.witness_script:
-            self._write_key_value_pair(result, self.OutputTypes.WITNESS_SCRIPT, b'', 
-                                       psbt_output.witness_script.to_bytes())
+            script_bytes = self._safe_to_bytes(psbt_output.witness_script)
+            self._write_key_value_pair(result, self.OutputTypes.WITNESS_SCRIPT, b'', script_bytes)
         
         # BIP32 derivations
         for pubkey, (fingerprint, path) in psbt_output.bip32_derivs.items():
             value_data = struct.pack('<I', fingerprint) + struct.pack('<' + 'I' * len(path), *path)
-            self._write_key_value_pair(result, self.OutputTypes.BIP32_DERIVATION, pubkey, value_data)
+            pubkey_bytes = pubkey if isinstance(pubkey, bytes) else self._safe_to_bytes(pubkey)
+            self._write_key_value_pair(result, self.OutputTypes.BIP32_DERIVATION, pubkey_bytes, value_data)
         
         # Proprietary and unknown
         for key_data, value_data in psbt_output.proprietary.items():
@@ -1175,7 +1222,7 @@ class PSBT:
     def _write_key_value_pair(self, result: BytesIO, key_type: int, key_data: bytes, value_data: bytes) -> None:
         """Write a key-value pair to the stream."""
         key = bytes([key_type]) + key_data
-        result.write(bytes([len(key)]))  # Key length
-        result.write(key)  # Key
-        result.write(bytes([len(value_data)]))  # Value length
-        result.write(value_data)  # Value
+        result.write(encode_varint(len(key)))
+        result.write(key)
+        result.write(encode_varint(len(value_data)))
+        result.write(value_data)

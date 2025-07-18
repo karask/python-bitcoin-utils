@@ -594,4 +594,26 @@ def i_to_b(i: int) -> bytes:
     return i.to_bytes(byte_length, "big")
 
 
+def read_varint(b: bytes) -> tuple[int, int]:
+    """
+    Reads a Bitcoin varint from the provided bytes.
+
+    Returns:
+        A tuple (value, size) where:
+            - value: the decoded integer
+            - size: the number of bytes consumed
+    """
+    prefix = b[0]
+    if prefix < 0xfd:
+        return prefix, 1
+    elif prefix == 0xfd:
+        return int.from_bytes(b[1:3], 'little'), 3
+    elif prefix == 0xfe:
+        return int.from_bytes(b[1:5], 'little'), 5
+    elif prefix == 0xff:
+        return int.from_bytes(b[1:9], 'little'), 9
+    else:
+        raise ValueError("Invalid varint prefix")
+
+
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?
