@@ -9,15 +9,20 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
+
 import copy
 import hashlib
 import struct
 from typing import Any, Union
 
+
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
 
+
 # import bitcoinutils.keys
+
+
 
 
 # Bitcoin's op codes. Complete list at: https://en.bitcoin.it/wiki/Script
@@ -126,14 +131,15 @@ OP_CODES = {
     "OP_CHECKSIGVERIFY": b"\xad",
     "OP_CHECKMULTISIG": b"\xae",
     "OP_CHECKMULTISIGVERIFY": b"\xaf",
-    "OP_CHECKSIGADD": b"\xba",
+    "OP_CHECKSIGADD": b"\xba",             # added this new OPCODE
     # locktime
     "OP_NOP2": b"\xb1",
     "OP_CHECKLOCKTIMEVERIFY": b"\xb1",
     "OP_NOP3": b"\xb2",
     "OP_CHECKSEQUENCEVERIFY": b"\xb2",
+    
+    }
 
-}
 
 CODE_OPS = {
     # constants
@@ -223,68 +229,87 @@ CODE_OPS = {
     b"\xad": "OP_CHECKSIGVERIFY",
     b"\xae": "OP_CHECKMULTISIG",
     b"\xaf": "OP_CHECKMULTISIGVERIFY",
-    b"\xba": "OP_CHECKSIGADD",
+    b"\xba": "OP_CHECKSIGADD", # added this new OPCODE
     # locktime
     # This used to be OP_NOP2
-    b"\xb1": "OP_CHECKLOCKTIMEVERIFY",
+    b"\xb1": "OP_CHECKLOCKTIMEVERIFY", 
     # This used to be OP_NOP3
-    b"\xb2": "OP_CHECKSEQUENCEVERIFY",
-}
+    b"\xb2": "OP_CHECKSEQUENCEVERIFY", 
+    }
+
+
 
 
 class Script:
     """Represents any script in Bitcoin
 
+
     A Script contains just a list of OP_CODES and also knows how to serialize
     into bytes
+
 
     Attributes
     ----------
     script : list
         the list with all the script OP_CODES and data
 
+
     Methods
     -------
     to_bytes()
         returns a serialized byte version of the script
 
+
     to_hex()
         returns a serialized version of the script in hex
+
 
     get_script()
         returns the list of strings that makes up this script
 
+
     copy()
         creates a copy of the object (classmethod)
 
+
     from_raw()
+
 
     to_p2sh_script_pub_key()
         converts script to p2sh scriptPubKey (locking script)
 
+
     to_p2wsh_script_pub_key()
         converts script to p2wsh scriptPubKey (locking script)
+
 
     is_p2wpkh()
         checks if script is P2WPKH (Pay-to-Witness-Public-Key-Hash)
 
+
     is_p2tr()
         checks if script is P2TR (Pay-to-Taproot)
+
 
     is_p2wsh()
         checks if script is P2WSH (Pay-to-Witness-Script-Hash)
 
+
     is_p2sh()
         checks if script is P2SH (Pay-to-Script-Hash)
+
 
     is_p2pkh()
         checks if script is P2PKH (Pay-to-Public-Key-Hash)
 
+
     is_multisig()
         checks if script is a multisig script
 
+
     get_script_type()
         determines the type of script
+
 
     Raises
     ------
@@ -292,9 +317,9 @@ class Script:
         If string data is too large or integer is negative
     """
 
+
     def __init__(self, script: list[Any]):
         """See Script description"""
-
         self.script: list[Any] = script
 
 
@@ -306,51 +331,51 @@ class Script:
 
 
     def _op_push_data(self, data):
-        """Converts data to appropriate OP_PUSHDATA OP code including length"""
-        
-        # Handle bytes directly
-        if isinstance(data, bytes):
-            data_bytes = data
-        # Handle hex strings
-        elif isinstance(data, str):
-            try:
-                # Check if it's a valid hex string
-                if len(data) % 2 == 0 and all(c in '0123456789abcdefABCDEF' for c in data):
-                    data_bytes = bytes.fromhex(data)
-                else:
+            """Converts data to appropriate OP_PUSHDATA OP code including length"""
+            
+            # Handle bytes directly
+            if isinstance(data, bytes):
+                data_bytes = data
+            # Handle hex strings
+            elif isinstance(data, str):
+                try:
+                    # Check if it's a valid hex string
+                    if len(data) % 2 == 0 and all(c in '0123456789abcdefABCDEF' for c in data):
+                        data_bytes = bytes.fromhex(data)
+                    else:
+                        data_bytes = data.encode('utf-8')
+                except ValueError:
                     data_bytes = data.encode('utf-8')
-            except ValueError:
-                data_bytes = data.encode('utf-8')
-        # Handle ints
-        elif isinstance(data, int):
-            # Special handling for small integers that might be opcodes
-            if data == 0:
-                return b'\x00'  # OP_0
-            elif 1 <= data <= 16:
-                return bytes([0x50 + data])  # OP_1 through OP_16
-            elif data == 0x51:
-                return b'\x51'
-            elif data == 0x52:
-                return b'\x52'
-            elif data == 0x53:
-                return b'\x53'
-            elif data == 0xae:
-                return b'\xae'
+            # Handle ints
+            elif isinstance(data, int):
+                # Special handling for small integers that might be opcodes
+                if data == 0:
+                    return b'\x00'  # OP_0
+                elif 1 <= data <= 16:
+                    return bytes([0x50 + data])  # OP_1 through OP_16
+                elif data == 0x51:
+                    return b'\x51'
+                elif data == 0x52:
+                    return b'\x52'
+                elif data == 0x53:
+                    return b'\x53'
+                elif data == 0xae:
+                    return b'\xae'
+                else:
+                    # Convert integer to bytes
+                    data_bytes = data.to_bytes((data.bit_length() + 7) // 8 or 1, 'little')
             else:
-                # Convert integer to bytes
-                data_bytes = data.to_bytes((data.bit_length() + 7) // 8 or 1, 'little')
-        else:
-            raise TypeError(f"Unsupported data type for push: {type(data)}")
-        
-        length = len(data_bytes)
-        if length < 0x4c:
-            return bytes([length]) + data_bytes
-        elif length <= 0xff:
-            return b'\x4c' + bytes([length]) + data_bytes
-        elif length <= 0xffff:
-            return b'\x4d' + length.to_bytes(2, 'little') + data_bytes
-        else:
-            return b'\x4e' + length.to_bytes(4, 'little') + data_bytes
+                raise TypeError(f"Unsupported data type for push: {type(data)}")
+            
+            length = len(data_bytes)
+            if length < 0x4c:
+                return bytes([length]) + data_bytes
+            elif length <= 0xff:
+                return b'\x4c' + bytes([length]) + data_bytes
+            elif length <= 0xffff:
+                return b'\x4d' + length.to_bytes(2, 'little') + data_bytes
+            else:
+                return b'\x4e' + length.to_bytes(4, 'little') + data_bytes
 
 
     def _push_integer(self, integer: int) -> bytes:
@@ -371,40 +396,40 @@ class Script:
 
 
     def to_bytes(self) -> bytes:
-        """Converts the script to bytes"""
-        script_bytes = b""
-        for token in self.script:
-            if isinstance(token, str) and token in OP_CODES:
-                # It's an opcode string like 'OP_CHECKMULTISIG'
-                script_bytes += OP_CODES[token]
-            elif isinstance(token, int):
-                # Handle integer opcodes directly
-                if token == 0:
-                    script_bytes += b'\x00'  # OP_0
-                elif 1 <= token <= 16:
-                    script_bytes += bytes([0x50 + token])  # OP_1 through OP_16
-                elif token == 0x51:  # OP_1
-                    script_bytes += b'\x51'
-                elif token == 0x52:  # OP_2
-                    script_bytes += b'\x52'
-                elif token == 0x53:  # OP_3
-                    script_bytes += b'\x53'
-                elif token == 0xae:  # OP_CHECKMULTISIG
-                    script_bytes += b'\xae'
-                elif 0x50 <= token <= 0x60:  # Other single-byte opcodes
-                    script_bytes += bytes([token])
+            """Converts the script to bytes"""
+            script_bytes = b""
+            for token in self.script:
+                if isinstance(token, str) and token in OP_CODES:
+                    # It's an opcode string like 'OP_CHECKMULTISIG'
+                    script_bytes += OP_CODES[token]
+                elif isinstance(token, int):
+                    # Handle integer opcodes directly
+                    if token == 0:
+                        script_bytes += b'\x00'  # OP_0
+                    elif 1 <= token <= 16:
+                        script_bytes += bytes([0x50 + token])  # OP_1 through OP_16
+                    elif token == 0x51:  # OP_1
+                        script_bytes += b'\x51'
+                    elif token == 0x52:  # OP_2
+                        script_bytes += b'\x52'
+                    elif token == 0x53:  # OP_3
+                        script_bytes += b'\x53'
+                    elif token == 0xae:  # OP_CHECKMULTISIG
+                        script_bytes += b'\xae'
+                    elif 0x50 <= token <= 0x60:  # Other single-byte opcodes
+                        script_bytes += bytes([token])
+                    else:
+                        # For other integers, push as data
+                        script_bytes += self._push_integer(token)
+                elif isinstance(token, bytes):
+                    # Raw bytes - push with length prefix
+                    script_bytes += self._op_push_data(token)
+                elif isinstance(token, str):
+                    # Assume it's hex data if not an opcode
+                    script_bytes += self._op_push_data(token)
                 else:
-                    # For other integers, push as data
-                    script_bytes += self._push_integer(token)
-            elif isinstance(token, bytes):
-                # Raw bytes - push with length prefix
-                script_bytes += self._op_push_data(token)
-            elif isinstance(token, str):
-                # Assume it's hex data if not an opcode
-                script_bytes += self._op_push_data(token)
-            else:
-                raise TypeError(f"Invalid token type in script: {type(token)}")
-        return script_bytes
+                    raise TypeError(f"Invalid token type in script: {type(token)}")
+            return script_bytes
 
     def to_hex(self) -> str:
         """Converts the script to hexadecimal"""
@@ -412,16 +437,16 @@ class Script:
 
     @classmethod
     def from_bytes(cls, byte_data: bytes) -> "Script":
-        """
-        Creates a Script object from raw bytes.
+            """
+            Creates a Script object from raw bytes.
 
-        Args:
-            byte_data (bytes): The raw bytes of the script.
+            Args:
+                byte_data (bytes): The raw bytes of the script.
 
-        Returns:
+            Returns:
             Script: A new Script object parsed from the byte data.
-        """
-        return cls.from_raw(byte_data)
+            """
+            return cls.from_raw(byte_data)
 
 
     @staticmethod
@@ -435,7 +460,7 @@ class Script:
             scriptraw = scriptrawhex
         else:
             raise TypeError("Input must be a hexadecimal string or bytes")
-       
+        
         commands = []
         index = 0
 
@@ -503,9 +528,9 @@ class Script:
     def is_p2wpkh(self) -> bool:
         """
         Check if script is P2WPKH (Pay-to-Witness-Public-Key-Hash).
-       
+        
         P2WPKH format: OP_0 <20-byte-key-hash>
-       
+        
         Returns:
             bool: True if script is P2WPKH
         """
@@ -519,9 +544,9 @@ class Script:
     def is_p2tr(self) -> bool:
         """
         Check if script is P2TR (Pay-to-Taproot).
-       
+        
         P2TR format: OP_1 <32-byte-key>
-       
+        
         Returns:
             bool: True if script is P2TR
         """
@@ -535,9 +560,9 @@ class Script:
     def is_p2wsh(self) -> bool:
         """
         Check if script is P2WSH (Pay-to-Witness-Script-Hash).
-       
+        
         P2WSH format: OP_0 <32-byte-script-hash>
-       
+        
         Returns:
             bool: True if script is P2WSH
         """
@@ -551,9 +576,9 @@ class Script:
     def is_p2sh(self) -> bool:
         """
         Check if script is P2SH (Pay-to-Script-Hash).
-       
+        
         P2SH format: OP_HASH160 <20-byte-script-hash> OP_EQUAL
-       
+        
         Returns:
             bool: True if script is P2SH
         """
@@ -568,9 +593,9 @@ class Script:
     def is_p2pkh(self) -> bool:
         """
         Check if script is P2PKH (Pay-to-Public-Key-Hash).
-       
+        
         P2PKH format: OP_DUP OP_HASH160 <20-byte-key-hash> OP_EQUALVERIFY OP_CHECKSIG
-       
+        
         Returns:
             bool: True if script is P2PKH
         """
@@ -587,33 +612,33 @@ class Script:
     def is_multisig(self) -> tuple[bool, Union[tuple[int, int], None]]:
         """
         Check if script is a multisig script.
-       
+        
         Multisig format: OP_M <pubkey1> ... <pubkeyN> OP_N OP_CHECKMULTISIG
-       
+        
         Returns:
             tuple: (bool, (M, N) if multisig, None otherwise)
         """
         ops = self.script
-       
+        
         if (len(ops) >= 4 and
             isinstance(ops[0], int) and
             ops[-1] == 'OP_CHECKMULTISIG' and
             isinstance(ops[-2], int)):
-           
+            
             m = ops[0]  # Required signatures
             n = ops[-2]  # Total public keys
-           
+            
             # Validate the structure
             if len(ops) == n + 3:  # M + N pubkeys + N + OP_CHECKMULTISIG
                 return True, (m, n)
-       
+        
         return False, None
 
 
     def get_script_type(self) -> str:
         """
         Determine the type of script.
-       
+        
         Returns:
             str: Script type ('p2pkh', 'p2sh', 'p2wpkh', 'p2wsh', 'p2tr', 'multisig', 'unknown')
         """

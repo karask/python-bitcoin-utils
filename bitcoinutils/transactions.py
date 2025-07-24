@@ -8,7 +8,7 @@
 # No part of python-bitcoin-utils, including this file, may be copied, modified,
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
-
+from typing import Union
 import math
 import hashlib
 import struct
@@ -79,7 +79,7 @@ class TxInput:
         txid: str,
         txout_index: int,
         script_sig=Script([]),
-        sequence: str | bytes = DEFAULT_TX_SEQUENCE,
+        sequence: Union[str, bytes] = DEFAULT_TX_SEQUENCE,
     ) -> None:
         """See TxInput description"""
 
@@ -354,31 +354,28 @@ class TxOutput:
     
     @classmethod
     def from_bytes(cls, b):
+        """Deserialize a TxOutput from bytes."""
         from bitcoinutils.script import Script
+        from bitcoinutils.utils import read_varint
         import struct
         from io import BytesIO
 
         stream = BytesIO(b)
 
-         # Read 8-byte value (little-endian)
+        # Read 8-byte value (little-endian)
         value = struct.unpack('<Q', stream.read(8))[0]
 
         # Read varint length of scriptPubKey
-        def read_varint(s):
-            i = ord(s.read(1))
-            if i == 0xfd:
-                return struct.unpack('<H', s.read(2))[0]
-            elif i == 0xfe:
-                return struct.unpack('<I', s.read(4))[0]
-            elif i == 0xff:
-                return struct.unpack('<Q', s.read(8))[0]
-            else:
-                return i
+        script_len, varint_size = read_varint(stream.read(9))  # Read up to 9 bytes for varint
+        stream.seek(8 + varint_size)  # Seek back to right after the varint
+        
+        # Read the script
+        script_data = stream.read(script_len)
+        
+        # Create Script object from the raw bytes
+        script_pubkey = Script.from_raw(script_data)
 
-        script_len = read_varint(stream)
-        script_pubkey = stream.read(script_len)
-
-        return cls(value, Script(script_pubkey.hex()))
+        return cls(value, script_pubkey)
 
 class Sequence:
     """Helps setting up appropriate sequence. Used to provide the sequence to
@@ -542,7 +539,7 @@ class Transaction:
         self,
         inputs: Optional[list[TxInput]] = None,
         outputs: Optional[list[TxOutput]] = None,
-        locktime: str | bytes | int = DEFAULT_TX_LOCKTIME,
+        locktime: Union[str, bytes, int] = DEFAULT_TX_LOCKTIME,
         version: bytes = DEFAULT_TX_VERSION,
         has_segwit: bool = False,
         witnesses: Optional[list[TxWitnessInput]] = None,

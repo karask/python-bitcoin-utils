@@ -593,8 +593,7 @@ def i_to_b(i: int) -> bytes:
     byte_length = (i.bit_length() + 7) // 8
     return i.to_bytes(byte_length, "big")
 
-
-def read_varint(b: bytes) -> tuple[int, int]:
+def read_varint(b: bytes) -> tuple:
     """
     Reads a Bitcoin varint from the provided bytes.
 
@@ -603,17 +602,23 @@ def read_varint(b: bytes) -> tuple[int, int]:
             - value: the decoded integer
             - size: the number of bytes consumed
     """
+    if not b:
+        raise ValueError("Empty bytes for varint")
+        
     prefix = b[0]
     if prefix < 0xfd:
         return prefix, 1
     elif prefix == 0xfd:
-        return int.from_bytes(b[1:3], 'little'), 3
+        if len(b) < 3:
+            raise ValueError("Insufficient bytes for 0xfd varint")
+        return struct.unpack('<H', b[1:3])[0], 3
     elif prefix == 0xfe:
-        return int.from_bytes(b[1:5], 'little'), 5
+        if len(b) < 5:
+            raise ValueError("Insufficient bytes for 0xfe varint")
+        return struct.unpack('<I', b[1:5])[0], 5
     elif prefix == 0xff:
-        return int.from_bytes(b[1:9], 'little'), 9
-    else:
-        raise ValueError("Invalid varint prefix")
-
+        if len(b) < 9:
+            raise ValueError("Insufficient bytes for 0xff varint")
+        return struct.unpack('<Q', b[1:9])[0], 9
 
 # TODO are these required - maybe bytestoint and inttobytes are only required?!?
