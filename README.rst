@@ -129,6 +129,13 @@ https://github.com/karask/python-bitcoin-utils/blob/master/examples/send_to_p2tr
 Spend taproot from script path (has three alternative script path spends - A, B and C)
 https://github.com/karask/python-bitcoin-utils/blob/master/examples/spend_p2tr_three_scripts_by_script_path.py - single input, single output, spend script path B.
 
+Send to Taproot address that contains four script path spends
+https://github.com/aaron-recompile/python-bitcoin-utils/blob/taproot-4leaf-example/examples/send_to_p2tr_with_four_scripts.py - builds a Taproot address with four scripts (hashlock, multisig, CSV, siglock).
+
+Spend Taproot from script path (has four alternative script path spends - A, B, C, and D)
+https://github.com/aaron-recompile/python-bitcoin-utils/blob/taproot-4leaf-example/examples/spend_p2tr_four_scripts_by_script_path.py - spends from any of the 4 script paths using control blocks and full validation.
+
+
 Other
 -----
 
