@@ -219,57 +219,60 @@ class PSBT:
                     return False
                 prev_txout = prev_tx.outputs[self.tx.inputs[input_index].tx_out_index]
 
-            # Determine the correct script to use
-            script_to_use = (
-                psbt_input.witness_script
-                if psbt_input.witness_script is not None
-                else psbt_input.redeem_script
-                if psbt_input.redeem_script is not None
-                else prev_txout.script_pubkey
-            )
-
-            # Compute sighash correctly
-            if is_segwit:
+            # For P2WPKH, we need special handling
+            if is_segwit and self._is_p2wpkh_script(prev_txout.script_pubkey):
+                # Get the P2PKH script from the public key
+                pubkey_obj = private_key.get_public_key()
+                p2pkh_script = pubkey_obj.get_address().to_script_pub_key()
+                
                 sighash = self.tx.get_transaction_segwit_digest(
                     input_index,
-                    script_to_use,
+                    p2pkh_script,  # This is the key fix!
                     prev_txout.amount,
                     sighash_type
                 )
             else:
-                sighash = self.tx.get_transaction_digest(
-                    input_index,
-                    script_to_use,
-                    sighash_type
+                # Determine the correct script to use for other types
+                script_to_use = (
+                    psbt_input.witness_script
+                    if psbt_input.witness_script is not None
+                    else psbt_input.redeem_script
+                    if psbt_input.redeem_script is not None
+                    else prev_txout.script_pubkey
                 )
 
-            # Prepare SigningKey correctly
+                # Compute sighash
+                if is_segwit:
+                    sighash = self.tx.get_transaction_segwit_digest(
+                        input_index,
+                        script_to_use,
+                        prev_txout.amount,
+                        sighash_type
+                    )
+                else:
+                    sighash = self.tx.get_transaction_digest(
+                        input_index,
+                        script_to_use,
+                        sighash_type
+                    )
+
+            # Rest of your signing code remains the same...
             if hasattr(private_key, 'key'):
                 raw_private_key = private_key.key.privkey.secret_multiplier.to_bytes(32, 'big')
             else:
                 raw_private_key = private_key.to_bytes()
 
             sk = SigningKey.from_string(raw_private_key, curve=SECP256k1)
-
-            # Create DER signature + sighash type byte
             sig = sk.sign_digest(sighash, sigencode=ecdsa.util.sigencode_der_canonize) + bytes([sighash_type])
 
-            # Get compressed pubkey bytes - MUST include the prefix byte
             pubkey_obj = private_key.get_public_key()
-
-            # The to_hex() method should give us the full compressed pubkey with prefix
             pubkey_hex = pubkey_obj.to_hex()
             pubkey_bytes = bytes.fromhex(pubkey_hex)
 
-            # Verify we have a proper compressed pubkey (33 bytes starting with 02 or 03)
             if len(pubkey_bytes) != 33 or pubkey_bytes[0] not in [0x02, 0x03]:
                 raise ValueError(f"Invalid compressed public key: {pubkey_hex}")
 
-            # Ensure we store only the compressed pubkey (33 bytes)
-            if len(pubkey_bytes) > 33:
-                pubkey_bytes = pubkey_bytes[:33]
             psbt_input.partial_sigs[pubkey_bytes] = sig
-
             return True
 
         except Exception as e:
