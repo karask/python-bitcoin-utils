@@ -6,9 +6,9 @@ SHORT-TERM
 - python-ecdsa is vulnerable to minerva timing attacks
   . https://github.com/karask/python-bitcoin-utils/security/dependabot/2
   . investigate the consequences (how critical) this is for the library
-  . find a python ecdsa implementation that solves this
-  . change the code to use the new library
-  . there are a couple of places where we extend the library for bitcoin-specific calculations; also update using the new library!
+  . no pure python implementation can go around that
+  . investigate changing the code to use library pyca/cryptography or pycryptodome?
+  . there are a couple of places where we extend the library for bitcoin-specific calculations; also consider them
 - taproot's op_addchecksig simply added
   . other tapscript changes?
   . think: how to differentiate tapscript in code? (right now addchecksig can be used in any script)
