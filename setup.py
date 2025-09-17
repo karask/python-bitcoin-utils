@@ -22,7 +22,7 @@ setup(
     keywords="bitcoin library utilities tools",
     install_requires=[
         "base58check>=1.0.2,<2.0",
-        "ecdsa==0.19.0",
+        "ecdsa>=0.19.1,<0.20",
         "sympy>=1.2,<2.0",
         "python-bitcoinrpc>=1.0,<2.0",
         "hdwallet~=3.0",
