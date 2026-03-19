@@ -1161,6 +1161,40 @@ class Transaction:
 
         return self.to_hex()
 
+    def to_psbt(self):
+        """Create a PSBT from this transaction.
+
+        Returns
+        -------
+        PSBT
+            A new PSBT wrapping this transaction.
+        """
+        from bitcoinutils.psbt import PSBT
+
+        return PSBT(self)
+
+    @classmethod
+    def from_psbt(cls, psbt_b64_or_hex: str) -> "Transaction":
+        """Extract a signed transaction from a finalized PSBT.
+
+        Parameters
+        ----------
+        psbt_b64_or_hex : str
+            Base64- or hex-encoded PSBT string.
+
+        Returns
+        -------
+        Transaction
+            The extracted signed transaction.
+        """
+        from bitcoinutils.psbt import PSBT
+
+        try:
+            p = PSBT.from_base64(psbt_b64_or_hex)
+        except Exception:
+            p = PSBT.from_hex(psbt_b64_or_hex)
+        return p.extract_transaction()
+
 
 def main():
     pass
