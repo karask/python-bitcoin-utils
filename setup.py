@@ -11,7 +11,7 @@ with open("README.rst") as readme:
     long_description = readme.read()
 
 setup(
-    name="bitcoin-utils",
+    name="bitcoin_utils",
     version=__version__,
     description="Bitcoin utility functions",
     long_description=long_description,
