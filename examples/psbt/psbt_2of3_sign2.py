@@ -49,7 +49,7 @@ OUTPUT_FILE = "final_tx.hex"
 def main():
     setup("regtest")
 
-    proxy = NodeProxy(RPC_USER, RPC_PASSWORD).get_proxy()
+    proxy = NodeProxy(RPC_USER, RPC_PASSWORD)
 
     # ------------------------------------------------------------------
     # 1. Load keys and Signer 2's private key

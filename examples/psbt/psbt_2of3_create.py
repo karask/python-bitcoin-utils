@@ -54,7 +54,7 @@ SPEND_AMOUNT = 0.999  # BTC to send out (the rest is fee)
 def main():
     setup("regtest")
 
-    proxy = NodeProxy(RPC_USER, RPC_PASSWORD).get_proxy()
+    proxy = NodeProxy(RPC_USER, RPC_PASSWORD)
     print(f"Connected to regtest node — block height: {proxy.getblockcount()}")
 
     # ------------------------------------------------------------------

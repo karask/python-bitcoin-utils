@@ -3,7 +3,7 @@ python-bitcoin-utils
 
 This is a bitcoin library that provides tools/utilities to interact with the Bitcoin network. One of the primary goals of the library is to explain the low-level details of Bitcoin. The code is easy to read and properly documented explaining in detail all the thorny aspects of the implementation. It is a low-level library which assumes some high-level understanding of how Bitcoin works. In the future this might change.
 
-The library (v0.8.0) currently supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot, with all SIGHASH types. All script op codes are included. Block parsing is also handled so you can read raw blocks directly. PSBT (BIP-174) is supported. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
+The library (v0.8.1) currently supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot, with all SIGHASH types. All script op codes are included. Block parsing is also handled so you can read raw blocks directly. PSBT (BIP-174) is supported. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
 
 The API documentation can be build with Sphinx but is also available as a PDF for convenience. One can currently use the library for experimenting and learning the inner workings of Bitcoin. It is not meant for production yet and parts of the API might be updated with new versions.
 
@@ -13,7 +13,6 @@ Complementary to this library is a CC BY-SA 4.0 licensed `Bitcoin programming bo
 Notes
 -----
 * For schnorr, bech32[m], ripemd160 the python Bitcoin Core reference implementations are used.
-* For making calls to a Bitcoin node a simple node proxy object exists, which wraps the python-bitcoinrpc library.
 * For Hierarchical Deterministic keys we wrap the python hdwallet library. For now we wrap only some very basic functionality to acquire a PrivateKey object that is used throughtout the library.
 
 
