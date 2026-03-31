@@ -767,6 +767,44 @@ class Transaction:
 
         return tx_digest
 
+    def add_input(self, input: TxInput):
+        """Adds an input to the transaction (and an empty witness if segwit)"""
+        self.inputs.append(input)
+        if self.has_segwit:
+            self.witnesses.append(TxWitnessInput([]))
+
+    def update_input(self, index: int, input: TxInput):
+        """Updates an input at the specified index"""
+        if index < 0 or index >= len(self.inputs):
+            raise IndexError("Transaction input index out of range")
+        self.inputs[index] = input
+
+    def remove_input(self, index: int):
+        """Removes an input at the specified index (and its witness if segwit)"""
+        if index < 0 or index >= len(self.inputs):
+            raise IndexError("Transaction input index out of range")
+        del self.inputs[index]
+        if self.has_segwit:
+            # assuming witnesses logic is consistent with inputs length
+            if index < len(self.witnesses):
+                del self.witnesses[index]
+
+    def add_output(self, output: TxOutput):
+        """Adds an output to the transaction"""
+        self.outputs.append(output)
+
+    def update_output(self, index: int, output: TxOutput):
+        """Updates an output at the specified index"""
+        if index < 0 or index >= len(self.outputs):
+            raise IndexError("Transaction output index out of range")
+        self.outputs[index] = output
+
+    def remove_output(self, index: int):
+        """Removes an output at the specified index"""
+        if index < 0 or index >= len(self.outputs):
+            raise IndexError("Transaction output index out of range")
+        del self.outputs[index]
+
     def get_transaction_segwit_digest(
         self, txin_index: int, script: Script, amount: int, sighash: int = SIGHASH_ALL
     ):
