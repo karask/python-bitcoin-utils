@@ -355,16 +355,47 @@ class TestHDWallet(unittest.TestCase):
             "cPSitUzA63SJL7oAbN1oNDrUbmmqzc23bAL2QuF4cSBc3FXCg1Ax"
         )
         self.legacy_address_m_44_1h_0h_0_3 = "mz63brMnFrXP4ZF9V75d9VrkKPM5gUyS9H"
+        self.taproot_xprivkey = (
+            "tprv8ZgxMBicQKsPdQR9RuHpGGxSnNq8Jr3X4WnT6Nf2eq7FajuXyBep5KWYpYEixxx5XdTm1N"
+            "tpe84f3cVcF7mZZ7mPkntaFXLGJD2tS7YJkWU"
+        )
+        self.taproot_wif_m_86h_1h_0h_0_1 = (
+            "cTLeemg1bCXXuRctid7PygEn7Svxj4zehjTcoayrbEYPsHQo248w"
+        )
+        self.taproot_wif_m_86h_1h_0h_0_5 = (
+            "cNxX8M7XU8VNa5ofd8yk1eiZxaxNrQQyb7xNpwAmsrzEhcVwtCjs"
+        )
 
     def test_legacy_address_from_xprivkey(self):
         hdw = HDWallet(xprivate_key=self.xprivkey, path="m/44'/1'/0'/0/1")
-        self.assertTrue(hdw.get_private_key(), self.privkey_m_44h_1h_0h_0_1)
+        self.assertEqual(
+            hdw.get_private_key().to_wif(), self.privkey_m_44h_1h_0h_0_1
+        )
 
     def test_legacy_address_from_mnemonic(self):
         hdw = HDWallet(mnemonic=self.mnemonic)
         hdw.from_path("m/44'/1'/0'/0/3")
         address = hdw.get_private_key().get_public_key().get_address()
-        self.assertTrue(address.to_string(), self.legacy_address_m_44_1h_0h_0_3)
+        self.assertEqual(address.to_string(), self.legacy_address_m_44_1h_0h_0_3)
+
+    def test_taproot_example_xprivkey_paths(self):
+        hdw = HDWallet(
+            xprivate_key=self.taproot_xprivkey,
+            path="m/86'/1'/0'/0/1",
+        )
+        self.assertEqual(
+            hdw.get_private_key().to_wif(), self.taproot_wif_m_86h_1h_0h_0_1
+        )
+
+        hdw.from_path("m/86'/1'/0'/0/5")
+        self.assertEqual(
+            hdw.get_private_key().to_wif(), self.taproot_wif_m_86h_1h_0h_0_5
+        )
+
+    def test_invalid_hd_path(self):
+        hdw = HDWallet(mnemonic=self.mnemonic)
+        with self.assertRaises(ValueError):
+            hdw.from_path("44'/1'/0'/0/3")
 
 if __name__ == "__main__":
     unittest.main()
