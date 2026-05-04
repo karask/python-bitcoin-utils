@@ -9,6 +9,14 @@ The API documentation can be build with Sphinx but is also available as a PDF fo
 
 Complementary to this library is a CC BY-SA 4.0 licensed `Bitcoin programming book <https://github.com/karask/bitcoin-textbook>`_.
 
+Security model
+--------------
+This library is intentionally pure Python and educational. Private-key operations, including ECDSA signing and Taproot/Schnorr signing, are not side-channel hardened and should not be used to protect real funds in timing-observable environments. 
+
+The ``python-ecdsa`` dependency has a known Minerva timing-attack advisory (CVE-2024-23342) with no patched pure-Python release. Keeping the library pure Python means this class of side-channel risk cannot be fully eliminated. Use the library for learning, tests, testnet, offline experiments, and transaction construction; use production wallets, hardware signers, or hardened native cryptographic libraries for real funds.
+
+Private-key warnings are enabled by default on mainnet and can be disabled with ``bitcoinutils.setup.set_security_warnings(False)``. Testnet, testnet4, signet and regtest do not emit the warning by default, so educational examples stay quiet.
+
 
 Notes
 -----

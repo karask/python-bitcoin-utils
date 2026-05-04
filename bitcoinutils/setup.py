@@ -10,6 +10,8 @@
 # LICENSE file.
 
 NETWORK = "testnet"
+SECURITY_WARNINGS = True
+_SECURITY_WARNING_EMITTED = False
 
 networks = {"mainnet", "testnet", "testnet4", "signet", "regtest"}
 
@@ -28,6 +30,32 @@ def setup(network: str = "testnet") -> str:
 def get_network() -> str:
     global NETWORK
     return NETWORK
+
+
+def set_security_warnings(enabled: bool) -> None:
+    """Enable or disable warnings for pure-Python private-key operations."""
+
+    global SECURITY_WARNINGS
+    global _SECURITY_WARNING_EMITTED
+    SECURITY_WARNINGS = enabled
+    if enabled:
+        _SECURITY_WARNING_EMITTED = False
+
+
+def get_security_warnings() -> bool:
+    """Return whether pure-Python private-key operation warnings are enabled."""
+
+    return SECURITY_WARNINGS
+
+
+def should_warn_about_private_key_use() -> bool:
+    """Return True the first time a private-key operation should warn."""
+
+    global _SECURITY_WARNING_EMITTED
+    if NETWORK != "mainnet" or not SECURITY_WARNINGS or _SECURITY_WARNING_EMITTED:
+        return False
+    _SECURITY_WARNING_EMITTED = True
+    return True
 
 
 def is_mainnet() -> bool:

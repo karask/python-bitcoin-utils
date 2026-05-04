@@ -11,8 +11,9 @@
 
 
 import unittest
+import warnings
 
-from bitcoinutils.setup import setup
+from bitcoinutils.setup import setup, set_security_warnings
 from bitcoinutils.keys import (
     PrivateKey,
     PublicKey,
@@ -27,6 +28,10 @@ from base64 import b64decode
 
 
 class TestPrivateKeys(unittest.TestCase):
+    def tearDown(self):
+        set_security_warnings(True)
+        setup("testnet")
+
     def setUp(self):
         setup("mainnet")
         self.key_wifc = "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn"
@@ -55,6 +60,27 @@ class TestPrivateKeys(unittest.TestCase):
     def test_public_key(self):
         p = PrivateKey(secret_exponent=1)
         self.assertEqual(p.get_public_key().to_bytes(), self.public_key_bytes)
+
+    def test_private_key_generation_warns_by_default(self):
+        set_security_warnings(True)
+        with self.assertWarnsRegex(RuntimeWarning, "not side-channel hardened"):
+            PrivateKey()
+
+    def test_private_key_warning_can_be_disabled(self):
+        set_security_warnings(False)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            PrivateKey()
+        self.assertEqual(caught, [])
+
+    def test_private_key_generation_does_not_warn_on_test_networks(self):
+        for network in ["testnet", "testnet4", "signet", "regtest"]:
+            setup(network)
+            set_security_warnings(True)
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                PrivateKey()
+            self.assertEqual(caught, [])
 
 
 class TestPublicKeys(unittest.TestCase):
@@ -176,6 +202,10 @@ class TestP2pkhAddresses(unittest.TestCase):
 
 
 class TestSignAndVerify(unittest.TestCase):
+    def tearDown(self):
+        set_security_warnings(True)
+        setup("testnet")
+
     def setUp(self):
         setup("mainnet")
         self.message = "The test!"
@@ -198,6 +228,39 @@ class TestSignAndVerify(unittest.TestCase):
         assert signature is not None
         self.assertEqual(signature, self.deterministic_signature)
         self.assertTrue(PublicKey.verify_message(self.address, signature, self.message))
+
+    def test_sign_message_warns_by_default(self):
+        set_security_warnings(True)
+        with self.assertWarnsRegex(RuntimeWarning, "not side-channel hardened"):
+            self.priv.sign_message(self.message)
+
+    def test_sign_message_warning_can_be_disabled(self):
+        set_security_warnings(False)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            self.priv.sign_message(self.message)
+        self.assertEqual(caught, [])
+
+    def test_sign_message_does_not_warn_on_test_networks(self):
+        for network in ["testnet", "testnet4", "signet", "regtest"]:
+            setup(network)
+            set_security_warnings(True)
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                self.priv.sign_message(self.message)
+            self.assertEqual(caught, [])
+
+    def test_transaction_signing_helper_warns_by_default(self):
+        set_security_warnings(True)
+        digest = bytes.fromhex("00" * 32)
+        with self.assertWarnsRegex(RuntimeWarning, "not side-channel hardened"):
+            self.priv._sign_input(digest)
+
+    def test_taproot_signing_helper_warns_by_default(self):
+        set_security_warnings(True)
+        digest = bytes.fromhex("00" * 32)
+        with self.assertWarnsRegex(RuntimeWarning, "not side-channel hardened"):
+            self.priv._sign_taproot_input(digest)
 
     def test_verify_external(self):
         self.assertTrue(

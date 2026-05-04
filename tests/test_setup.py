@@ -7,6 +7,8 @@ from bitcoinutils.setup import (
     is_testnet4,
     is_signet,
     is_regtest,
+    set_security_warnings,
+    get_security_warnings,
 )
 
 
@@ -31,6 +33,15 @@ class TestSetup(unittest.TestCase):
     def test_invalid_network(self):
         with self.assertRaises(ValueError):
             setup("badnet")
+
+        setup("testnet")
+
+    def test_security_warning_setting(self):
+        set_security_warnings(False)
+        self.assertFalse(get_security_warnings())
+
+        set_security_warnings(True)
+        self.assertTrue(get_security_warnings())
 
         setup("testnet")
 
