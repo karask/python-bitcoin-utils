@@ -293,16 +293,15 @@ class Script:
         Also note that according to standarardness rules (BIP-62) the minimum
         possible PUSHDATA operator must be used!
         """
-        
-        data_bytes = h_to_b(data) # Assuming string is hexadecimal
+        data_bytes = h_to_b(data)
 
         if len(data_bytes) < 0x4C:
             return bytes([len(data_bytes)]) + data_bytes
-        elif len(data_bytes) < 0xFF:
+        elif len(data_bytes) <= 0xFF:
             return b"\x4c" + bytes([len(data_bytes)]) + data_bytes
-        elif len(data_bytes) < 0xFFFF:
+        elif len(data_bytes) <= 0xFFFF:
             return b"\x4d" + struct.pack("<H", len(data_bytes)) + data_bytes
-        elif len(data_bytes) < 0xFFFFFFFF:
+        elif len(data_bytes) <= 0xFFFFFFFF:
             return b"\x4e" + struct.pack("<I", len(data_bytes)) + data_bytes
         else:
             raise ValueError("Data too large. Cannot push into script")

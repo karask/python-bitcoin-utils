@@ -54,8 +54,6 @@ OTHERLIBS-related
 
 OTHER
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...
-- create test with 260 outputs (inputs too much trouble) - file: test_extreme_txs.py
-- create test with script of 260 and another with 66000 commands
 - maybe make RBF the default from now on (like Bitcoin Core)
   . will need to change all the tests, unless I add minor hack that uses RBF by default only for taproot
   
