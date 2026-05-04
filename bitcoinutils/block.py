@@ -9,8 +9,6 @@ from bitcoinutils.transactions import Transaction
 
 from bitcoinutils.constants import HEADER_SIZE, BLOCK_MAGIC_NUMBER
 
-import os
-
 
 class BlockHeader:
     """
@@ -56,6 +54,8 @@ class BlockHeader:
         Retrieves the nonce used for mining to achieve the block's proof of work.
     format_timestamp()
         Formats the timestamp into a human-readable UTC datetime string.
+    get_target_hex()
+        Decodes target bits into the full proof-of-work target.
     """
 
     def __init__(
@@ -200,7 +200,7 @@ class BlockHeader:
         utc_time = datetime.fromtimestamp(self.timestamp, timezone.utc)
         return utc_time.strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    def get_target_bits(self):
+    def get_target_hex(self):
         """
         Decodes the compact representation of the target bits into the full target hash
         that a block's hash must be less than or equal to, in order to solve the block.
@@ -210,7 +210,11 @@ class BlockHeader:
                 the full 256-bit target hash used in the proof of work.
         """
 
-        # Extract the exponent (first byte) and coefficient (last three bytes) from the target_bits
+        if self.target_bits is None:
+            return None
+
+        # Extract the exponent (first byte) and coefficient (last three bytes)
+        # from the target_bits.
         exponent = self.target_bits >> 24
         coefficient = self.target_bits & 0xFFFFFF
 
@@ -358,6 +362,10 @@ class Block:
             rawdata = rawhexdata
         else:
             raise TypeError("Input must be a hexadecimal string or bytes")
+
+        if len(rawdata) < 8 + HEADER_SIZE + 1:
+            raise ValueError("Block data is too short.")
+
         magic = rawdata[0:4]
         block_size = struct.unpack("<I", rawdata[4:8])[0]
         block_size = block_size
@@ -375,15 +383,12 @@ class Block:
                         rawdata[current_offset : current_offset + tx_length].hex()
                     )
                 )
-                temp = Transaction.from_raw(
-                    rawdata[current_offset : current_offset + tx_length].hex()
-                )
                 current_offset += tx_length
 
             except Exception as e:
-                print(e)
-                print(i, transaction_count)
-                break
+                raise ValueError(
+                    f"Could not parse transaction {i + 1} of {transaction_count}"
+                ) from e
 
         return Block(magic, block_size, header, transaction_count, transactions)
 

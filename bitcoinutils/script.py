@@ -453,3 +453,67 @@ class Script:
         if not isinstance(_other, Script):
             return False
         return self.script == _other.script
+
+
+def is_p2pkh(script: Script) -> bool:
+    """Returns True for a P2PKH scriptPubKey."""
+
+    s = script.script
+    return (
+        len(s) == 5
+        and s[0] == "OP_DUP"
+        and s[1] == "OP_HASH160"
+        and isinstance(s[2], str)
+        and len(s[2]) == 40
+        and s[3] == "OP_EQUALVERIFY"
+        and s[4] == "OP_CHECKSIG"
+    )
+
+
+def is_p2sh(script: Script) -> bool:
+    """Returns True for OP_HASH160 <20-byte-hash> OP_EQUAL."""
+
+    s = script.script
+    return (
+        len(s) == 3
+        and s[0] == "OP_HASH160"
+        and isinstance(s[1], str)
+        and len(s[1]) == 40
+        and s[2] == "OP_EQUAL"
+    )
+
+
+def is_p2wpkh(script: Script) -> bool:
+    """Returns True for OP_0 <20-byte-hash>."""
+
+    s = script.script
+    return (
+        len(s) == 2
+        and s[0] == "OP_0"
+        and isinstance(s[1], str)
+        and len(s[1]) == 40
+    )
+
+
+def is_p2wsh(script: Script) -> bool:
+    """Returns True for OP_0 <32-byte-hash>."""
+
+    s = script.script
+    return (
+        len(s) == 2
+        and s[0] == "OP_0"
+        and isinstance(s[1], str)
+        and len(s[1]) == 64
+    )
+
+
+def is_p2tr(script: Script) -> bool:
+    """Returns True for OP_1 <32-byte-key>."""
+
+    s = script.script
+    return (
+        len(s) == 2
+        and s[0] == "OP_1"
+        and isinstance(s[1], str)
+        and len(s[1]) == 64
+    )

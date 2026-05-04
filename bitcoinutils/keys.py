@@ -1404,11 +1404,3 @@ class P2trAddress(SegwitAddress):
         False otherwise."""
 
         return self.odd
-
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()

@@ -16,6 +16,11 @@ networks = {"mainnet", "testnet", "testnet4", "signet", "regtest"}
 
 def setup(network: str = "testnet") -> str:
     global NETWORK
+    if network not in networks:
+        supported = ", ".join(sorted(networks))
+        raise ValueError(
+            f"Unknown network '{network}'. Supported networks: {supported}"
+        )
     NETWORK = network
     return NETWORK
 
@@ -26,40 +31,20 @@ def get_network() -> str:
 
 
 def is_mainnet() -> bool:
-    global NETWORK
-    if NETWORK == "mainnet":
-        return True
-    else:
-        return False
+    return NETWORK == "mainnet"
 
 
 def is_testnet() -> bool:
-    global NETWORK
-    if NETWORK == "testnet":
-        return True
-    else:
-        return False
+    return NETWORK == "testnet"
 
 
 def is_testnet4() -> bool:
-    global NETWORK
-    if NETWORK == "testnet4":
-        return True
-    else:
-        return False
+    return NETWORK == "testnet4"
 
 
 def is_signet() -> bool:
-    global NETWORK
-    if NETWORK == "signet":
-        return True
-    else:
-        return False
+    return NETWORK == "signet"
 
 
 def is_regtest() -> bool:
-    global NETWORK
-    if NETWORK == "regtest":
-        return True
-    else:
-        return False
+    return NETWORK == "regtest"

@@ -173,21 +173,16 @@ def get_tag_hashed_merkle_root(
     # empty scripts or empty list
     if not scripts:
         return b""
-    # print('1')
     # if not list return tapleaf_hash of Script
     if not isinstance(scripts, list):
-        # print('2')
         return tapleaf_tagged_hash(scripts)
     # list
     else:
         if len(scripts) == 0:
-            # print('3')
             return b""
         elif len(scripts) == 1:
-            # print('4')
             return get_tag_hashed_merkle_root(scripts[0])
         elif len(scripts) == 2:
-            # print('5')
             left = get_tag_hashed_merkle_root(scripts[0])
             right = get_tag_hashed_merkle_root(scripts[1])
             return tapbranch_tagged_hash(left, right)
@@ -515,7 +510,6 @@ def tweak_taproot_pubkey(internal_pubkey: bytes, tweak: int) -> Tuple[bytes, boo
         is_odd = True
         Q = (Q[0], Secp256k1Params._field - Q[1])  # type: ignore
 
-    # print(f'Tweaked Public Key: {Q[0]:064x}{Q[1]:064x}')
     return bytes.fromhex(f"{Q[0]:064x}{Q[1]:064x}"), is_odd  # type: ignore
 
 
@@ -543,7 +537,6 @@ def tweak_taproot_privkey(privkey: bytes, tweak: int) -> bytes:
     # and S is the alt script, if any (empty script, if none?? TODO)
     tweaked_privkey_int = (h_to_i(negated_key) + tweak) % Secp256k1Params._order
 
-    # print(f'Tweaked Private Key:', hex(tweaked_privkey_int)[2:])
     return bytes.fromhex(f"{tweaked_privkey_int:064x}")
 
 

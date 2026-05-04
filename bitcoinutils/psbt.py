@@ -20,7 +20,14 @@ from typing import Optional
 import base64
 
 from bitcoinutils.constants import SIGHASH_ALL
-from bitcoinutils.script import Script
+from bitcoinutils.script import (
+    Script,
+    is_p2pkh as _is_p2pkh,
+    is_p2sh as _is_p2sh,
+    is_p2wpkh as _is_p2wpkh,
+    is_p2wsh as _is_p2wsh,
+    is_p2tr as _is_p2tr,
+)
 from bitcoinutils.transactions import (
     Transaction,
     TxInput,
@@ -91,64 +98,6 @@ def _validate_pubkey_length(pubkey: bytes, context: str) -> None:
             f"Invalid public key length {len(pubkey)} in {context}: "
             "expected 33 (compressed) or 65 (uncompressed)"
         )
-
-
-# ---------------------------------------------------------------------------
-# Script type detection helpers
-# ---------------------------------------------------------------------------
-
-def _is_p2pkh(script: Script) -> bool:
-    """OP_DUP OP_HASH160 <20-byte-hash> OP_EQUALVERIFY OP_CHECKSIG"""
-    s = script.script
-    return (
-        len(s) == 5
-        and s[0] == "OP_DUP"
-        and s[1] == "OP_HASH160"
-        and isinstance(s[2], str) and len(s[2]) == 40
-        and s[3] == "OP_EQUALVERIFY"
-        and s[4] == "OP_CHECKSIG"
-    )
-
-
-def _is_p2sh(script: Script) -> bool:
-    """OP_HASH160 <20-byte-hash> OP_EQUAL"""
-    s = script.script
-    return (
-        len(s) == 3
-        and s[0] == "OP_HASH160"
-        and isinstance(s[1], str) and len(s[1]) == 40
-        and s[2] == "OP_EQUAL"
-    )
-
-
-def _is_p2wpkh(script: Script) -> bool:
-    """OP_0 <20-byte-hash>"""
-    s = script.script
-    return (
-        len(s) == 2
-        and s[0] == "OP_0"
-        and isinstance(s[1], str) and len(s[1]) == 40
-    )
-
-
-def _is_p2wsh(script: Script) -> bool:
-    """OP_0 <32-byte-hash>"""
-    s = script.script
-    return (
-        len(s) == 2
-        and s[0] == "OP_0"
-        and isinstance(s[1], str) and len(s[1]) == 64
-    )
-
-
-def _is_p2tr(script: Script) -> bool:
-    """OP_1 <32-byte-key>"""
-    s = script.script
-    return (
-        len(s) == 2
-        and s[0] == "OP_1"
-        and isinstance(s[1], str) and len(s[1]) == 64
-    )
 
 
 # Map OP_n strings to integer n

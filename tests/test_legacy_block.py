@@ -44,6 +44,17 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.block.header.target_bits, self.header.target_bits, "Target bits are incorrect.")
         self.assertEqual(self.block.header.nonce, self.header.nonce, "Nonce is incorrect.")
 
+    def test_header_target_methods(self):
+        self.assertEqual(self.block.header.get_target_bits(), self.header.target_bits)
+        self.assertEqual(
+            self.block.header.get_target_hex(),
+            "000000000000094a860000000000000000000000000000000000000000000000",
+        )
+
+    def test_invalid_block_parse_raises(self):
+        with self.assertRaises(ValueError):
+            Block.from_raw(bytes.fromhex(self.magic) + b"\x01\x00\x00\x00" + b"\x00" * 80)
+
     def test_block_size(self):
         self.assertEqual(self.block.get_block_size(), self.block_size, "Block size is incorrect.")
 
