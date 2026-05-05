@@ -367,14 +367,10 @@ def add_magic_prefix(message: str) -> bytes:
 
 
 def tagged_hash(data: bytes, tag: str) -> bytes:
-    """
-    Tagged hashes ensure that hashes used in one context can not be used in another.
-    It is used extensively in Taproot
+    """Return a BIP-340 style tagged hash.
 
-    A tagged hash is: SHA256( SHA256("TapTweak") ||
-                              SHA256("TapTweak") ||
-                              data
-                            )
+    Tagged hashes ensure that hashes used in one context cannot be used in
+    another. A tagged hash is ``SHA256(SHA256(tag) || SHA256(tag) || data)``.
     """
 
     tag_digest = hashlib.sha256(tag.encode()).digest()

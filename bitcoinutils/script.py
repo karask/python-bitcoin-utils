@@ -359,14 +359,14 @@ class Script:
 
     @staticmethod
     def from_raw(scriptrawhex: Union[str, bytes], has_segwit: bool = False):
-        """
-        Imports a Script commands list from raw hexadecimal data
-            Attributes
-            ----------
-            txinputraw : string (hex)
-                The hexadecimal raw string representing the Script commands
-            has_segwit : boolean
-                Is the Tx Input segwit or not
+        """Import a Script commands list from raw hexadecimal data.
+
+        Parameters
+        ----------
+        scriptrawhex : str or bytes
+            The raw script as hexadecimal text or bytes.
+        has_segwit : bool
+            Whether to parse using SegWit-specific script handling.
         """
         if isinstance(scriptrawhex, str):
             scriptraw = h_to_b(scriptrawhex)

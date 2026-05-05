@@ -84,36 +84,35 @@ def _warn_about_private_key_use() -> None:
 class PrivateKey:
     """Represents an ECDSA private key.
 
+    The object can be created randomly, from WIF, from raw 32-byte key
+    material, or from a secret exponent. It can derive the corresponding
+    :class:`PublicKey` and sign Bitcoin messages and transaction digests.
+
     Attributes
     ----------
-    key : bytes
-        the raw key of 32 bytes
+    key
+        The underlying ECDSA signing key object.
 
-    Methods
-    -------
-    from_wif(wif)
-        creates an object from a WIF of WIFC format (string)
-    from_bytes()
-        creates an object from raw 32 bytes
-    to_wif(compressed=True)
-        returns as WIFC (compressed) or WIF format (string)
-    to_bytes()
-        returns the key's raw bytes
-    sign_message(message, compressed=True)
-        signs the message's digest and returns the signature
-    sign_input(tx, txin_index, script, sighash=SIGHASH_ALL)
-        creates the transaction's digest and signs it for a particular index
-        and returns the signature.
-    sign_segwit_input(tx, txin_index, script, amount, sighash=SIGHASH_ALL)
-        creates the transaction's digest and signs it for a particular index
-        and amount and returns the signature.
-    sign_taproot_input(tx, txin_index, utxo_scripts, amounts, script_path=False,
-                       script=None, sighash=TAPROOT_SIGHASH_ALL, tweak=True)
-        creates the transaction's digest and signs it for a particular index
-        input script_pub_keys and amounts and returns the signature. By default
-        it tweaks the keys but it can be disabled for tapleaf scripts.
-    get_public_key()
-        returns the corresponding PublicKey object
+    Common methods
+    --------------
+    ``from_wif(wif)``
+        Create an object from WIF or WIFC text.
+    ``from_bytes(b)``
+        Create an object from 32 raw private-key bytes.
+    ``to_wif(compressed=True)``
+        Return the key as WIF or WIFC text.
+    ``to_bytes()``
+        Return the raw 32-byte private key.
+    ``get_public_key()``
+        Return the corresponding :class:`PublicKey`.
+    ``sign_message(message, compressed=True)``
+        Sign a Bitcoin message and return a compact Base64 signature.
+    ``sign_input(tx, txin_index, script, sighash=SIGHASH_ALL)``
+        Sign a legacy transaction input.
+    ``sign_segwit_input(tx, txin_index, script, amount, sighash=SIGHASH_ALL)``
+        Sign a SegWit v0 transaction input.
+    ``sign_taproot_input(...)``
+        Sign a Taproot transaction input by key path or script path.
     """
 
     def __init__(

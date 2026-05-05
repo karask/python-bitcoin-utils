@@ -1,6 +1,3 @@
-PRIORITY
-- use the TODO thoughts of this file to create Github issues so that contributors can consult and implement
-
 SHORT-TERM
 - create Address object that covers all addresses and can convert from one to another
 - taproot's op_addchecksig simply added
@@ -31,20 +28,10 @@ IMPROVE
 - make a new proxy object from scratch (test with at least 2/3 of bitcoin core RPC)
 
 DOC-related
-- update contributions file when required
-- add explicit documentation for each module before members...
-- commit docs/usage/proxy.rst
-- segwit in documentation
-- create jupyter notebooks instead of above documentation?
+- create jupyter notebooks?
 
 tests-related
 - improve test structure - similar to Bitcoin core 
-
-SECURITY
-- check https://github.com/advisories/GHSA-wj6h-64fc-37mp and if/how it applies 
-
-OTHERLIBS-related
-- create HD wallet implementation - very simple - similar to the hdwallet lib that I wrap
 
 OTHER
 - create script: clean-less-than-sats 100000 bc1q86gsg4t32...

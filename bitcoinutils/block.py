@@ -515,13 +515,10 @@ class Block:
         return amount
 
     def get_witness_transactions(self) -> list[Transaction]:
-        """
-        Returns a list of transactions that contain SegWit data.
+        """Return transactions that contain SegWit data.
 
         Returns:
-        -------
-        list[Transaction]
-            A list of transactions with SegWit data.
+            list[Transaction]: Transactions with SegWit data.
         """
         if self.transactions is None:
             raise ValueError("No transactions given.")
@@ -530,13 +527,10 @@ class Block:
         return witness_transactions
 
     def get_legacy_transactions(self) -> list[Transaction]:
-        """
-        Returns a list of legacy transactions.
+        """Return legacy transactions.
 
         Returns:
-        -------
-        list[Transaction]
-            A list of legacy transactions.
+            list[Transaction]: Transactions without SegWit data.
         """
         if self.transactions is None:
             raise ValueError("No transactions given.")
