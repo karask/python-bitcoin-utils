@@ -3,7 +3,7 @@ python-bitcoin-utils
 
 This is a bitcoin library that provides tools/utilities to interact with the Bitcoin network. One of the primary goals of the library is to explain the low-level details of Bitcoin. The code is easy to read and properly documented explaining in detail all the thorny aspects of the implementation. It is a low-level library which assumes some high-level understanding of how Bitcoin works. In the future this might change.
 
-The library (v0.8.3) currently supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot, with all SIGHASH types. All script op codes are included. Block parsing is also handled so you can read raw blocks directly. PSBT (BIP-174) is supported. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
+The library (v0.8.4) currently supports private/public keys, all type of addresses and creation of any transaction, incl. segwit and taproot, with all SIGHASH types. All script op codes are included. Block parsing is also handled so you can read raw blocks directly. PSBT (BIP-174) is supported. A small fixed-key output descriptor module is also included for converting common descriptors such as ``wpkh(KEY)``, ``sh(wpkh(KEY))``, ``wsh(multi(...))``, ``tr(KEY)``, ``addr(ADDRESS)`` and ``raw(HEX)`` into scripts and addresses. Extra functionality will be added continuously and the documentation will be improved as the work progresses.
 
 The API documentation can be build with Sphinx but is also available as a PDF for convenience. One can currently use the library for experimenting and learning the inner workings of Bitcoin. It is not meant for production yet and parts of the API might be updated with new versions.
 
@@ -147,6 +147,11 @@ Partially Signed Bitcoin Transactions (PSBT)
 
 Multisig (2-of-3) example with PSBT to transfer intermediate tx states
 https://github.com/karask/python-bitcoin-utils/blob/master/examples/psbt/ - folder explains workflow and script usage
+
+Output Descriptors
+------------------
+
+Fixed-key output descriptors are supported through ``bitcoinutils.descriptors``. The module parses a practical educational subset of Bitcoin Core descriptors, validates/generates descriptor checksums, and converts descriptors to ``Script`` and address objects.
 
 
 Other

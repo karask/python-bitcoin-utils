@@ -38,6 +38,7 @@ Getting Around
    usage/segwit
    usage/taproot
    usage/hdwallet
+   usage/descriptors
    usage/psbt
    usage/blocks
    usage/proxy
@@ -51,6 +52,7 @@ Getting Around
    api/script
    api/transactions
    api/hdwallet
+   api/descriptors
    api/psbt
    api/block
    api/utils
