@@ -862,8 +862,8 @@ class Transaction:
         tx_for_signing += h_to_b(txin.txid)[::-1] + struct.pack("<I", txin.txout_index)
 
         # add tx script code
-        tx_for_signing += struct.pack("B", len(script.to_bytes()))
-        tx_for_signing += script.to_bytes()
+        script_bytes = script.to_bytes()
+        tx_for_signing += encode_varint(len(script_bytes)) + script_bytes
 
         # add txin amount
         tx_for_signing += struct.pack("<q", amount)

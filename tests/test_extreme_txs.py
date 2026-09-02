@@ -67,6 +67,37 @@ class TestExtremeTransactions(unittest.TestCase):
     def test_script_with_66000_commands_uses_compact_size_uint32(self):
         self._assert_script_length_prefix(["OP_1"] * 66000, "fed0010100")
 
+    def test_segwit_digest_uses_compact_size_for_long_script_code(self):
+        tx = Transaction(
+            [self.txin], [TxOutput(1000, self.script_pubkey)], has_segwit=True
+        )
+        # Golden BIP143 digests at the CompactSize boundary and above 520 bytes.
+        cases = [
+            (
+                Script(
+                    ["01" * 60] * 4
+                    + ["OP_DROP"] * 4
+                    + ["OP_NOP"] * 4
+                    + ["OP_1"]
+                ),
+                253,
+                "ddd62d2dc5d54b3a3318d96e5bcbfd10"
+                "f3be935f11bcbe58682be3830c040ab2",
+            ),
+            (
+                Script(["01" * 75] * 7 + ["OP_DROP"] * 7 + ["OP_1"]),
+                540,
+                "4566ea6e48b430dd3efdf14a563d6628"
+                "e107d823d30997c77cbb186f86896438",
+            ),
+        ]
+
+        for script_code, expected_length, expected_digest in cases:
+            with self.subTest(script_code_length=expected_length):
+                self.assertEqual(len(script_code.to_bytes()), expected_length)
+                digest = tx.get_transaction_segwit_digest(0, script_code, 2000)
+                self.assertEqual(digest.hex(), expected_digest)
+
     def test_pushdata_boundaries_use_minimal_opcode(self):
         cases = [
             (75, "4b"),

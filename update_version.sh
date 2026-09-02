@@ -1,3 +1,3 @@
 pip uninstall -y bitcoin-utils
 python setup.py sdist bdist_wheel
-pip install dist/bitcoin_utils-0.8.4.tar.gz
+pip install dist/bitcoin_utils-0.8.5.tar.gz
