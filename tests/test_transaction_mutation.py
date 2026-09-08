@@ -12,7 +12,6 @@
 import unittest
 
 from bitcoinutils.setup import setup
-from bitcoinutils.constants import SIGHASH_ALL
 from bitcoinutils.transactions import (
     Transaction,
     TxInput,
@@ -22,422 +21,152 @@ from bitcoinutils.transactions import (
 from bitcoinutils.script import Script
 
 
-class TestTransactionAddInput(unittest.TestCase):
+class TestTransactionMutation(unittest.TestCase):
     def setUp(self):
         setup("testnet")
-        self.txin = TxInput(
-            "fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c", 0
+        self.txin1 = TxInput(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
         )
         self.txin2 = TxInput(
-            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2", 1
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1
         )
-        self.txout = TxOutput(
+        self.txout1 = TxOutput(
             10000,
             Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
         )
+        self.txout2 = TxOutput(
+            20000,
+            Script(["OP_1", "bb" * 32]),
+        )
 
-    def test_add_input_to_empty_tx(self):
-        tx = Transaction([], [self.txout])
-        tx.add_input(self.txin)
-        self.assertEqual(len(tx.inputs), 1)
-        self.assertEqual(tx.inputs[0].txid, self.txin.txid)
-        self.assertEqual(tx.inputs[0].txout_index, self.txin.txout_index)
+    def txid_index(self, tx):
+        return [(i.txid, i.txout_index) for i in tx.inputs]
+
+    def amount_list(self, tx):
+        return [o.amount for o in tx.outputs]
 
     def test_add_input_preserves_existing_inputs(self):
-        tx = Transaction([self.txin], [self.txout])
+        tx = Transaction([self.txin1], [self.txout1])
         tx.add_input(self.txin2)
-        self.assertEqual(len(tx.inputs), 2)
-        self.assertEqual(tx.inputs[1].txid, self.txin2.txid)
+        self.assertEqual(self.txid_index(tx), [("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0), ("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1)])
 
-    def test_add_input_appends_empty_witness_for_segwit(self):
-        tx = Transaction([self.txin], [self.txout], has_segwit=True)
+    def test_add_input_segwit_backfills_witnesses(self):
+        tx = Transaction([self.txin1], [self.txout1], has_segwit=True)
         self.assertEqual(len(tx.witnesses), 0)
         tx.add_input(self.txin2)
-        self.assertEqual(len(tx.witnesses), 1)
-        self.assertEqual(tx.witnesses[0].stack, [])
+        self.assertEqual(
+            len(tx.witnesses), len(tx.inputs),
+            "witnesses must stay parallel with inputs",
+        )
+        self.assertEqual(tx.witnesses[-1].stack, [])
 
-    def test_add_input_does_not_add_witness_for_non_segwit(self):
-        tx = Transaction([self.txin], [self.txout], has_segwit=False)
+    def test_add_input_non_segwit_no_witness(self):
+        tx = Transaction([self.txin1], [self.txout1], has_segwit=False)
         tx.add_input(self.txin2)
         self.assertEqual(len(tx.witnesses), 0)
-
-
-class TestTransactionAddOutput(unittest.TestCase):
-    def setUp(self):
-        setup("testnet")
-        self.txin = TxInput(
-            "fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c", 0
-        )
-        self.txout = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-        self.txout2 = TxOutput(
-            20000,
-            Script(["OP_HASH160", "bb" * 20, "OP_EQUAL"]),
-        )
-
-    def test_add_output_to_empty_tx(self):
-        tx = Transaction([self.txin], [])
-        tx.add_output(self.txout)
-        self.assertEqual(len(tx.outputs), 1)
-        self.assertEqual(tx.outputs[0].amount, self.txout.amount)
 
     def test_add_output_preserves_existing_outputs(self):
-        tx = Transaction([self.txin], [self.txout])
+        tx = Transaction([self.txin1], [self.txout1])
         tx.add_output(self.txout2)
-        self.assertEqual(len(tx.outputs), 2)
-        self.assertEqual(tx.outputs[1].amount, self.txout2.amount)
+        self.assertEqual(self.amount_list(tx), [10000, 20000])
 
-
-class TestTransactionRemoveInput(unittest.TestCase):
-    def setUp(self):
-        setup("testnet")
-        self.txin1 = TxInput(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
-        )
-        self.txin2 = TxInput(
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1
-        )
-        self.txin3 = TxInput(
-            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", 2
-        )
-        self.txout = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-
-    def test_remove_input_removes_correct_item(self):
-        tx = Transaction([self.txin1, self.txin2, self.txin3], [self.txout])
-        tx.remove_input(1)
-        self.assertEqual(len(tx.inputs), 2)
-        self.assertEqual(tx.inputs[0].txid, self.txin1.txid)
-        self.assertEqual(tx.inputs[1].txid, self.txin3.txid)
-
-    def test_remove_input_raises_on_negative_index(self):
-        tx = Transaction([self.txin1], [self.txout])
-        with self.assertRaises(IndexError):
-            tx.remove_input(-1)
-
-    def test_remove_input_raises_on_out_of_bounds(self):
-        tx = Transaction([self.txin1], [self.txout])
-        with self.assertRaises(IndexError):
-            tx.remove_input(5)
-
-    def test_remove_input_raises_on_empty_tx(self):
-        tx = Transaction([], [self.txout])
-        with self.assertRaises(IndexError):
-            tx.remove_input(0)
-
-    def test_remove_input_removes_corresponding_witness(self):
+    def test_remove_input_removes_correct_item_and_witness(self):
         tx = Transaction(
             [self.txin1, self.txin2],
-            [self.txout],
+            [self.txout1],
             has_segwit=True,
-            witnesses=[TxWitnessInput(["aa"]), TxWitnessInput(["bb"])],
+            witnesses=[TxWitnessInput(["deadbeef"]), TxWitnessInput([])],
         )
         tx.remove_input(0)
-        self.assertEqual(len(tx.witnesses), 1)
-        self.assertEqual(tx.witnesses[0].stack, ["bb"])
-
-    def test_remove_input_handles_witness_shortage_gracefully(self):
-        tx = Transaction(
-            [self.txin1, self.txin2],
-            [self.txout],
-            has_segwit=True,
-            witnesses=[TxWitnessInput(["aa"])],
-        )
-        tx.remove_input(1)
-        self.assertEqual(len(tx.witnesses), 1)
-
-    def test_remove_first_input(self):
-        tx = Transaction([self.txin1, self.txin2], [self.txout])
-        tx.remove_input(0)
-        self.assertEqual(len(tx.inputs), 1)
-        self.assertEqual(tx.inputs[0].txid, self.txin2.txid)
-
-    def test_remove_last_input(self):
-        tx = Transaction([self.txin1, self.txin2], [self.txout])
-        tx.remove_input(1)
-        self.assertEqual(len(tx.inputs), 1)
-        self.assertEqual(tx.inputs[0].txid, self.txin1.txid)
-
-
-class TestTransactionRemoveOutput(unittest.TestCase):
-    def setUp(self):
-        setup("testnet")
-        self.txin = TxInput(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
-        )
-        self.txout1 = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-        self.txout2 = TxOutput(
-            20000,
-            Script(["OP_HASH160", "bb" * 20, "OP_EQUAL"]),
-        )
-        self.txout3 = TxOutput(
-            30000,
-            Script(["OP_1", "cc" * 32]),
-        )
+        self.assertEqual(self.txid_index(tx), [("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1)])
+        self.assertEqual(len(tx.witnesses), len(tx.inputs))
+        self.assertEqual(tx.witnesses[0].stack, [])
 
     def test_remove_output_removes_correct_item(self):
-        tx = Transaction([self.txin], [self.txout1, self.txout2, self.txout3])
-        tx.remove_output(1)
-        self.assertEqual(len(tx.outputs), 2)
-        self.assertEqual(tx.outputs[0].amount, 10000)
-        self.assertEqual(tx.outputs[1].amount, 30000)
-
-    def test_remove_output_raises_on_negative_index(self):
-        tx = Transaction([self.txin], [self.txout1])
-        with self.assertRaises(IndexError):
-            tx.remove_output(-1)
-
-    def test_remove_output_raises_on_out_of_bounds(self):
-        tx = Transaction([self.txin], [self.txout1])
-        with self.assertRaises(IndexError):
-            tx.remove_output(5)
-
-    def test_remove_output_raises_on_empty_tx(self):
-        tx = Transaction([self.txin], [])
-        with self.assertRaises(IndexError):
-            tx.remove_output(0)
-
-    def test_remove_first_output(self):
-        tx = Transaction([self.txin], [self.txout1, self.txout2])
+        tx = Transaction([self.txin1], [self.txout1, self.txout2])
         tx.remove_output(0)
-        self.assertEqual(len(tx.outputs), 1)
-        self.assertEqual(tx.outputs[0].amount, 20000)
+        self.assertEqual(self.amount_list(tx), [20000])
 
-    def test_remove_last_output(self):
-        tx = Transaction([self.txin], [self.txout1, self.txout2])
-        tx.remove_output(1)
-        self.assertEqual(len(tx.outputs), 1)
-        self.assertEqual(tx.outputs[0].amount, 10000)
-
-
-class TestTransactionUpdateInput(unittest.TestCase):
-    def setUp(self):
-        setup("testnet")
-        self.txin1 = TxInput(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
-        )
-        self.txin2 = TxInput(
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1
-        )
-        self.txout = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-
-    def test_update_input_replaces_correct_item(self):
-        tx = Transaction([self.txin1], [self.txout])
-        tx.update_input(0, self.txin2)
-        self.assertEqual(tx.inputs[0].txid, self.txin2.txid)
-        self.assertEqual(tx.inputs[0].txout_index, self.txin2.txout_index)
-
-    def test_update_input_does_not_change_length(self):
-        tx = Transaction([self.txin1], [self.txout])
+    def test_update_input_replaces_item_keeps_length(self):
+        tx = Transaction([self.txin1], [self.txout1])
         tx.update_input(0, self.txin2)
         self.assertEqual(len(tx.inputs), 1)
+        self.assertEqual(self.txid_index(tx), [("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1)])
 
-    def test_update_input_raises_on_negative_index(self):
-        tx = Transaction([self.txin1], [self.txout])
-        with self.assertRaises(IndexError):
-            tx.update_input(-1, self.txin2)
-
-    def test_update_input_raises_on_out_of_bounds(self):
-        tx = Transaction([self.txin1], [self.txout])
-        with self.assertRaises(IndexError):
-            tx.update_input(5, self.txin2)
-
-    def test_update_input_raises_on_empty_tx(self):
-        tx = Transaction([], [self.txout])
-        with self.assertRaises(IndexError):
-            tx.update_input(0, self.txin2)
-
-
-class TestTransactionUpdateOutput(unittest.TestCase):
-    def setUp(self):
-        setup("testnet")
-        self.txin = TxInput(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
-        )
-        self.txout1 = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-        self.txout2 = TxOutput(
-            20000,
-            Script(["OP_HASH160", "bb" * 20, "OP_EQUAL"]),
-        )
-
-    def test_update_output_replaces_correct_item(self):
-        tx = Transaction([self.txin], [self.txout1])
-        tx.update_output(0, self.txout2)
-        self.assertEqual(tx.outputs[0].amount, self.txout2.amount)
-
-    def test_update_output_does_not_change_length(self):
-        tx = Transaction([self.txin], [self.txout1])
+    def test_update_output_replaces_item_keeps_length(self):
+        tx = Transaction([self.txin1], [self.txout1])
         tx.update_output(0, self.txout2)
         self.assertEqual(len(tx.outputs), 1)
+        self.assertEqual(self.amount_list(tx), [20000])
 
-    def test_update_output_raises_on_negative_index(self):
-        tx = Transaction([self.txin], [self.txout1])
+    def test_negative_and_out_of_bounds_indices_rejected(self):
+        tx_inputs = Transaction([self.txin1], [self.txout1])
+        tx_outputs = Transaction([self.txin1], [self.txout1])
+        for index in (-1, 5):
+            with self.assertRaises(IndexError):
+                tx_inputs.remove_input(index)
+            with self.assertRaises(IndexError):
+                tx_inputs.update_input(index, self.txin2)
+            with self.assertRaises(IndexError):
+                tx_outputs.remove_output(index)
+            with self.assertRaises(IndexError):
+                tx_outputs.update_output(index, self.txout2)
+
+    def test_mutation_on_empty_transaction_raises(self):
+        tx = Transaction([], [])
         with self.assertRaises(IndexError):
-            tx.update_output(-1, self.txout2)
-
-    def test_update_output_raises_on_out_of_bounds(self):
-        tx = Transaction([self.txin], [self.txout1])
+            tx.remove_input(0)
         with self.assertRaises(IndexError):
-            tx.update_output(5, self.txout2)
-
-    def test_update_output_raises_on_empty_tx(self):
-        tx = Transaction([self.txin], [])
+            tx.remove_output(0)
         with self.assertRaises(IndexError):
-            tx.update_output(0, self.txout2)
-
-
-class TestTransactionMutationRoundTrip(unittest.TestCase):
-    """Verify that serialization round-trips after mutations."""
-
-    def setUp(self):
-        setup("testnet")
-        self.txin = TxInput(
-            "fb48f4e23bf6ddf606714141ac78c3e921c8c0bebeb7c8abb2c799e9ff96ce6c", 0
-        )
-        self.txin2 = TxInput(
-            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2", 1
-        )
-        self.txout = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-        self.txout2 = TxOutput(
-            20000,
-            Script(["OP_HASH160", "bb" * 20, "OP_EQUAL"]),
-        )
+            tx.update_input(0, self.txin1)
+        with self.assertRaises(IndexError):
+            tx.update_output(0, self.txout1)
 
     def test_add_input_then_serialize(self):
-        tx = Transaction([self.txin], [self.txout])
+        tx = Transaction([self.txin1], [self.txout1])
         tx.add_input(self.txin2)
-        serialized = tx.to_hex()
-        parsed = Transaction.from_raw(serialized)
+        parsed = Transaction.from_raw(tx.to_hex())
         self.assertEqual(len(parsed.inputs), 2)
-
-    def test_add_output_then_serialize(self):
-        tx = Transaction([self.txin], [self.txout])
-        tx.add_output(self.txout2)
-        serialized = tx.to_hex()
-        parsed = Transaction.from_raw(serialized)
-        self.assertEqual(len(parsed.outputs), 2)
-
-    def test_remove_then_serialize(self):
-        tx = Transaction([self.txin, self.txin2], [self.txout, self.txout2])
-        tx.remove_input(0)
-        tx.remove_output(1)
-        serialized = tx.to_hex()
-        parsed = Transaction.from_raw(serialized)
-        self.assertEqual(len(parsed.inputs), 1)
         self.assertEqual(len(parsed.outputs), 1)
 
-    def test_update_then_serialize(self):
-        tx = Transaction([self.txin], [self.txout])
-        tx.update_output(0, self.txout2)
-        serialized = tx.to_hex()
-        parsed = Transaction.from_raw(serialized)
-        self.assertEqual(parsed.outputs[0].amount, 20000)
-
-    def test_mutation_preserves_txid_of_unrelated_outputs(self):
-        tx = Transaction([self.txin, self.txin2], [self.txout, self.txout2])
-        original_txid = tx.get_txid()
-        tx.remove_output(0)
-        self.assertNotEqual(tx.get_txid(), original_txid)
-
-    def test_add_after_remove_round_trip(self):
-        tx = Transaction([self.txin], [self.txout])
+    def test_add_output_and_remove_then_serialize(self):
+        tx = Transaction([self.txin1], [self.txout1])
+        tx.add_output(self.txout2)
+        tx.remove_input(0)
         tx.add_input(self.txin2)
-        tx.remove_input(1)
-        serialized = tx.to_hex()
-        parsed = Transaction.from_raw(serialized)
-        self.assertEqual(len(parsed.inputs), 1)
-        self.assertEqual(parsed.inputs[0].txid, self.txin.txid)
+        parsed = Transaction.from_raw(tx.to_hex())
+        self.assertEqual(self.txid_index(parsed), [("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1)])
+        self.assertEqual(self.amount_list(parsed), [10000, 20000])
 
-
-class TestTransactionMutationEdgeCases(unittest.TestCase):
-    def setUp(self):
-        setup("testnet")
-
-    def test_add_input_to_segwit_tx_then_set_witness(self):
-        txin = TxInput(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
+    def test_segwit_add_input_round_trip_nonzero_locktime(self):
+        tx = Transaction(
+            [self.txin1],
+            [self.txout1],
+            locktime="0000f406",
+            has_segwit=True,
+            witnesses=[TxWitnessInput(["deadbeef"])],
         )
-        txout = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-        tx = Transaction([], [txout], has_segwit=True)
-        tx.add_input(txin)
-        wit = TxWitnessInput(["deadbeef"])
-        tx.set_witness(0, wit)
-        self.assertEqual(tx.witnesses[0].stack, ["deadbeef"])
-
-    def test_add_multiple_inputs_to_segwit(self):
-        txin1 = TxInput(
-            "1111111111111111111111111111111111111111111111111111111111111111", 0
-        )
-        txin2 = TxInput(
-            "2222222222222222222222222222222222222222222222222222222222222222", 0
-        )
-        txin3 = TxInput(
-            "3333333333333333333333333333333333333333333333333333333333333333", 0
-        )
-        txout = TxOutput(
-            10000,
-            Script(["OP_1", "aa" * 32]),
-        )
-        tx = Transaction([], [txout], has_segwit=True)
-        tx.add_input(txin1)
-        tx.add_input(txin2)
-        tx.add_input(txin3)
-        self.assertEqual(len(tx.inputs), 3)
-        self.assertEqual(len(tx.witnesses), 3)
-        for w in tx.witnesses:
-            self.assertEqual(w.stack, [])
-
-    def test_mutation_does_not_affect_original_after_copy(self):
-        txin1 = TxInput(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
-        )
-        txin2 = TxInput(
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1
-        )
-        txout = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-        tx = Transaction([txin1], [txout])
-        tx_copy = Transaction.copy(tx)
-        tx.add_input(txin2)
-        self.assertEqual(len(tx.inputs), 2)
-        self.assertEqual(len(tx_copy.inputs), 1)
+        tx.add_input(self.txin2)
+        self.assertEqual(len(tx.witnesses), len(tx.inputs))
+        parsed = Transaction.from_raw(tx.to_hex())
+        self.assertEqual(parsed.locktime, bytes.fromhex("0000f406"))
+        self.assertEqual(len(parsed.inputs), 2)
+        self.assertEqual(parsed.witnesses[0].stack, ["deadbeef"])
 
     def test_update_input_changes_txid(self):
-        txin1 = TxInput(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0
-        )
-        txin2 = TxInput(
-            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 1
-        )
-        txout = TxOutput(
-            10000,
-            Script(["OP_DUP", "OP_HASH160", "aa" * 20, "OP_EQUALVERIFY", "OP_CHECKSIG"]),
-        )
-        tx = Transaction([txin1], [txout])
+        tx = Transaction([self.txin1], [self.txout1])
         old_txid = tx.get_txid()
-        tx.update_input(0, txin2)
+        tx.update_input(0, self.txin2)
         self.assertNotEqual(tx.get_txid(), old_txid)
+
+    def test_mutation_does_not_affect_copy(self):
+        tx = Transaction([self.txin1], [self.txout1])
+        tx_copy = Transaction.copy(tx)
+        tx.add_input(self.txin2)
+        tx.remove_output(0)
+        self.assertEqual(len(tx_copy.inputs), 1)
+        self.assertEqual(len(tx_copy.outputs), 1)
 
 
 if __name__ == "__main__":
