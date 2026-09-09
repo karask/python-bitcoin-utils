@@ -678,6 +678,50 @@ class Transaction:
             raise IndexError("txin_index out of range")
         self.witnesses[txin_index] = witness
 
+    def add_input(self, txin: TxInput) -> None:
+        """Append a transaction input.
+
+        If the transaction is segwit an empty witness entry is appended so
+        that the witnesses list stays parallel to inputs.
+        """
+        self.inputs.append(txin)
+        if self.has_segwit:
+            self.set_witness(len(self.inputs) - 1, TxWitnessInput([]))
+
+    def add_output(self, txout: TxOutput) -> None:
+        """Append a transaction output."""
+        self.outputs.append(txout)
+
+    def remove_input(self, index: int) -> None:
+        """Remove the transaction input at *index*.
+
+        If the transaction is segwit the corresponding witness entry is
+        also removed. Negative indices are rejected.
+        """
+        if index < 0 or index >= len(self.inputs):
+            raise IndexError("Input index out of range")
+        del self.inputs[index]
+        if self.has_segwit and index < len(self.witnesses):
+            del self.witnesses[index]
+
+    def remove_output(self, index: int) -> None:
+        """Remove the transaction output at *index*. Negative indices are rejected."""
+        if index < 0 or index >= len(self.outputs):
+            raise IndexError("Output index out of range")
+        del self.outputs[index]
+
+    def update_input(self, index: int, txin: TxInput) -> None:
+        """Replace the transaction input at *index*. Negative indices are rejected."""
+        if index < 0 or index >= len(self.inputs):
+            raise IndexError("Input index out of range")
+        self.inputs[index] = txin
+
+    def update_output(self, index: int, txout: TxOutput) -> None:
+        """Replace the transaction output at *index*. Negative indices are rejected."""
+        if index < 0 or index >= len(self.outputs):
+            raise IndexError("Output index out of range")
+        self.outputs[index] = txout
+
     def get_transaction_digest(
         self, txin_index: int, script: Script, sighash: int = SIGHASH_ALL
     ):
