@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 from bitcoinutils import __version__
 
 # with open('requirements.txt') as f:
@@ -25,7 +25,7 @@ setup(
         "ecdsa>=0.19.1,<0.20",
         "sympy>=1.2,<2.0",
     ],
-    packages=["bitcoinutils"],
+    packages=find_packages(),
     # package_data={
     #    'bitcoinutils': ['requirements.txt']
     # },
