@@ -64,6 +64,19 @@ PSBT_OUT_REDEEM_SCRIPT = 0x00
 PSBT_OUT_WITNESS_SCRIPT = 0x01
 PSBT_OUT_BIP32_DERIVATION = 0x02
 
+# BIP-371 Taproot input types
+PSBT_IN_TAP_KEY_SIG = 0x13
+PSBT_IN_TAP_SCRIPT_SIG = 0x14
+PSBT_IN_TAP_LEAF_SCRIPT = 0x15
+PSBT_IN_TAP_BIP32_DERIVATION = 0x16
+PSBT_IN_TAP_INTERNAL_KEY = 0x17
+PSBT_IN_TAP_MERKLE_ROOT = 0x18
+
+# BIP-371 Taproot output types
+PSBT_OUT_TAP_INTERNAL_KEY = 0x05
+PSBT_OUT_TAP_TREE = 0x06
+PSBT_OUT_TAP_BIP32_DERIVATION = 0x07
+
 
 # Sets of known key types for validation
 _KNOWN_INPUT_SINGLE_BYTE_KEYS = {
@@ -74,6 +87,9 @@ _KNOWN_INPUT_SINGLE_BYTE_KEYS = {
     PSBT_IN_WITNESS_SCRIPT,
     PSBT_IN_FINAL_SCRIPTSIG,
     PSBT_IN_FINAL_SCRIPTWITNESS,
+    PSBT_IN_TAP_KEY_SIG,
+    PSBT_IN_TAP_INTERNAL_KEY,
+    PSBT_IN_TAP_MERKLE_ROOT,
 }
 
 _KNOWN_INPUT_PUBKEY_KEYS = {
@@ -84,6 +100,8 @@ _KNOWN_INPUT_PUBKEY_KEYS = {
 _KNOWN_OUTPUT_SINGLE_BYTE_KEYS = {
     PSBT_OUT_REDEEM_SCRIPT,
     PSBT_OUT_WITNESS_SCRIPT,
+    PSBT_OUT_TAP_INTERNAL_KEY,
+    PSBT_OUT_TAP_TREE,
 }
 
 _KNOWN_OUTPUT_PUBKEY_KEYS = {
@@ -189,7 +207,20 @@ class PSBTInput:
         self.bip32_derivs: dict[bytes, tuple[bytes, list[int]]] = {}
         self.final_scriptsig: Optional[Script] = None
         self.final_scriptwitness: Optional[list[bytes]] = None
-        self.unknown: dict[bytes, bytes] = {}
+                        self.unknown: dict[bytes, bytes] = {}
+
+        # BIP-371 Taproot fields
+        self.tap_internal_key: Optional[bytes] = None
+        self.tap_tree: Optional[bytes] = None
+        self.tap_bip32_derivation: dict[bytes, tuple[list[bytes], bytes, list[int]]] = {}
+
+        # BIP-371 Taproot fields
+        self.tap_key_sig: Optional[bytes] = None
+        self.tap_script_sigs: dict[tuple[bytes, bytes], bytes] = {}
+        self.tap_leaf_scripts: dict[bytes, tuple[bytes, int]] = {}
+        self.tap_bip32_derivation: dict[bytes, tuple[list[bytes], bytes, list[int]]] = {}
+        self.tap_internal_key: Optional[bytes] = None
+        self.tap_merkle_root: Optional[bytes] = None
 
 
 class PSBTOutput:
@@ -199,7 +230,12 @@ class PSBTOutput:
         self.redeem_script: Optional[Script] = None
         self.witness_script: Optional[Script] = None
         self.bip32_derivs: dict[bytes, tuple[bytes, list[int]]] = {}
-        self.unknown: dict[bytes, bytes] = {}
+                self.unknown: dict[bytes, bytes] = {}
+
+        # BIP-371 Taproot fields
+        self.tap_internal_key: Optional[bytes] = None
+        self.tap_tree: Optional[bytes] = None
+        self.tap_bip32_derivation: dict[bytes, tuple[list[bytes], bytes, list[int]]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +333,24 @@ class PSBT:
             data += _write_kv_simple(PSBT_IN_FINAL_SCRIPTWITNESS, wit_data)
         for k, v in psi.unknown.items():
             data += encode_varint(len(k)) + k + encode_varint(len(v)) + v
+
+        # BIP-371 Taproot fields
+        if psi.tap_key_sig is not None:
+            data += _write_kv_simple(PSBT_IN_TAP_KEY_SIG, psi.tap_key_sig)
+        for (pubkey, leaf_hash), sig in psi.tap_script_sigs.items():
+            data += _write_kv(PSBT_IN_TAP_SCRIPT_SIG, pubkey + leaf_hash, sig)
+        for control_block, (script, leaf_ver) in psi.tap_leaf_scripts.items():
+            data += _write_kv(PSBT_IN_TAP_LEAF_SCRIPT, control_block, script + bytes([leaf_ver]))
+        for pubkey, (leaf_hashes, fp, path) in psi.tap_bip32_derivation.items():
+            value = b"".join(leaf_hashes) + fp
+            for idx in path:
+                value += struct.pack("<I", idx)
+            data += _write_kv(PSBT_IN_TAP_BIP32_DERIVATION, pubkey, value)
+        if psi.tap_internal_key is not None:
+            data += _write_kv_simple(PSBT_IN_TAP_INTERNAL_KEY, psi.tap_internal_key)
+        if psi.tap_merkle_root is not None:
+            data += _write_kv_simple(PSBT_IN_TAP_MERKLE_ROOT, psi.tap_merkle_root)
+        
         return data
 
     @staticmethod
@@ -315,6 +369,18 @@ class PSBT:
             data += _write_kv(PSBT_OUT_BIP32_DERIVATION, pubkey, value)
         for k, v in pso.unknown.items():
             data += encode_varint(len(k)) + k + encode_varint(len(v)) + v
+
+        # BIP-371 Taproot fields
+        if pso.tap_internal_key is not None:
+            data += _write_kv_simple(PSBT_OUT_TAP_INTERNAL_KEY, pso.tap_internal_key)
+        if pso.tap_tree is not None:
+            data += _write_kv_simple(PSBT_OUT_TAP_TREE, pso.tap_tree)
+        for pubkey, (leaf_hashes, fp, path) in pso.tap_bip32_derivation.items():
+            value = b"".join(leaf_hashes) + fp
+            for idx in path:
+                value += struct.pack("<I", idx)
+            data += _write_kv(PSBT_OUT_TAP_BIP32_DERIVATION, pubkey, value)
+
         return data
 
     def to_base64(self) -> str:
@@ -468,6 +534,49 @@ class PSBT:
                 item_len = _read_compact_size_from_stream(wit_stream)
                 items.append(wit_stream.read(item_len))
             psi.final_scriptwitness = items
+        # BIP-371 Taproot fields
+        elif key_type == PSBT_IN_TAP_KEY_SIG and len(key_data) == 1:
+            if len(value_data) not in (64, 65):
+                raise ValueError("Invalid tap_key_sig length")
+            psi.tap_key_sig = value_data
+        elif key_type == PSBT_IN_TAP_SCRIPT_SIG:
+            if len(key_data) != 65:  # 1 byte type + 32 byte xonly + 32 byte leaf hash
+                raise ValueError("Invalid tap_script_sig key length")
+            pubkey = key_data[1:33]
+            leaf_hash = key_data[33:65]
+            if len(value_data) not in (64, 65):
+                raise ValueError("Invalid tap_script_sig value length")
+            psi.tap_script_sigs[(pubkey, leaf_hash)] = value_data
+        elif key_type == PSBT_IN_TAP_LEAF_SCRIPT:
+            if (len(key_data) - 1 - 33) % 32 != 0:
+                raise ValueError("Invalid tap_leaf_script control block size")
+            control_block = key_data[1:]
+            script = value_data[:-1]
+            leaf_ver = value_data[-1]
+            psi.tap_leaf_scripts[control_block] = (script, leaf_ver)
+        elif key_type == PSBT_IN_TAP_BIP32_DERIVATION:
+            if len(key_data) != 33:
+                raise ValueError("Invalid tap_bip32_derivation pubkey length")
+            pubkey = key_data[1:]
+            leaf_hashes = []
+            num_hashes = _read_compact_size_from_stream(BytesIO(value_data))
+            offset = len(encode_varint(num_hashes))
+            for _ in range(num_hashes):
+                leaf_hashes.append(value_data[offset:offset+32])
+                offset += 32
+            fingerprint = value_data[offset:offset+4]
+            path = []
+            for i in range(offset+4, len(value_data), 4):
+                path.append(struct.unpack("<I", value_data[i : i + 4])[0])
+            psi.tap_bip32_derivation[pubkey] = (leaf_hashes, fingerprint, path)
+        elif key_type == PSBT_IN_TAP_INTERNAL_KEY and len(key_data) == 1:
+            if len(value_data) != 32:
+                raise ValueError("Invalid tap_internal_key length")
+            psi.tap_internal_key = value_data
+        elif key_type == PSBT_IN_TAP_MERKLE_ROOT and len(key_data) == 1:
+            if len(value_data) != 32:
+                raise ValueError("Invalid tap_merkle_root length")
+            psi.tap_merkle_root = value_data
         else:
             psi.unknown[key_data] = value_data
 
@@ -496,6 +605,28 @@ class PSBT:
             fingerprint = value_data[:4]
             path = []
             for i in range(4, len(value_data), 4):
+                path.append(struct.unpack("<I", value_data[i : i + 4])[0])
+            pso.bip32_derivs[pubkey] = (fingerprint, path)
+        # BIP-371 Taproot fields
+        elif key_type == PSBT_OUT_TAP_INTERNAL_KEY and len(key_data) == 1:
+            if len(value_data) != 32:
+                raise ValueError("Invalid tap_internal_key length")
+            pso.tap_internal_key = value_data
+        elif key_type == PSBT_OUT_TAP_TREE and len(key_data) == 1:
+            pso.tap_tree = value_data
+        elif key_type == PSBT_OUT_TAP_BIP32_DERIVATION:
+            if len(key_data) != 33:
+                raise ValueError("Invalid tap_bip32_derivation pubkey length")
+            pubkey = key_data[1:]
+            leaf_hashes = []
+            num_hashes = _read_compact_size_from_stream(BytesIO(value_data))
+            offset = len(encode_varint(num_hashes))
+            for _ in range(num_hashes):
+                leaf_hashes.append(value_data[offset:offset+32])
+                offset += 32
+            fingerprint = value_data[offset:offset+4]
+            path = []
+            for i in range(offset+4, len(value_data), 4):
                 path.append(struct.unpack("<I", value_data[i : i + 4])[0])
             pso.bip32_derivs[pubkey] = (fingerprint, path)
         else:
@@ -643,6 +774,30 @@ class PSBT:
                 self.tx, input_index, ws, amount, sighash
             )
 
+        elif _is_p2tr(script_pubkey):
+            amount = self._get_witness_amount(input_index)
+            # Default sighash is SIGHASH_DEFAULT (0)
+            if sighash == SIGHASH_ALL:
+                sighash = 0
+            
+            script_pubkeys = [self._get_script_pubkey(i) for i in range(len(self.inputs))]
+            amounts = [self._get_witness_amount(i) for i in range(len(self.inputs))]
+            
+            sig_hex = private_key.sign_taproot_input(
+                self.tx,
+                input_index,
+                script_pubkeys,
+                amounts,
+                ext_flag=0,
+                sighash=sighash
+            )
+            if sig_hex is not None:
+                # Schnorr sigs are 64 or 65 bytes (no length prefix unlike DER)
+                sig_bytes = h_to_b(sig_hex)
+                psi.tap_key_sig = sig_bytes
+                return True
+
+
         else:
             raise ValueError(
                 f"Unsupported script type for input {input_index}"
@@ -714,6 +869,18 @@ class PSBT:
                     dst.final_scriptsig = src.final_scriptsig
                 if src.final_scriptwitness is not None:
                     dst.final_scriptwitness = src.final_scriptwitness
+                
+                # Taproot combine
+                if src.tap_key_sig is not None:
+                    dst.tap_key_sig = src.tap_key_sig
+                dst.tap_script_sigs.update(src.tap_script_sigs)
+                dst.tap_leaf_scripts.update(src.tap_leaf_scripts)
+                dst.tap_bip32_derivation.update(src.tap_bip32_derivation)
+                if src.tap_internal_key is not None:
+                    dst.tap_internal_key = src.tap_internal_key
+                if src.tap_merkle_root is not None:
+                    dst.tap_merkle_root = src.tap_merkle_root
+
                 dst.unknown.update(src.unknown)
 
         for i in range(len(self.outputs)):
@@ -724,6 +891,14 @@ class PSBT:
                 if src.witness_script is not None:
                     dst.witness_script = src.witness_script
                 dst.bip32_derivs.update(src.bip32_derivs)
+                
+                # Taproot combine
+                if src.tap_internal_key is not None:
+                    dst.tap_internal_key = src.tap_internal_key
+                if src.tap_tree is not None:
+                    dst.tap_tree = src.tap_tree
+                dst.tap_bip32_derivation.update(src.tap_bip32_derivation)
+
                 dst.unknown.update(src.unknown)
 
         return combined
@@ -760,6 +935,8 @@ class PSBT:
                 self._finalize_p2sh_legacy(psi)
         elif _is_p2wsh(script_pubkey):
             self._finalize_p2wsh(psi)
+        elif _is_p2tr(script_pubkey):
+            self._finalize_p2tr(psi)
         else:
             raise ValueError("Unsupported script type for finalization")
 
@@ -769,6 +946,12 @@ class PSBT:
         psi.redeem_script = None
         psi.witness_script = None
         psi.bip32_derivs = {}
+        psi.tap_key_sig = None
+        psi.tap_script_sigs = {}
+        psi.tap_leaf_scripts = {}
+        psi.tap_bip32_derivation = {}
+        psi.tap_internal_key = None
+        psi.tap_merkle_root = None
 
     def finalize(self):
         """Finalize all inputs."""
@@ -797,6 +980,15 @@ class PSBT:
         pubkey, sig = next(iter(psi.partial_sigs.items()))
         psi.final_scriptsig = Script([psi.redeem_script.to_hex()])
         psi.final_scriptwitness = [sig, pubkey]
+
+    @staticmethod
+    def _finalize_p2tr(psi: PSBTInput):
+        if psi.tap_key_sig is not None:
+            # Key path spend
+            psi.final_scriptsig = Script([])
+            psi.final_scriptwitness = [psi.tap_key_sig]
+        else:
+            raise ValueError("Taproot script path finalization not yet fully supported by PSBT")
 
     @staticmethod
     def _finalize_p2wsh(psi: PSBTInput):
