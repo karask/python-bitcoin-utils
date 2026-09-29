@@ -160,7 +160,7 @@ class TestP2wpkhTrace(unittest.TestCase):
             with self.subTest(signature=sig):
                 self.tx.witnesses[0].stack[0] = sig
                 self.assert_failure(self.trace(), "INVALID_SIGNATURE_ENCODING")
-        for mode in (0, 2, 3, 0x81, 0xff):
+        for mode in (0, 4, 0xff):
             self.tx.witnesses[0].stack[0] = self.signature[:-2] + f"{mode:02x}"
             result = self.trace()
             self.assert_failure(result, "UNSUPPORTED_SIGHASH")

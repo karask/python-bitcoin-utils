@@ -11,6 +11,8 @@ from bitcoinutils.learning.block import (
 )
 from bitcoinutils.learning.p2pkh import trace_p2pkh_input
 from bitcoinutils.learning.p2wpkh import trace_p2wpkh_input
+from bitcoinutils.learning.segwit_block import create_segwit_coinbase_transaction
+from bitcoinutils.learning.sighash import trace_segwit_v0_sighash
 
 __all__ = [
     "create_coinbase_transaction",
@@ -18,4 +20,6 @@ __all__ = [
     "trace_merkle_root",
     "trace_p2pkh_input",
     "trace_p2wpkh_input",
+    "create_segwit_coinbase_transaction",
+    "trace_segwit_v0_sighash",
 ]

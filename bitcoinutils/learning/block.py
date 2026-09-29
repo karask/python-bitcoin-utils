@@ -1,7 +1,8 @@
 """Trace transaction Merkle trees and construct a scoped legacy coinbase.
 
 The helpers expose the bytes needed for teaching block construction. They do
-not validate a complete candidate block or construct SegWit witness commitments.
+not validate a complete candidate block. SegWit commitment construction lives
+separately in :mod:`bitcoinutils.learning.segwit_block`.
 """
 
 from __future__ import annotations
@@ -82,7 +83,8 @@ def create_coinbase_transaction(
 
     The caller supplies fees and a suitable payout script. This helper does not
     check the UTXO set, block height context, or proof of work. It does not add
-    a SegWit witness commitment; use it only with legacy transactions.
+    a SegWit witness commitment; use the separate SegWit coinbase helper for
+    candidates containing witness transactions.
     """
     subsidy = get_block_subsidy(height, network)
     if type(fees) is not int or not 0 <= fees <= _MAX_MONEY:
@@ -139,7 +141,15 @@ def trace_merkle_root(transactions: list[Transaction]) -> dict[str, Any]:
     if not all(isinstance(tx, Transaction) for tx in transactions):
         raise TypeError("Every Merkle leaf must be a Transaction.")
 
-    txids = [tx.get_txid() for tx in transactions]
+    return _trace_merkle_hashes([tx.get_txid() for tx in transactions])
+
+
+def _trace_merkle_hashes(txids: list[str]) -> dict[str, Any]:
+    """Trace an ordered list of displayed 32-byte hashes, including a zero leaf."""
+    if not txids:
+        raise ValueError("At least one Merkle leaf is required.")
+    if any(len(item) != 64 for item in txids):
+        raise ValueError("Every Merkle leaf must be a 32-byte displayed hash.")
     current = [bytes.fromhex(txid)[::-1] for txid in txids]
     levels_internal = [[item.hex() for item in current]]
     levels = [[item[::-1].hex() for item in current]]

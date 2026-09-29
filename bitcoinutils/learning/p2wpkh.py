@@ -15,7 +15,8 @@ from ecdsa import BadSignatureError, MalformedPointError, SECP256k1, VerifyingKe
 from ecdsa.der import UnexpectedDER
 from ecdsa.util import sigdecode_der
 
-from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, SIGHASH_ALL
+from bitcoinutils.constants import SATOSHIS_PER_BITCOIN
+from bitcoinutils.learning.sighash import SIGHASH_NAMES, trace_segwit_v0_sighash
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.script import Script
 from bitcoinutils.transactions import Transaction, TxWitnessInput
@@ -31,7 +32,7 @@ def trace_p2wpkh_input(
 
     The previous Script must serialize as ``0014<20-byte hash>``. The selected
     input must have an empty scriptSig and a two-item witness: signature (DER
-    plus 01) and compressed SEC public key. ``transaction.witnesses`` must
+    plus a supported sighash byte) and compressed SEC public key. ``transaction.witnesses`` must
     contain one TxWitnessInput per input, including empty legacy slots.
 
     The JSON-friendly result retains the P2PKH tracer's common fields: success,
@@ -45,7 +46,7 @@ def trace_p2wpkh_input(
     None until read; sighash_byte then records the actual numeric type byte.
     Failures retain the partial trace and annotate the failing instruction.
 
-    Supports only native P2WPKH, SIGHASH_ALL and compressed keys. Compressed
+    Supports only native P2WPKH, six BIP143 sighash modes and compressed keys. Compressed
     keys are a scope/default-policy restriction, not a consensus-validity
     claim. No low-S or NULLFAIL policy check is made. Empty/incorrect signatures
     produce false; malformed nonempty DER signatures halt execution. Inputs
@@ -61,6 +62,7 @@ def trace_p2wpkh_input(
         "final_stack": [],
         "steps": steps,
         "error": None,
+        "clean_stack": False,
     }
 
     def snapshot() -> list[str]:
@@ -139,7 +141,7 @@ def trace_p2wpkh_input(
     # Only this fixed, internally constructed script is interpreted.
     for instruction in script_code.get_script():
         record = step(
-            "scriptCode", instruction,
+            "scriptCode", "PUSH_PUBLICKEY_HASH" if instruction == program.hex() else instruction,
             "opcode" if instruction.startswith("OP_") else "push",
         )
         if instruction == "OP_DUP":
@@ -156,17 +158,21 @@ def trace_p2wpkh_input(
                 return fail("EQUALVERIFY_FAILED", "The public-key hash does not match the witness program.", record)
         elif instruction == "OP_CHECKSIG":
             signature, public_key = stack[-2:]
+            result["public_key"] = public_key.hex()
+            record["public_key"] = public_key.hex()
             if len(public_key) != 33 or public_key[:1] not in (b"\x02", b"\x03"):
                 return fail("UNSUPPORTED_PUBLIC_KEY", "This tracer supports only 33-byte compressed SEC public keys.", record)
             if signature:
                 result["sighash_byte"] = signature[-1]
-                if signature[-1] != SIGHASH_ALL:
-                    return fail("UNSUPPORTED_SIGHASH", "Only SIGHASH_ALL (01) is supported.", record)
-                result["sighash"] = "SIGHASH_ALL"
+                if signature[-1] not in SIGHASH_NAMES:
+                    return fail("UNSUPPORTED_SIGHASH", "Only ALL, NONE, SINGLE, and their ANYONECANPAY variants are supported.", record)
+                result["sighash"] = SIGHASH_NAMES[signature[-1]]
+                result["der_signature"] = signature[:-1].hex()
+                record["der_signature"] = signature[:-1].hex()
                 try:
                     sigdecode_der(signature[:-1], SECP256k1.order)
                 except UnexpectedDER:
-                    return fail("INVALID_SIGNATURE_ENCODING", "Use a strict DER signature followed by 01.", record)
+                    return fail("INVALID_SIGNATURE_ENCODING", "Use a strict DER signature followed by a supported sighash byte.", record)
             try:
                 key = VerifyingKey.from_string(
                     public_key, curve=SECP256k1, valid_encodings={"compressed"}
@@ -176,21 +182,24 @@ def trace_p2wpkh_input(
             valid = False
             if signature:
                 try:
-                    digest = transaction.get_transaction_segwit_digest(
-                        input_index, script_code, amount, SIGHASH_ALL
+                    signing_trace = trace_segwit_v0_sighash(
+                        transaction, input_index, script_code, amount, signature[-1]
                     )
                 except (TypeError, ValueError, OverflowError, struct.error):
                     return fail("INVALID_TRANSACTION", "The transaction fields cannot produce a SegWit signing digest.", record)
+                digest = bytes.fromhex(signing_trace["digest"])
                 record["digest"] = digest.hex()
+                result["digest"] = digest.hex()
                 try:
                     valid = key.verify_digest(signature[:-1], digest, sigdecode=sigdecode_der)
                 except BadSignatureError:
                     valid = False
             stack[-2:] = [b"\x01" if valid else b""]
             record.update(signature_valid=valid, stack_after=snapshot())
+            result["signature_valid"] = valid
             if not valid:
                 return fail("CHECKSIG_FAILED", "The signature does not authorize this input for the supplied amount.", record)
         record["stack_after"] = snapshot()
 
-    result.update(success=stack == [b"\x01"], final_stack=snapshot())
+    result.update(success=stack == [b"\x01"], clean_stack=stack == [b"\x01"], final_stack=snapshot())
     return result
