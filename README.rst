@@ -24,6 +24,19 @@ Notes
 * For Hierarchical Deterministic keys we include minimal native BIP-32/BIP-39 functionality to acquire a PrivateKey object that is used throughtout the library.
 
 
+
+Educational trace helpers
+-------------------------
+
+The former ``bitcoinutils.learning`` subpackage has moved to the
+`bitcoin-education project <https://github.com/karask/bitcoin-education>`_.
+Its project-local ``bitcoin_education`` Python package owns the educational
+Script evaluators, Sighash traces, coinbase helpers, and Merkle walkthroughs.
+Those helpers and their tests are no longer distributed with this library.
+Core key, script, transaction, and block APIs are unchanged by this move.
+For migration and local execution instructions, see that project's
+``public/python/bitcoin_education/README.md``.
+
 Installation
 ------------
 Python version 3.10 and above is required. Then just install with:
