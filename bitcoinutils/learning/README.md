@@ -19,6 +19,65 @@ consensus, or policy validator. It supports only a two-push P2PKH `scriptSig`,
 the standard P2PKH locking script, and legacy `SIGHASH_ALL`. The caller must
 supply the previous output script; existence and unspent status are not checked.
 
+## Native P2WPKH execution
+
+```python
+from bitcoinutils.learning import trace_p2wpkh_input
+
+# transaction is signed and has one witness slot per input.
+# previous_script_pubkey is the spent output's Script (0014<20-byte hash>).
+result = trace_p2wpkh_input(transaction, 0, previous_script_pubkey, amount=100_000)
+for step in result["steps"]:
+    print(step["phase"], step["instruction"], step["stack_after"])
+```
+
+The previous output amount is required in **satoshis**. Changing it changes
+the BIP143 signing digest, so the original signature will fail. The selected
+input must have an empty scriptSig and a witness containing exactly a DER
+signature with a trailing `01` sighash byte and a compressed SEC public key.
+The initial scope is native P2WPKH with `SIGHASH_ALL`; P2SH wrapping, P2WSH,
+Taproot, other sighash modes, and uncompressed keys are explicitly unsupported.
+The compressed-key restriction follows default policy; it is not presented as
+a consensus rule. This helper does not enforce low-S or NULLFAIL policy.
+
+Results use the same `success`, `final_stack`, `steps`, and `error` fields as
+the P2PKH tracer. Additional fields expose the `witness_program`, implied
+`script_code` (without a length prefix), and supplied `amount`. `sighash` is
+null until read; `sighash_byte` records the actual signature type when present.
+All stacks are hex arrays, bottom first; false is `""`, true is `"01"`.
+The successful trace contains seven steps:
+
+1. Two `witness` steps (`kind: witness_load`) initialize the stack. These
+   load data; they are not Script opcodes or scriptSig pushes.
+2. Five `scriptCode` steps execute DUP, HASH160, the public-key-hash push,
+   EQUALVERIFY, and CHECKSIG using the implied P2PKH script. The witness program
+   selects this script; `OP_0 <hash>` is not a replacement unlocking script.
+
+CHECKSIG exposes its BIP143 `digest` and `signature_valid` result. Failures
+return a structured error and the trace so far, with the failing step annotated
+when execution has begun. An incorrect/empty signature produces false; malformed
+nonempty DER halts execution. A hash mismatch fails at EQUALVERIFY and leaves
+the false comparison result on the stack. The helper does not mutate its inputs
+or verify UTXO existence, unspent status, claimed amounts, or whole-transaction
+validity.
+
+Witness slots must stay aligned with transaction inputs. Include an empty
+`TxWitnessInput([])` for each legacy input in a mixed transaction. The current
+core `Transaction.from_raw()` drops empty witness slots; the tracer rejects
+the resulting shorter list with `WITNESS_COUNT_MISMATCH` rather than assigning
+a witness to the wrong input. Construct mixed transactions with explicit slots
+(or `set_witness` on a freshly constructed transaction). Transactions with
+P2WPKH witnesses for every input can be parsed and traced directly.
+
+Tests live here to keep the addition contained in the optional subpackage:
+
+```sh
+python -m unittest discover -s bitcoinutils/learning/tests -p 'test_*.py'
+```
+
+References: [BIP141](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki)
+and [BIP143](https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki).
+
 ## Legacy candidate-block construction
 
 The block helpers expose real transaction bytes and intermediate hashes for

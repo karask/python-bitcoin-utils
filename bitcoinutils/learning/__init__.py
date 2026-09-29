@@ -10,10 +10,12 @@ from bitcoinutils.learning.block import (
     trace_merkle_root,
 )
 from bitcoinutils.learning.p2pkh import trace_p2pkh_input
+from bitcoinutils.learning.p2wpkh import trace_p2wpkh_input
 
 __all__ = [
     "create_coinbase_transaction",
     "get_block_subsidy",
     "trace_merkle_root",
     "trace_p2pkh_input",
+    "trace_p2wpkh_input",
 ]
