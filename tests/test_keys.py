@@ -24,6 +24,7 @@ from bitcoinutils.keys import (
 )
 from bitcoinutils.script import Script
 from bitcoinutils.hdwallet import HDWallet
+from bitcoinutils.utils import add_magic_prefix
 from base64 import b64decode
 
 
@@ -268,6 +269,23 @@ class TestSignAndVerify(unittest.TestCase):
                 self.external_address, self.external_signature, self.message
             )
         )
+
+    def test_sign_and_verify_non_ascii(self):
+        # the message length is counted in UTF-8 bytes, like Bitcoin Core does,
+        # so this 9 character message is prefixed with a length of 12
+        message = "caf\u00e9 \u20ac100"
+        self.assertEqual(add_magic_prefix(message)[25], 12)
+        # signed with libsecp256k1 over Bitcoin Core's message hash
+        external_signature = (
+            "HzgxtLKPoSdm3BruCoFlRSmvHkx0+euut1kMtoWXtk4h"
+            "Q5jlNLTKzVG9IzKtuGDDQIP1T2iB2rwKOjO6lYSbFNk="
+        )
+        self.assertTrue(
+            PublicKey.verify_message(self.address, external_signature, message)
+        )
+        signature = self.priv.sign_message(message)
+        assert signature is not None
+        self.assertTrue(PublicKey.verify_message(self.address, signature, message))
 
 
 class TestP2shAddresses(unittest.TestCase):

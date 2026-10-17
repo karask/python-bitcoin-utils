@@ -360,8 +360,10 @@ def add_magic_prefix(message: str) -> bytes:
     # need to use varint for big messages
     # note that previously big-endian was used but varint uses little-endian
     # successfully tested with signatures from bitcoin core but keep this in mind
-    message_size = encode_varint(len(message))
+    # the size is the length of the UTF-8 encoded message in bytes, not the
+    # number of characters, which differ for non-ASCII messages
     message_encoded = message.encode("utf-8")
+    message_size = encode_varint(len(message_encoded))
     message_magic = magic_prefix + message_size + message_encoded
     return message_magic
 
