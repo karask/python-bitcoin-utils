@@ -153,7 +153,7 @@ class TxInput:
         cursor : int
             The cursor of which the algorithm will start to read the data
         has_segwit : boolean
-            Is the Tx Input segwit or not
+            Ignored; kept for backward compatibility
         """
         if isinstance(txinputrawhex, str):
             txinputraw = h_to_b(txinputrawhex)
@@ -187,7 +187,7 @@ class TxInput:
                 [unlocking_script.hex()]
             )  # Treat as single element for coinbase
         else:
-            script_sig = Script.from_raw(unlocking_script.hex(), has_segwit=has_segwit)
+            script_sig = Script.from_raw(unlocking_script.hex())
 
         # Create the TxInput instance
         tx_input = TxInput(
@@ -306,7 +306,7 @@ class TxOutput:
         cursor : int
             The cursor of which the algorithm will start to read the data
         has_segwit : boolean
-            Is the Tx Output segwit or not
+            Ignored; kept for backward compatibility
         """
         if isinstance(txoutputrawhex, str):
             txoutputraw = h_to_b(txoutputrawhex)
@@ -332,7 +332,7 @@ class TxOutput:
         # Create the TxOutput instance
         tx_output = TxOutput(
             amount=amount,
-            script_pubkey=Script.from_raw(lock_script.hex(), has_segwit=has_segwit),
+            script_pubkey=Script.from_raw(lock_script.hex()),
         )
 
         return tx_output, cursor
@@ -590,7 +590,7 @@ class Transaction:
 
         # Read inputs
         for _ in range(n_inputs):
-            inp, cursor = TxInput.from_raw(rawtx.hex(), cursor, has_segwit)
+            inp, cursor = TxInput.from_raw(rawtx.hex(), cursor)
             inputs.append(inp)
 
         # Read the number of outputs using parse_compact_size
@@ -600,7 +600,7 @@ class Transaction:
 
         # Read outputs
         for _ in range(n_outputs):
-            output, cursor = TxOutput.from_raw(rawtx.hex(), cursor, has_segwit)
+            output, cursor = TxOutput.from_raw(rawtx.hex(), cursor)
             outputs.append(output)
 
         # Handle witnesses if SegWit is enabled and if they are present i.e. if

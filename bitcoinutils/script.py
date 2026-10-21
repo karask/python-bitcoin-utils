@@ -366,7 +366,8 @@ class Script:
         scriptrawhex : str or bytes
             The raw script as hexadecimal text or bytes.
         has_segwit : bool
-            Whether to parse using SegWit-specific script handling.
+            Ignored; kept for backward compatibility. Scripts are parsed the
+            same way regardless of the transaction's serialization format.
         """
         if isinstance(scriptrawhex, str):
             scriptraw = h_to_b(scriptrawhex)
