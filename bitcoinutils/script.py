@@ -15,12 +15,15 @@ import struct
 from typing import Any, Union
 
 from bitcoinutils.ripemd160 import ripemd160
-from bitcoinutils.utils import b_to_h, h_to_b, vi_to_int
+from bitcoinutils.utils import b_to_h, h_to_b
 
 # import bitcoinutils.keys
 
 
 # Bitcoin's op codes. Complete list at: https://en.bitcoin.it/wiki/Script
+# Disabled, reserved and unassigned op codes are included as well so that
+# scripts using them can be parsed with Script.from_raw() and serialized back
+# unchanged.
 OP_CODES = {
     # constants
     "OP_0": b"\x00",
@@ -29,6 +32,7 @@ OP_CODES = {
     "OP_PUSHDATA2": b"\x4d",
     "OP_PUSHDATA4": b"\x4e",
     "OP_1NEGATE": b"\x4f",
+    "OP_RESERVED": b"\x50",
     "OP_1": b"\x51",
     "OP_TRUE": b"\x51",
     "OP_2": b"\x52",
@@ -48,8 +52,11 @@ OP_CODES = {
     "OP_16": b"\x60",
     # flow control
     "OP_NOP": b"\x61",
+    "OP_VER": b"\x62",
     "OP_IF": b"\x63",
     "OP_NOTIF": b"\x64",
+    "OP_VERIF": b"\x65",
+    "OP_VERNOTIF": b"\x66",
     "OP_ELSE": b"\x67",
     "OP_ENDIF": b"\x68",
     "OP_VERIFY": b"\x69",
@@ -75,34 +82,36 @@ OP_CODES = {
     "OP_2ROT": b"\x71",
     "OP_2SWAP": b"\x72",
     # splice
-    #'OP_CAT'                : b'\x7e',
-    #'OP_SUBSTR'             : b'\x7f',
-    #'OP_LEFT'               : b'\x80',
-    #'OP_RIGHT'              : b'\x81',
+    "OP_CAT": b"\x7e",
+    "OP_SUBSTR": b"\x7f",
+    "OP_LEFT": b"\x80",
+    "OP_RIGHT": b"\x81",
     "OP_SIZE": b"\x82",
     # bitwise logic
-    #'OP_INVERT'             : b'\x83',
-    #'OP_AND'                : b'\x84',
-    #'OP_OR'                 : b'\x85',
-    #'OP_XOR'                : b'\x86',
+    "OP_INVERT": b"\x83",
+    "OP_AND": b"\x84",
+    "OP_OR": b"\x85",
+    "OP_XOR": b"\x86",
     "OP_EQUAL": b"\x87",
     "OP_EQUALVERIFY": b"\x88",
+    "OP_RESERVED1": b"\x89",
+    "OP_RESERVED2": b"\x8a",
     # arithmetic
     "OP_1ADD": b"\x8b",
     "OP_1SUB": b"\x8c",
-    #'OP_2MUL'               : b'\x8d',
-    #'OP_2DIV'               : b'\x8e',
+    "OP_2MUL": b"\x8d",
+    "OP_2DIV": b"\x8e",
     "OP_NEGATE": b"\x8f",
     "OP_ABS": b"\x90",
     "OP_NOT": b"\x91",
     "OP_0NOTEQUAL": b"\x92",
     "OP_ADD": b"\x93",
     "OP_SUB": b"\x94",
-    #'OP_MUL'                : b'\x95',
-    #'OP_DIV'                : b'\x96',
-    #'OP_MOD'                : b'\x97',
-    #'OP_LSHIFT'             : b'\x98',
-    #'OP_RSHIFT'             : b'\x99',
+    "OP_MUL": b"\x95",
+    "OP_DIV": b"\x96",
+    "OP_MOD": b"\x97",
+    "OP_LSHIFT": b"\x98",
+    "OP_RSHIFT": b"\x99",
     "OP_BOOLAND": b"\x9a",
     "OP_BOOLOR": b"\x9b",
     "OP_NUMEQUAL": b"\x9c",
@@ -132,7 +141,18 @@ OP_CODES = {
     "OP_CHECKLOCKTIMEVERIFY": b"\xb1",
     "OP_NOP3": b"\xb2",
     "OP_CHECKSEQUENCEVERIFY": b"\xb2",
-    
+    # expansion
+    "OP_NOP1": b"\xb0",
+    "OP_NOP4": b"\xb3",
+    "OP_NOP5": b"\xb4",
+    "OP_NOP6": b"\xb5",
+    "OP_NOP7": b"\xb6",
+    "OP_NOP8": b"\xb7",
+    "OP_NOP9": b"\xb8",
+    "OP_NOP10": b"\xb9",
+    # unassigned, named by their decimal value (OP_SUCCESSx in tapscript, BIP-342)
+    **{f"OP_UNKNOWN{i}": bytes([i]) for i in range(0xBB, 0xFF)},
+    "OP_INVALIDOPCODE": b"\xff",
 }
 
 CODE_OPS = {
@@ -142,6 +162,7 @@ CODE_OPS = {
     b"\x4d": "OP_PUSHDATA2",
     b"\x4e": "OP_PUSHDATA4",
     b"\x4f": "OP_1NEGATE",
+    b"\x50": "OP_RESERVED",
     b"\x51": "OP_1",
     b"\x52": "OP_2",
     b"\x53": "OP_3",
@@ -160,8 +181,11 @@ CODE_OPS = {
     b"\x60": "OP_16",
     # flow control
     b"\x61": "OP_NOP",
+    b"\x62": "OP_VER",
     b"\x63": "OP_IF",
     b"\x64": "OP_NOTIF",
+    b"\x65": "OP_VERIF",
+    b"\x66": "OP_VERNOTIF",
     b"\x67": "OP_ELSE",
     b"\x68": "OP_ENDIF",
     b"\x69": "OP_VERIFY",
@@ -187,19 +211,36 @@ CODE_OPS = {
     b"\x71": "OP_2ROT",
     b"\x72": "OP_2SWAP",
     # splice
+    b"\x7e": "OP_CAT",
+    b"\x7f": "OP_SUBSTR",
+    b"\x80": "OP_LEFT",
+    b"\x81": "OP_RIGHT",
     b"\x82": "OP_SIZE",
     # bitwise logic
+    b"\x83": "OP_INVERT",
+    b"\x84": "OP_AND",
+    b"\x85": "OP_OR",
+    b"\x86": "OP_XOR",
     b"\x87": "OP_EQUAL",
     b"\x88": "OP_EQUALVERIFY",
+    b"\x89": "OP_RESERVED1",
+    b"\x8a": "OP_RESERVED2",
     # arithmetic
     b"\x8b": "OP_1ADD",
     b"\x8c": "OP_1SUB",
+    b"\x8d": "OP_2MUL",
+    b"\x8e": "OP_2DIV",
     b"\x8f": "OP_NEGATE",
     b"\x90": "OP_ABS",
     b"\x91": "OP_NOT",
     b"\x92": "OP_0NOTEQUAL",
     b"\x93": "OP_ADD",
     b"\x94": "OP_SUB",
+    b"\x95": "OP_MUL",
+    b"\x96": "OP_DIV",
+    b"\x97": "OP_MOD",
+    b"\x98": "OP_LSHIFT",
+    b"\x99": "OP_RSHIFT",
     b"\x9a": "OP_BOOLAND",
     b"\x9b": "OP_BOOLOR",
     b"\x9c": "OP_NUMEQUAL",
@@ -229,6 +270,18 @@ CODE_OPS = {
     b"\xb1": "OP_CHECKLOCKTIMEVERIFY",  
     # This used to be OP_NOP3
     b"\xb2": "OP_CHECKSEQUENCEVERIFY",  
+    # expansion
+    b"\xb0": "OP_NOP1",
+    b"\xb3": "OP_NOP4",
+    b"\xb4": "OP_NOP5",
+    b"\xb5": "OP_NOP6",
+    b"\xb6": "OP_NOP7",
+    b"\xb7": "OP_NOP8",
+    b"\xb8": "OP_NOP9",
+    b"\xb9": "OP_NOP10",
+    # unassigned, named by their decimal value (OP_SUCCESSx in tapscript, BIP-342)
+    **{bytes([i]): f"OP_UNKNOWN{i}" for i in range(0xBB, 0xFF)},
+    b"\xff": "OP_INVALIDOPCODE",
 }
 
 
@@ -381,7 +434,13 @@ class Script:
 
         while index < len(scriptraw):
             byte = scriptraw[index]
-            if bytes([byte]) in CODE_OPS:
+            # 0x01-0x4b push data directly; the op code is the number of bytes
+            if 0x01 <= byte <= 0x4B:
+                index = index + 1
+                commands.append(scriptraw[index : index + byte].hex())
+                index = index + byte
+            # any other byte is an op code (CODE_OPS contains all of them)
+            else:
                 if (
                     bytes([byte]) != b"\x4c"
                     and bytes([byte]) != b"\x4d"
@@ -411,12 +470,6 @@ class Script:
                     index = index + 4
                     commands.append(scriptraw[index : index + bytes_to_read].hex())
                     index = index + bytes_to_read
-            else:
-                data_size, size = vi_to_int(scriptraw[index : index + 8])
-                commands.append(
-                    scriptraw[index + size : index + size + data_size].hex()
-                )
-                index = index + data_size + size
 
         return Script(script=commands)
 
