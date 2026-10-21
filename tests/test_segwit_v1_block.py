@@ -1,3 +1,4 @@
+import hashlib
 import unittest
 import os
 import sys
@@ -8,6 +9,20 @@ if root_path not in sys.path:
 
 from bitcoinutils.block import Block, BlockHeader
 from bitcoinutils.script import Script
+
+
+def merkle_root(txids: list[str]) -> str:
+    """Computes a block's merkle root (hex, display order) from its txids"""
+    hashes = [bytes.fromhex(txid)[::-1] for txid in txids]
+    while len(hashes) > 1:
+        if len(hashes) % 2 == 1:
+            hashes.append(hashes[-1])
+        hashes = [
+            hashlib.sha256(hashlib.sha256(left + right).digest()).digest()
+            for left, right in zip(hashes[0::2], hashes[1::2])
+        ]
+    return hashes[0][::-1].hex()
+
 
 class TestBlock(unittest.TestCase):
     def setUp(self): 
@@ -44,6 +59,16 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.block.header.timestamp, self.header.timestamp, "Timestamp is incorrect.")
         self.assertEqual(self.block.header.target_bits, self.header.target_bits, "Target bits are incorrect.")
         self.assertEqual(self.block.header.nonce, self.header.nonce, "Nonce is incorrect.")
+
+    def test_merkle_root(self):
+        # the parsed transactions must re-serialize to their exact (non-witness)
+        # bytes for their txids to hash up to the merkle root of the header
+        txids = [tx.get_txid() for tx in self.block.transactions]
+        self.assertEqual(
+            merkle_root(txids),
+            self.header.merkle_root,
+            "Merkle root of the parsed transactions is incorrect.",
+        )
 
     def test_block_size(self):
         self.assertEqual(self.block.get_block_size(), self.block_size, "Block size is incorrect.")
