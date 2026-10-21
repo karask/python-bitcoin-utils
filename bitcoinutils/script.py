@@ -12,7 +12,7 @@
 import copy
 import hashlib
 import struct
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from bitcoinutils.ripemd160 import ripemd160
 from bitcoinutils.utils import b_to_h, h_to_b
@@ -328,12 +328,19 @@ class Script:
         """See Script description"""
 
         self.script: list[Any] = script
+        # set by from_raw(): the bytes the script was parsed from and the
+        # commands parsed from them (see to_bytes())
+        self._raw: Optional[bytes] = None
+        self._raw_commands: list[Any] = []
 
     @classmethod
     def copy(cls, script: "Script") -> "Script":
         """Deep copy of Script"""
         scripts = copy.deepcopy(script.script)
-        return cls(scripts)
+        script_copy = cls(scripts)
+        script_copy._raw = script._raw
+        script_copy._raw_commands = list(script._raw_commands)
+        return script_copy
 
     def _op_push_data(self, data: str) -> bytes:
         """Converts data to appropriate OP_PUSHDATA OP code including length
@@ -388,7 +395,15 @@ class Script:
         https://en.bitcoin.it/wiki/Script
         If not consider it data (signature, public key, public key hash, etc.) and
         and include with appropriate OP_PUSHDATA OP code plus length
+
+        A script created with from_raw() is converted back to the exact bytes it
+        was parsed from while its commands are unchanged. Those bytes can push
+        data in ways the commands do not record, e.g. with a larger OP_PUSHDATA
+        than needed or with a push cut short by the end of the script.
         """
+        if self._raw is not None and self.script == self._raw_commands:
+            return self._raw
+
         script_bytes = b""
         for token in self.script:
             # add op codes directly
@@ -471,7 +486,11 @@ class Script:
                     commands.append(scriptraw[index : index + bytes_to_read].hex())
                     index = index + bytes_to_read
 
-        return Script(script=commands)
+        script = Script(script=commands)
+        script._raw = scriptraw
+        # a copy, since script.script is the commands list itself
+        script._raw_commands = list(commands)
+        return script
 
     def get_script(self) -> list[Any]:
         """Returns script as array of strings"""
