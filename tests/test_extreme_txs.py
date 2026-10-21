@@ -9,12 +9,13 @@
 # modified, propagated, or distributed except according to the terms contained
 # in the LICENSE file.
 
+import math
 import unittest
 
 from bitcoinutils.keys import P2pkhAddress
 from bitcoinutils.script import Script
 from bitcoinutils.setup import setup
-from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput, TxWitnessInput
 
 
 class TestExtremeTransactions(unittest.TestCase):
@@ -97,6 +98,24 @@ class TestExtremeTransactions(unittest.TestCase):
                 self.assertEqual(len(script_code.to_bytes()), expected_length)
                 digest = tx.get_transaction_segwit_digest(0, script_code, 2000)
                 self.assertEqual(digest.hex(), expected_digest)
+
+    def test_vsize_uses_compact_size_for_witness_stack_count(self):
+        # Golden vsizes for an 85-byte base tx with one-byte witness items. The
+        # stack count is 1 byte up to 252 items (128 and up must not be UTF-8
+        # encoded to 2 bytes) and 3 bytes from 253 items.
+        cases = [(127, 150), (128, 150), (252, 212), (253, 213)]
+
+        for stack_size, expected_vsize in cases:
+            with self.subTest(stack_size=stack_size):
+                tx = Transaction(
+                    [self.txin],
+                    [TxOutput(1000, self.script_pubkey)],
+                    has_segwit=True,
+                    witnesses=[TxWitnessInput(["01"] * stack_size)],
+                )
+                weight = 3 * len(tx.to_bytes(False)) + len(tx.to_bytes(True))
+                self.assertEqual(tx.get_vsize(), math.ceil(weight / 4))
+                self.assertEqual(tx.get_vsize(), expected_vsize)
 
     def test_pushdata_boundaries_use_minimal_opcode(self):
         cases = [

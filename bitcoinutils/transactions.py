@@ -1140,10 +1140,10 @@ class Transaction:
     def get_vsize(self) -> int:
         """Gets the virtual size of the transaction.
 
-        For non-segwit txs this is identical to get_size(). For segwit txs the
-        marker and witnesses length needs to be reduced to 1/4 of its original
-        length. Thus it is substructed from size and then it is divided by 4
-        before added back to size to produce vsize (always rounded up).
+        For non-segwit txs this is identical to get_size(). For segwit txs it
+        is the weight divided by 4 (always rounded up), where the weight is 3
+        times the size without the marker, flag and witnesses plus the full
+        size (BIP141).
 
         https://en.bitcoin.it/wiki/Weight_units
         """
@@ -1151,23 +1151,9 @@ class Transaction:
         if not self.has_segwit:
             return self.get_size()
 
-        marker_size = 2
+        weight = 3 * len(self.to_bytes(False)) + len(self.to_bytes(True))
 
-        wit_size = 0
-        data = b""
-
-        # count witnesses data
-        for witness in self.witnesses:
-            # add witnesses stack count
-            witnesses_count_bytes = chr(len(witness.stack)).encode()
-            data += witnesses_count_bytes
-            data += witness.to_bytes()
-        wit_size = len(data)
-
-        size = self.get_size() - (marker_size + wit_size)
-        vsize = size + (marker_size + wit_size) / 4
-
-        return int(math.ceil(vsize))
+        return math.ceil(weight / 4)
 
     def to_hex(self) -> str:
         """Converts object to hexadecimal string"""
