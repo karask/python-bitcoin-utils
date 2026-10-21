@@ -618,8 +618,9 @@ class Transaction:
                     witness_data = rawtx[cursor : cursor + item_size]
                     cursor += item_size
                     witnesses_tmp.append(witness_data.hex())
-                if witnesses_tmp:
-                    witnesses.append(TxWitnessInput(stack=witnesses_tmp))
+                # add an entry even when the stack is empty (non-witness input)
+                # so that witnesses stay parallel to inputs
+                witnesses.append(TxWitnessInput(stack=witnesses_tmp))
 
         # Read locktime (4 bytes)
         locktime = rawtx[cursor : cursor + 4]
