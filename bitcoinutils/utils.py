@@ -319,14 +319,11 @@ def is_address_bech32(address: str) -> bool:
         return False
 
     CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
-    # Check if the string has valid characters
-    for char in address:
-        if char.lower() not in CHARSET:
+    # the data part follows the last "1"; only it uses the bech32 charset
+    hrp, _, data = address.lower().rpartition("1")
+    for char in data:
+        if char not in CHARSET:
             return False
-    try:
-        hrp, data = address.lower().split("1")
-    except ValueError:
-        return False
     # Check if the human-readable part (hrp) and data part are of appropriate lengths
     if len(hrp) < 1 or len(data) < 6:
         return False
