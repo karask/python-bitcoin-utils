@@ -24,7 +24,7 @@ from bitcoinutils.keys import (
 )
 from bitcoinutils.script import Script
 from bitcoinutils.hdwallet import HDWallet
-from bitcoinutils.utils import add_magic_prefix
+from bitcoinutils.utils import add_magic_prefix, is_address_bech32
 from base64 import b64decode
 
 
@@ -340,6 +340,10 @@ class TestP2WPKHAddresses(unittest.TestCase):
         )
         p2sh_addr = P2shAddress.from_script(addr.to_script_pub_key())
         self.assertTrue(p2sh_addr.to_string(), self.correct_p2sh_p2wpkh_address)
+
+    def test_is_address_bech32(self):
+        self.assertTrue(is_address_bech32(self.correct_p2wpkh_address))
+        self.assertFalse(is_address_bech32(self.correct_p2sh_p2wpkh_address))
 
     def test_p2wsh_creation_1multisig(self):
         p2wpkh_key = PrivateKey.from_wif(
