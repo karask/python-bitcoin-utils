@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 import hashlib
 from ecdsa import ellipticcurve  # type: ignore
+from bitcoinutils.bech32 import bech32_decode
 from bitcoinutils.constants import SATOSHIS_PER_BITCOIN, LEAF_VERSION_TAPSCRIPT
 from bitcoinutils.schnorr import full_pubkey_gen, point_add, point_mul, G
 import struct
@@ -303,7 +304,7 @@ def get_transaction_length(data: bytes) -> int:
 
 
 def is_address_bech32(address: str) -> bool:
-    """Returns if an address (string) is bech32 or not
+    """Returns whether an address has a valid Bech32 or Bech32m encoding.
     
     Parameters
     ----------
@@ -313,21 +314,10 @@ def is_address_bech32(address: str) -> bool:
     Returns
     -------
     bool
-        True if the address is bech32, False otherwise
+        True if the encoding is valid Bech32 or Bech32m, False otherwise
     """
-    if not address:
-        return False
-
-    CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
-    # the data part follows the last "1"; only it uses the bech32 charset
-    hrp, _, data = address.lower().rpartition("1")
-    for char in data:
-        if char not in CHARSET:
-            return False
-    # Check if the human-readable part (hrp) and data part are of appropriate lengths
-    if len(hrp) < 1 or len(data) < 6:
-        return False
-    return True
+    hrp, _, _ = bech32_decode(address)
+    return hrp is not None
 
 
 def vi_to_int(byteint: bytes) -> Tuple[int, int]:
