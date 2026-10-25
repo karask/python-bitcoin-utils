@@ -24,7 +24,7 @@ from bitcoinutils.keys import (
 )
 from bitcoinutils.script import Script
 from bitcoinutils.hdwallet import HDWallet
-from bitcoinutils.utils import add_magic_prefix
+from bitcoinutils.utils import add_magic_prefix, is_address_bech32
 from base64 import b64decode
 
 
@@ -340,6 +340,38 @@ class TestP2WPKHAddresses(unittest.TestCase):
         )
         p2sh_addr = P2shAddress.from_script(addr.to_script_pub_key())
         self.assertTrue(p2sh_addr.to_string(), self.correct_p2sh_p2wpkh_address)
+
+    def test_is_address_bech32(self):
+        addresses = [
+            self.correct_p2wpkh_address,
+            self.correct_p2wsh_address,
+            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+            "tb1pk426x6qvmncj5vzhtp5f2pzhdu4qxsshszswga8ea6sycj9nulmsu7syz0",
+        ]
+        for address in addresses:
+            for encoded in (address, address.upper()):
+                with self.subTest(address=encoded):
+                    self.assertTrue(is_address_bech32(encoded))
+
+    def test_is_address_bech32_rejects_invalid_encodings(self):
+        address = self.correct_p2wpkh_address
+        taproot = "tb1pk426x6qvmncj5vzhtp5f2pzhdu4qxsshszswga8ea6sycj9nulmsu7syz0"
+        invalid_addresses = {
+            "base58": self.correct_p2sh_p2wpkh_address,
+            "empty": "",
+            "bad checksum": address[:-1] + "q",
+            "bad bech32m checksum": taproot[:-1] + "q",
+            "mixed case": "tB" + address[2:],
+            "invalid HRP character": " " + address,
+            "invalid data character": address[:-1] + "b",
+            "missing separator": "tbqqqqqq",
+            "empty HRP": "1qqqqqq",
+            "short data": "tb1qqqqq",
+            "overlong": "a" * 84 + "1qqqqqq",
+        }
+        for label, invalid in invalid_addresses.items():
+            with self.subTest(case=label, address=invalid):
+                self.assertFalse(is_address_bech32(invalid))
 
     def test_p2wsh_creation_1multisig(self):
         p2wpkh_key = PrivateKey.from_wif(
