@@ -123,6 +123,9 @@ class TestDescriptors(unittest.TestCase):
         desc = parse_descriptor(f"tr({XONLY_PUB1})")
         self.assertEqual(desc.to_string(), f"tr({XONLY_PUB1})")
         self.assertEqual(desc.to_script_pub_key().get_script()[0], "OP_1")
+        # hex digits only, but no 0 and a leading 5, like a WIF key
+        xonly = "59dbf46f8c94759ba21277c33784f41645f7b44f6c596a58ce92e666191abe3e"
+        self.assertEqual(parse_descriptor(f"tr({xonly})").to_string(), f"tr({xonly})")
 
     def test_addr_descriptor(self):
         address = P2wpkhAddress.from_witness_program(
