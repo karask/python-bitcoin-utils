@@ -139,9 +139,12 @@ class _Key:
             raise NotImplementedError("Extended public keys are not supported")
         if value[:4] in ("xprv", "yprv", "zprv", "tprv", "uprv", "vprv"):
             raise NotImplementedError("Extended private keys are not supported")
-        if re.match(r"^[5KLc9][1-9A-HJ-NP-Za-km-z]+$", value):
+        if re.match(r"^[5KLc9][1-9A-HJ-NP-Za-km-z]{50,51}$", value):
             raise NotImplementedError("Private keys and WIF keys are not supported")
-        if not re.match(r"^[0-9a-fA-F]+$", value):
+        if not re.fullmatch(
+            r"(?:[0-9a-fA-F]{64}|0[23][0-9a-fA-F]{64}|04[0-9a-fA-F]{128})",
+            value,
+        ):
             raise DescriptorError(f"Invalid public key: {value}")
         try:
             PublicKey(value)

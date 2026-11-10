@@ -85,10 +85,12 @@ class TestDescriptors(unittest.TestCase):
         self.assertEqual(desc.to_script_pub_key(), expected.to_script_pub_key())
 
     def test_pk_descriptor_script(self):
-        desc = parse_descriptor(f"pk({PUB1})")
-        self.assertEqual(desc.to_script_pub_key(), Script([PUB1, "OP_CHECKSIG"]))
-        with self.assertRaises(DescriptorError):
-            desc.to_address()
+        for key in (PUB1, UNCOMPRESSED_PUB1):
+            with self.subTest(key=key):
+                desc = parse_descriptor(f"pk({key})")
+                self.assertEqual(desc.to_script_pub_key(), Script([key, "OP_CHECKSIG"]))
+                with self.assertRaises(DescriptorError):
+                    desc.to_address()
 
     def test_multisig_descriptor_preserves_key_order(self):
         desc = parse_descriptor(f"multi(2,{PUB2},{PUB1},{PUB3})")
@@ -123,6 +125,95 @@ class TestDescriptors(unittest.TestCase):
         desc = parse_descriptor(f"tr({XONLY_PUB1})")
         self.assertEqual(desc.to_string(), f"tr({XONLY_PUB1})")
         self.assertEqual(desc.to_script_pub_key().get_script()[0], "OP_1")
+
+    def test_tr_descriptor_accepts_wif_like_xonly_keys(self):
+        # These valid keys start with a WIF prefix and contain no zero digit.
+        # Expected scripts were calculated independently using BIP 341's tweak.
+        vectors = (
+            (
+                "59dbf46f8c94759ba21277c33784f41645f7b44f6c596a58ce92e666191abe3e",
+                "5120a2ceab9f814c80d64748d223bc2a8eb402712f671e4b2ea7381554810e4e959c",
+            ),
+            (
+                "9aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1111",
+                "5120de8ca39da0cdceff823a5436a75470ac9064781227d88f698229b23a0e43280a",
+            ),
+            (
+                "caaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1114",
+                "51208a8e4c91d67a6590b305be933e4f0f5396c9cf100189e92c6853a25ec2fa8198",
+            ),
+        )
+        for xonly, expected_script in vectors:
+            for key in (xonly, xonly.upper()):
+                for require_checksum in (False, True):
+                    with self.subTest(key=key, require_checksum=require_checksum):
+                        text = f"tr({key})"
+                        if require_checksum:
+                            text = add_descriptor_checksum(text)
+                        desc = parse_descriptor(text, require_checksum=require_checksum)
+                        self.assertEqual(desc.to_string(), f"tr({xonly})")
+                        self.assertEqual(
+                            desc.to_script_pub_key().to_hex(), expected_script
+                        )
+
+    def test_wif_private_keys_rejected(self):
+        # Mainnet (5, K, L) and testnet (9, c), compressed and uncompressed.
+        wifs = (
+            "5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf",
+            "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn",
+            "L1WXUEobVkjAiVhi4jikoNA5yqKKmmquvGYkQNXAbVLxgYBegitj",
+            "91avARGdfge8E4tZfYLoxeJ5sGBdNJQH4kvjJoQFacbgwmaKkrx",
+            "cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA",
+        )
+        for network in ("mainnet", "testnet", "testnet4", "signet", "regtest"):
+            setup(network)
+            for wif in wifs:
+                for function in ("pk", "pkh", "wpkh", "tr"):
+                    with self.subTest(network=network, wif=wif, function=function):
+                        with self.assertRaisesRegex(
+                            NotImplementedError,
+                            "Private keys and WIF keys are not supported",
+                        ):
+                            parse_descriptor(f"{function}({wif})")
+
+    def test_public_keys_with_invalid_lengths_rejected(self):
+        invalid = (
+            "5a",
+            "9a",
+            "ca",
+            "aa",
+            XONLY_PUB1[:-2],
+            PUB1[:-1],
+            PUB1 + "aa",
+            UNCOMPRESSED_PUB1[:-2],
+            UNCOMPRESSED_PUB1 + "aa",
+        )
+        for key in invalid:
+            for function in ("pk", "pkh", "wpkh", "tr"):
+                with self.subTest(key=key, function=function):
+                    with self.assertRaises(DescriptorError):
+                        parse_descriptor(f"{function}({key})")
+
+    def test_public_keys_with_invalid_sec_prefixes_rejected(self):
+        # Valid coordinates without zero digits also reproduce WIF-like inputs.
+        coordinates = (
+            "5aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1143"
+            "67f31f88fd41a4a326ff49ed17b991b77f25477ed21e65e3224db5e88647a386"
+        )
+        for prefix in ("00", "02", "03", "05", "06", "07", "44", "55", "99", "cc"):
+            for function in ("pk", "pkh"):
+                with self.subTest(prefix=prefix, function=function):
+                    with self.assertRaises(DescriptorError):
+                        parse_descriptor(f"{function}({prefix}{coordinates})")
+
+    def test_public_keys_with_invalid_curve_points_rejected(self):
+        xonly = "5aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1111"
+        invalid = (xonly, "02" + xonly, "03" + xonly, "04" + "11" * 64)
+        for key in invalid:
+            for function in ("pk", "pkh", "tr"):
+                with self.subTest(key=key, function=function):
+                    with self.assertRaises(DescriptorError):
+                        parse_descriptor(f"{function}({key})")
 
     def test_addr_descriptor(self):
         address = P2wpkhAddress.from_witness_program(
