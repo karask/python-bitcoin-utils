@@ -17,6 +17,7 @@ from bitcoinutils.keys import PrivateKey, P2pkhAddress
 from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence
 from bitcoinutils.script import Script
+from bitcoinutils.psbt import PSBT
 from bitcoinutils.utils import to_satoshis
 
 
@@ -95,6 +96,34 @@ class TestCreateP2shTransaction(unittest.TestCase):
         sig = self.p2pk_sk.sign_input(tx, 0, self.p2pk_redeem_script)
         self.txin_spend.script_sig = Script([sig, self.p2pk_redeem_script.to_hex()])
         self.assertEqual(tx.serialize(), self.spend_p2sh_result)
+
+    def test_spend_p2sh_with_psbt(self):
+        psbt = PSBT(Transaction([self.txin_spend], [self.txout2]))
+        psbt.update_input(
+            0,
+            witness_utxo=self.txout,
+            redeem_script=self.p2pk_redeem_script,
+        )
+        psbt.sign_input(0, self.p2pk_sk)
+        psbt.finalize()
+        tx = psbt.extract_transaction()
+        self.assertEqual(tx.serialize(), self.spend_p2sh_result)
+
+    def test_spend_p2sh_uncompressed_with_psbt(self):
+        pk = self.p2pk_sk.get_public_key().to_hex(compressed=False)
+        redeem_script = Script([pk, "OP_CHECKSIG"])
+        psbt = PSBT(Transaction([self.txin_spend], [self.txout2]))
+        psbt.update_input(
+            0,
+            witness_utxo=TxOutput(
+                to_satoshis(0.09), redeem_script.to_p2sh_script_pub_key()
+            ),
+            redeem_script=redeem_script,
+        )
+        psbt.sign_input(0, self.p2pk_sk)
+        psbt.finalize()
+        script_sig = psbt.extract_transaction().inputs[0].script_sig.script
+        self.assertEqual(script_sig[1:], [redeem_script.to_hex()])
 
     def test_spend_p2sh_csv_p2pkh(self):
         redeem_script = Script(

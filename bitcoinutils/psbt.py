@@ -837,7 +837,17 @@ class PSBT:
             psi.final_scriptsig = Script(["OP_0"] + sig_hexes + [rs.to_hex()])
         elif len(psi.partial_sigs) == 1:
             pubkey, sig = next(iter(psi.partial_sigs.items()))
-            psi.final_scriptsig = Script([b_to_h(sig), b_to_h(pubkey), rs.to_hex()])
+            if (
+                len(rs.script) == 2
+                and rs.script[1] == "OP_CHECKSIG"
+                and isinstance(rs.script[0], str)
+                and len(h_to_b(rs.script[0])) in (33, 65)
+            ):
+                psi.final_scriptsig = Script([b_to_h(sig), rs.to_hex()])
+            else:
+                psi.final_scriptsig = Script(
+                    [b_to_h(sig), b_to_h(pubkey), rs.to_hex()]
+                )
         else:
             raise ValueError("Cannot finalize P2SH input: unsupported script pattern")
 
