@@ -17,6 +17,7 @@ from bitcoinutils.keys import PrivateKey, P2pkhAddress
 from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
 from bitcoinutils.transactions import TxInput, TxOutput, Transaction, Sequence
 from bitcoinutils.script import Script
+from bitcoinutils.psbt import PSBT
 from bitcoinutils.utils import to_satoshis
 
 
@@ -94,6 +95,18 @@ class TestCreateP2shTransaction(unittest.TestCase):
         tx = Transaction([self.txin_spend], [self.txout2])
         sig = self.p2pk_sk.sign_input(tx, 0, self.p2pk_redeem_script)
         self.txin_spend.script_sig = Script([sig, self.p2pk_redeem_script.to_hex()])
+        self.assertEqual(tx.serialize(), self.spend_p2sh_result)
+
+    def test_spend_p2sh_with_psbt(self):
+        psbt = PSBT(Transaction([self.txin_spend], [self.txout2]))
+        psbt.update_input(
+            0,
+            witness_utxo=self.txout,
+            redeem_script=self.p2pk_redeem_script,
+        )
+        psbt.sign_input(0, self.p2pk_sk)
+        psbt.finalize()
+        tx = psbt.extract_transaction()
         self.assertEqual(tx.serialize(), self.spend_p2sh_result)
 
     def test_spend_p2sh_csv_p2pkh(self):
