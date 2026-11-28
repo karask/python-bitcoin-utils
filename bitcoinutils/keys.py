@@ -58,6 +58,7 @@ from bitcoinutils.utils import (
     b_to_h,
     h_to_b,
     b_to_i,
+    i_to_b,
     i_to_b32,
     tweak_taproot_pubkey,
     tweak_taproot_privkey,
@@ -442,12 +443,12 @@ class PrivateKey:
             new_S_as_bigint = Secp256k1Params._order - S_as_bigint
             # convert bigint to bytes
             # new_S = h_to_b(i_to_h64(new_S_as_bigint))
-            new_S = i_to_b32(new_S_as_bigint)
-            # new value should be 32 bytes
-            assert len(new_S) == 0x20
+            # DER integers are minimal (BIP66) so no leading zero bytes; the
+            # new S is below 2^255 so it never needs a sign byte either
+            new_S = i_to_b(new_S_as_bigint)
             # reduce appropriate lengths
-            length_s -= 1
-            length_total -= 1
+            length_total -= length_s - len(new_S)
+            length_s = len(new_S)
         else:
             new_S = S
 
