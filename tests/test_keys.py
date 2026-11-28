@@ -10,8 +10,11 @@
 # in the LICENSE file.
 
 
+import hashlib
 import unittest
 import warnings
+
+from ecdsa.util import sigdecode_der  # type: ignore
 
 from bitcoinutils.setup import setup, set_security_warnings
 from bitcoinutils.keys import (
@@ -24,7 +27,7 @@ from bitcoinutils.keys import (
 )
 from bitcoinutils.script import Script
 from bitcoinutils.hdwallet import HDWallet
-from bitcoinutils.utils import add_magic_prefix, is_address_bech32
+from bitcoinutils.utils import add_magic_prefix, h_to_b, is_address_bech32
 from base64 import b64decode
 
 
@@ -262,6 +265,26 @@ class TestSignAndVerify(unittest.TestCase):
         digest = bytes.fromhex("00" * 32)
         with self.assertWarnsRegex(RuntimeWarning, "not side-channel hardened"):
             self.priv._sign_taproot_input(digest)
+
+    def test_sign_input_low_s_is_minimal_der(self):
+        # for this digest S comes out high and (order - S) is only 31 bytes
+        # long. DER integers must not be zero padded (BIP66) or nodes reject
+        # the signature.
+        set_security_warnings(False)
+        digest = hashlib.sha256((191).to_bytes(4, "big")).digest()
+        signature = h_to_b(self.priv._sign_input(digest))
+        der, sighash = signature[:-1], signature[-1]
+        self.assertEqual(sighash, 1)
+        self.assertEqual(der[1], len(der) - 2)
+        length_r = der[3]
+        length_s = der[5 + length_r]
+        s_bytes = der[6 + length_r :]
+        self.assertEqual(length_s, len(s_bytes))
+        self.assertEqual(length_s, 31)
+        self.assertNotEqual(s_bytes[0], 0)
+        self.assertTrue(
+            self.pub.key.verify_digest(der, digest, sigdecode=sigdecode_der)
+        )
 
     def test_verify_external(self):
         self.assertTrue(
